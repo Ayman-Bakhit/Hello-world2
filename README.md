@@ -14,13 +14,14 @@ Phase 1 in progress. Nothing is deployed. No mainnet, no custody, no production 
 | Tax engine (lots, FIFO/LIFO/HIFO, estimate, reserve) | Done, tested |
 | Approved copy + banned-phrase lint | Done |
 | Postgres schema | Done, loads on PG16 |
-| Web (Next.js), API, wallet auth | Not started |
+| Web (Next.js): 10 demo screens, mock data, responsive | Done (all data is DEMO) |
+| API, real wallet auth, indexer | Not started |
 | Smart contracts | Not started (blocked on architecture review) |
 
 ## Layout
 
 ```
-apps/web         Next.js frontend (not scaffolded)
+apps/web         Next.js frontend (demo build, mock data)
 apps/api         Node/TS API + workers (not scaffolded)
 packages/shared  Pure TS: fee split, tax engine, copy. No I/O.
 db/schema.sql    PostgreSQL schema
@@ -31,8 +32,9 @@ docs/            Architecture, threat model, plan, etc.
 
 ```
 pnpm install
+pnpm dev         # frontend at http://localhost:3000 (demo data)
 pnpm test        # all unit tests
 pnpm typecheck
 ```
 
-Docs: [ARCHITECTURE](docs/ARCHITECTURE.md), [DATABASE](docs/DATABASE.md), [THREAT_MODEL](docs/THREAT_MODEL.md), [MVP_PLAN](docs/MVP_PLAN.md), [TAX_ENGINE](docs/TAX_ENGINE.md), [SECURITY](docs/SECURITY.md), [LEGAL](docs/LEGAL_CONSIDERATIONS.md).
+Docs: [ARCHITECTURE](docs/ARCHITECTURE.md), [DATABASE](docs/DATABASE.md), [THREAT_MODEL](docs/THREAT_MODEL.md), [MVP_PLAN](docs/MVP_PLAN.md), [FRONTEND](docs/FRONTEND.md), [TAX_ENGINE](docs/TAX_ENGINE.md), [SECURITY](docs/SECURITY.md), [LEGAL](docs/LEGAL_CONSIDERATIONS.md).

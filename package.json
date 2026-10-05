@@ -2,11 +2,15 @@
   "name": "project-name",
   "private": true,
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @project-name/web dev",
+    "start:web": "pnpm --filter @project-name/web start"
   }
 }

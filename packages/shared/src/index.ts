@@ -1,3 +1,3 @@
-export * from "./feesplit/index.js";
-export * from "./tax/index.js";
-export * from "./language.js";
+export * from "./feesplit/index";
+export * from "./tax/index";
+export * from "./language";

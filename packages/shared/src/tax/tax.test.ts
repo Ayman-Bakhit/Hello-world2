@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { estimateTax, holdingPeriod, percentOfGains, realize, reserveStatus } from "./engine.js";
-import type { AcquisitionLot, Disposal, TaxAssumptions } from "./types.js";
+import { estimateTax, holdingPeriod, percentOfGains, realize, reserveStatus } from "./engine";
+import type { AcquisitionLot, Disposal, TaxAssumptions } from "./types";
 
 const D = 9; // SOL-like
 const SOL = 10n ** 9n;

@@ -5,7 +5,7 @@ import {
   splitAmount,
   validateFeeSplit,
   type FeeSplitBps,
-} from "./index.js";
+} from "./index";
 
 const good: FeeSplitBps = { creator: 6000, taxReserve: 1500, charity: 1500, protocol: 1000 };
 

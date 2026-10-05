@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BANNED_PHRASES, COPY } from "./language.js";
+import { BANNED_PHRASES, COPY } from "./language";
 
 describe("approved copy", () => {
   it("contains no banned phrases", () => {

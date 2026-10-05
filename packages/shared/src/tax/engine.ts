@@ -7,7 +7,7 @@ import type {
   RealizedEvent,
   TaxAssumptions,
   TaxEstimate,
-} from "./types.js";
+} from "./types";
 
 const MICRO_PER_CENT = 10_000n;
 
