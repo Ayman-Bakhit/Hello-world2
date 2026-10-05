@@ -58,6 +58,9 @@ Required components exist as: Sidebar, TopBar, DemoDataBanner, StatCard, Portfol
 | Discover ranking | Real data; add wash-trade detection before "Trending" means anything |
 | Analytics / Vaults / Documents | Real pages after indexer |
 
+## API client layer (Slice 1)
+`src/lib/api/` exposes `getPortfolio`, `getTaxEstimate`, `getTaxReserve`, `getCharities`, `getDonations`, `getLaunches`, `getLaunch`, `getTokenProof`, `getDiscover`. `NEXT_PUBLIC_API_MODE=mock` (default) builds responses locally from shared demo fixtures; `api` calls the Fastify API (`NEXT_PUBLIC_API_BASE_URL`, default http://localhost:4000) and validates every response with the shared Zod schemas. Existing screens still render from `src/mock` and do not call the client yet; switching them over is a later task. The session token is held in memory only (`setSessionToken`).
+
 ## Known limits and risks
 - Wallet state and wizard state are in-memory; a hard reload resets them (by design for now).
 - "VERIFIED TRANSPARENCY" is not awarded anywhere; demo tokens show "n/9 CHECKS REPORTED · DEMO". Nothing is labeled IMMUTABLE.

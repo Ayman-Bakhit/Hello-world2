@@ -1,0 +1,38 @@
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
+import Fastify, { type FastifyInstance } from "fastify";
+import type { Config } from "./config";
+import type { Pool } from "./db/pool";
+import { registerErrorHandling } from "./errors";
+import { registerRoutes } from "./routes";
+
+export async function buildApp(deps: { config: Config; pool: Pool; logStream?: { write(msg: string): void } }): Promise<FastifyInstance> {
+  const { config } = deps;
+  const app = Fastify({
+    logger: {
+      level: config.LOG_LEVEL,
+      ...(deps.logStream ? { stream: deps.logStream } : {}),
+      // Secrets never reach logs.
+      redact: { paths: ["req.headers.authorization", "req.headers.cookie", "res.headers['set-cookie']"], censor: "[redacted]" },
+    },
+    bodyLimit: 64 * 1024,
+    trustProxy: config.TRUST_PROXY,
+  });
+
+  registerErrorHandling(app);
+  await app.register(helmet);
+  await app.register(cors, {
+    origin: config.CORS_ORIGINS,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type"],
+    credentials: false,
+    maxAge: 600,
+  });
+  // In-memory limiter: fine for one process. Use a shared store (Redis) before running multiple instances.
+  await app.register(rateLimit, { global: true, max: config.RATE_LIMIT_MAX, timeWindow: config.RATE_LIMIT_WINDOW });
+
+  app.decorateRequest("actor", null);
+  await registerRoutes(app, deps);
+  return app;
+}

@@ -71,3 +71,20 @@ describe("copy lint over the frontend source", () => {
     }
   });
 });
+
+describe("parity with the shared demo fixtures the API serves", () => {
+  it("frontend mock tokens, fee splits, and totals match shared fixtures", async () => {
+    const { DEMO_TOKENS: shared, buildTax, buildTaxReserve, DEMO_IDS } = await import("@project-name/shared");
+    expect(DEMO_TOKENS.map((t) => [t.slug, t.symbol])).toEqual(shared.map((t) => [t.id, t.symbol]));
+    for (const t of DEMO_TOKENS) {
+      const s = shared.find((x) => x.id === t.slug)!;
+      expect(t.feeSplit).toEqual(s.feeSplit);
+      expect(t.marketCapCents).toBe(s.marketCapCents);
+      expect(t.liquidityCents).toBe(s.liquidityCents);
+      expect(t.holders).toBe(s.holders);
+      expect(t.lifetimeFeesCents).toBe(s.lifetimeFeesCents);
+    }
+    expect(buildTax(DEMO_IDS.wallets.trading).estimatedTaxExposureCents).toBe(E.exposureCents.toString());
+    expect(buildTaxReserve(DEMO_IDS.wallets.trading, null, "demo").currentReserveCents).toBe(DEMO_TAX_RESERVE.reserveCents.toString());
+  });
+});

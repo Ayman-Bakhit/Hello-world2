@@ -20,3 +20,19 @@ swap -> `raw_transactions` (payload as received) -> `transactions` (normalized, 
 
 ## Not yet done
 Migrations tool (choose node-pg-migrate or similar), row-level security review, indexes beyond the obvious, retention policy, per-user data export/delete flow.
+
+## Migrations (Slice 1)
+- `db/schema.sql` is the baseline. `db/migrations/NNN_*.sql` apply in order. Runner: `pnpm db:migrate` (`apps/api/src/db/migrate.ts`). It applies the baseline only to an empty database, records applied files in `schema_migrations`, runs each migration in a transaction, takes an advisory lock, and **never drops, truncates, or resets**. Re-running is a no-op.
+- `pnpm db:seed-demo` inserts clearly labeled demo rows (idempotent, refuses in production). It is never run automatically.
+- Tests create and drop only a dedicated `pn_api_test` database (name guard in `test/globalSetup.ts`).
+
+### 001_api_foundation (additive)
+| Change | Why |
+|---|---|
+| `users.is_demo`, `wallets/charities/donations.data_source` (`demo`/`database`/`chain`) | provenance on every record; dev sessions limited to demo users |
+| `donations.status` CHECK now allows `demo`; new CHECKs: `confirmed` requires `raw_transaction_id`, `demo` forbids it | a donation cannot be "confirmed" without a verifiable transaction |
+| `tax_reserves.currency` (USDC only), `updated_at`, unique `(user_id)`, CHECK that rule fields are consistent | one target per user; upsert; no funds stored |
+| new `launch_configurations` (+ CHECK `launch_fee_split_is_10000_bps` on the JSON) | launch drafts and review results; DB refuses any split not summing to 10000 |
+| index `sessions(user_id)` | session lookups |
+Existing data is untouched. The one replaced constraint (`donations_status_check`) only widens allowed values. If existing `tax_reserves` rows had duplicate users, the unique index would fail loudly and roll back; the table was never written before this slice.
+Tax reserve mapping: API `percentage` = `rule FIXED_PERCENT` + `percent_bps`; `amount` = `MANUAL_TARGET` + `target_cents`.

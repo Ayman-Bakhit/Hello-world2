@@ -10,7 +10,12 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "build": "pnpm -r build",
-    "dev": "pnpm --filter @project-name/web dev",
-    "start:web": "pnpm --filter @project-name/web start"
+    "dev": "pnpm dev:web",
+    "start:web": "pnpm --filter @project-name/web start",
+    "dev:web": "pnpm --filter @project-name/web dev",
+    "dev:api": "pnpm --filter @project-name/api dev",
+    "dev:all": "pnpm --parallel --filter @project-name/api --filter @project-name/web dev",
+    "db:migrate": "pnpm --filter @project-name/api db:migrate",
+    "db:seed-demo": "pnpm --filter @project-name/api db:seed-demo"
   }
 }

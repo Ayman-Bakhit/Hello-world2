@@ -48,3 +48,13 @@ USDC only in V1. User-controlled vault; deposits explicitly signed. No auto-conv
 | 3 | Dust in fee split goes to protocol | deterministic, documented, mirrorable on-chain |
 | 4 | Simplified US netting (ST/LT cross-offset) | MVP estimate; real rules (wash-sale status for crypto, NIIT, brackets) are out of scope and labeled |
 | 5 | Rates are inputs, not constants | spec forbids hardcoded tax % |
+
+## API layer (Slice 1)
+`apps/api` (Fastify 5). Routes grouped by domain under `/api`; contracts are Zod schemas in `packages/shared/src/api`, shared by API and web client. See `API.md`.
+- **Provenance is part of the contract.** Every data response says `dataSource` (`demo` | `database` | `chain`) and `verifiedOnChain`. In this slice nothing is `chain`, and nothing may be presented as on-chain fact.
+- **Demo-backed vs database-backed.** Wallets, charities, donations, tax-reserve target, launch configurations, sessions are PostgreSQL. Portfolio, transactions, tax, tokens, proof, discover are pure builders over `shared/src/demo` fixtures (same builders power the web client's mock mode, so shapes cannot drift). The seed uses the same fixtures.
+- **Single implementation of the math.** Fee split (`validateFeeSplit`, `splitAmount`), tax (`estimateTax`, `reserveStatus`), launch review (`reviewLaunchConfig`), discover filters all live in `packages/shared`. The API calls them; it re-implements nothing.
+- **Auth boundary.** `requireAuth` resolves a bearer session to a user id; repositories filter by that id. Session issuance via wallet signature is an unimplemented interface (`auth/walletAuth.ts`); the dev-only session endpoint exists solely under `AUTH_MODE=dev-insecure` and is refused in production.
+- **No fund movement.** There is no route or function that builds a transaction, asks for a signature, or transfers value. Donations are records (`demo`), reserve is a target, launches are configurations.
+- **Web client** (`apps/web/src/lib/api`): `NEXT_PUBLIC_API_MODE=mock|api`. UI components do not use it yet; switching screens over is later work.
+- Bundling: `tsup` inlines `@project-name/shared` (shipped as TS source) into `dist/` for `node dist/server.js`.

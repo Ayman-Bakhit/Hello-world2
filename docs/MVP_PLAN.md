@@ -6,7 +6,7 @@ One vertical slice at a time. After each: tests, typecheck, lint, build, docs.
 |---|---|---|
 | 0 (done) | Monorepo, shared math (fee split, tax engine), schema, docs | 33 tests green, schema loads |
 | 3 (done, pulled forward) | Next.js frontend, all 10 demo screens, mock data layer, DEMO DATA labeling | build/typecheck/lint/tests green, every route loads, mobile OK. See FRONTEND.md |
-| 1 | API scaffold (Fastify, zod, pg), env validation, migrations, health | boots, tested, no secrets in repo |
+| 1 (done) | API foundation: Fastify, Zod, pg, env validation, migrations + demo seed, 13 route groups, session boundary, typed web client with mock/api switch | 97 API tests on real Postgres, typecheck/lint/build green. Wallet sign-in NOT done (slice 2). See API.md |
 | 2 | Wallet auth: nonce, ed25519 verify, sessions, rate limit | replay/expiry/wrong-key tests |
 | 3b | Replace the mock wallet with Wallet Standard adapters + server-verified sign-in (depends on slice 2) | real connect on devnet |
 | 4 | Portfolio: RPC balances, price service interface + one provider, mock fallback labeled DEMO | real balances on devnet/mainnet read-only |
