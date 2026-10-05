@@ -1,18 +1,38 @@
-# Hello-world2
-## Table of Contents
+# PROJECT_NAME
 
-- [PROJECT TITLE](#Project-Title)
-- [DESCRIPTION](#Description)
-- [FILES USED](#Files-Used)
+Non-custodial crypto financial OS (track, tax estimate, give) plus a transparent token launchpad on Solana. Principle: **verify, don't trust.**
 
-## Project Title
+Working name is `PROJECT_NAME` until branding is final.
 
-***Hello World***
+## Status
 
-## Description
+Phase 1 in progress. Nothing is deployed. No mainnet, no custody, no production keys.
 
-Creating my first respository and learning the formatting.
+| Area | State |
+|---|---|
+| Fee split math (bps) | Done, tested |
+| Tax engine (lots, FIFO/LIFO/HIFO, estimate, reserve) | Done, tested |
+| Approved copy + banned-phrase lint | Done |
+| Postgres schema | Done, loads on PG16 |
+| Web (Next.js), API, wallet auth | Not started |
+| Smart contracts | Not started (blocked on architecture review) |
 
-## Files Used
+## Layout
 
-[Markdown Cheatsheet](https://www.markdownguide.org/cheat-sheet/)
+```
+apps/web         Next.js frontend (not scaffolded)
+apps/api         Node/TS API + workers (not scaffolded)
+packages/shared  Pure TS: fee split, tax engine, copy. No I/O.
+db/schema.sql    PostgreSQL schema
+docs/            Architecture, threat model, plan, etc.
+```
+
+## Dev
+
+```
+pnpm install
+pnpm test        # all unit tests
+pnpm typecheck
+```
+
+Docs: [ARCHITECTURE](docs/ARCHITECTURE.md), [DATABASE](docs/DATABASE.md), [THREAT_MODEL](docs/THREAT_MODEL.md), [MVP_PLAN](docs/MVP_PLAN.md), [TAX_ENGINE](docs/TAX_ENGINE.md), [SECURITY](docs/SECURITY.md), [LEGAL](docs/LEGAL_CONSIDERATIONS.md).
