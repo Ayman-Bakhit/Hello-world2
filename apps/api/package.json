@@ -14,10 +14,13 @@
     "db:seed-demo": "tsx --env-file-if-exists=../../.env src/db/cli.ts seed-demo"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.0.0",
     "@fastify/helmet": "^13.0.0",
     "@fastify/rate-limit": "^10.0.0",
     "@project-name/shared": "workspace:*",
+    "@solana/addresses": "^8.4.0",
+    "@solana/keys": "^8.4.0",
     "fastify": "^5.0.0",
     "pg": "^8.13.0",
     "zod": "^4.1.0"

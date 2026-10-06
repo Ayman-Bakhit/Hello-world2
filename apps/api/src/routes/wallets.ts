@@ -10,8 +10,8 @@ import type { Deps } from "./index";
 export const WalletParams = z.strictObject({ walletId: z.string().uuid() });
 
 /** Wallet records hold public information only. This API has no field for keys, seeds, or secrets. */
-export const walletRoutes: FastifyPluginAsync<Deps> = async (app, { pool }) => {
-  const auth = requireAuth(pool);
+export const walletRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
+  const auth = requireAuth(pool, config);
 
   app.get("/api/wallets", { preHandler: auth }, async (req) => respond(WalletList, { wallets: await listWallets(pool, actorOf(req).userId) }));
 

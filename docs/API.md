@@ -7,7 +7,7 @@ Base URL (local): `http://localhost:4000`. All routes are under `/api`; `GET /he
 ## Read this first
 - **Nothing here is on-chain data.** No indexer, RPC, or price provider exists yet. Every response that carries balances, transactions, tax, reserve balance, or token facts is `"dataSource": "demo"` and `"verifiedOnChain": false`. Treat both fields as part of the contract.
 - **Non-custodial.** No endpoint moves funds, builds a transaction, requests a signature, or accepts a key/seed/secret. Wallet records contain public information only.
-- **Authentication is NOT production-ready.** Sessions are real (hashed, expiring, revocable) but the only way to obtain one is a dev-only endpoint with no wallet signature. See [Authentication](#authentication).
+- **Authentication is real, the API is still demo-grade.** Sessions come from Solana wallet-signature sign-in (Slice 2). Everything else in this list that is demo-backed is still demo. See [Authentication](#authentication) and `docs/SECURITY.md`.
 - Money: integer USD cents as strings (`"1842000"` = $18,420.00). Token amounts: base units as strings. Rates: integer basis points. No floats.
 - Tax language: fields are `estimated*`. There is no tax-bill field anywhere.
 
@@ -18,8 +18,11 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 |---|---|---|---|
 | `GET /health`, `GET /api/health` | public | none | production-capable (liveness) |
 | `GET /api/auth/status` | public | none | production-capable |
-| `POST /api/auth/nonce`, `POST /api/auth/verify` | public | none | **501 not implemented** |
-| `POST /api/auth/dev-session` | public, only when `AUTH_MODE=dev-insecure` | db (sessions) | **dev only**, absent otherwise |
+| `POST /api/auth/nonce` | public (Origin-checked) | db (`auth_nonces`) | production-capable |
+| `POST /api/auth/verify` | public (Origin-checked) | db (users, wallets, sessions) | production-capable; sets HttpOnly cookie |
+| `GET /api/auth/session` | public (reports "not authenticated") | db | production-capable |
+| `POST /api/auth/logout` | cookie/bearer optional (Origin-checked) | db | production-capable |
+| `POST /api/auth/dev-session` | public, only when `AUTH_MODE=dev-insecure` | db (sessions) | **dev only**; absent and rejected in production |
 | `GET /api/wallets` | session | db (`demo` rows) | db-backed; demo seed data |
 | `GET /api/wallets/:id` | session + owner | db | db-backed |
 | `GET /api/portfolio/:walletId` | session + owner | demo | **demo** |
@@ -41,14 +44,36 @@ Common error body (all errors):
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "Request validation failed", "fields": { "feeSplit": ["fee split totals 10001 basis points; it must be exactly 10000"] } } }
 ```
-Codes: `VALIDATION_ERROR` 400, `BAD_REQUEST` 400/413, `UNAUTHENTICATED` 401 (with `WWW-Authenticate: Bearer`), `NOT_FOUND` 404, `LIMIT_REACHED` 409, `DEMO_DATA_MISSING` 409, `CHARITY_NOT_VERIFIED` 422, `WALLET_NOT_OWNED` 422, `RATE_LIMITED` 429, `NOT_IMPLEMENTED` 501, `INTERNAL_ERROR` 500 (no internals leaked).
-A resource owned by another user is reported as `404`, not `403`, so existence is not revealed.
+Codes: `VALIDATION_ERROR` 400, `BAD_REQUEST` 400/413, `UNAUTHENTICATED` 401 (with `WWW-Authenticate: Bearer`), `AUTH_FAILED` 401 (any sign-in failure; deliberately uniform), `ORIGIN_NOT_ALLOWED` 403, `NOT_FOUND` 404, `LIMIT_REACHED` 409, `DEMO_DATA_MISSING` 409, `CHARITY_NOT_VERIFIED` 422, `WALLET_NOT_OWNED` 422, `RATE_LIMITED` 429, `TOO_MANY_CHALLENGES` 429, `INTERNAL_ERROR` 500 (no internals leaked).
+A resource owned by another user is reported as `404`, not `403`, so existence is not revealed. Wallets created by real sign-in are `dataSource:"database"` and have **no** portfolio/transaction/tax data yet (those endpoints return 404 for them: no fabricated data); only the seeded demo user's wallets return demo fixtures.
 
 ## Authentication
-- Header: `Authorization: Bearer <token>`. Tokens are 256-bit random values; only a SHA-256 hash is stored (`sessions.id_hash`). Sessions expire and can be revoked.
-- **Wallet sign-in (nonce, signature, replay protection) is not implemented.** `POST /api/auth/nonce` and `/verify` return 501. The required design and checklist is in `apps/api/src/auth/walletAuth.ts` and `docs/SECURITY.md`.
-- `AUTH_MODE=disabled` (default): there is no way to get a session; every protected route returns 401.
-- `AUTH_MODE=dev-insecure`: registers `POST /api/auth/dev-session`, which issues a session for the seeded **demo user** with no proof of wallet control. It cannot target any other user. Startup is refused if `NODE_ENV=production`.
+Sign-in is Solana wallet-signature only (full design, message format and nonce lifecycle in `docs/SECURITY.md`).
+- Browsers: an **HttpOnly cookie** (`pn_session`; `__Host-pn_session`, Secure, in production; `SameSite=Strict`). Send requests with `credentials: "include"`. State-changing requests must carry an allowlisted `Origin` (browsers do this automatically).
+- API clients: `Authorization: Bearer <token>` is also accepted (tokens are the same 256-bit random values; only a SHA-256 is stored).
+- A wallet **connection** is not authentication. `GET /api/auth/session` reports `authenticated:true` only after a verified signature.
+- `AUTH_MODE=dev-insecure` additionally registers `POST /api/auth/dev-session` (demo user, no signature). Local development only; refused at startup in production and its sessions are rejected there.
+
+### `GET /api/auth/status` (public)
+`{ mode:"wallet"|"dev-insecure", walletSignIn:{ implemented:true, messageVersion:"1", nonceTtlSeconds, chainId, domain }, productionReady:false }`
+
+### `POST /api/auth/nonce` (public)
+Request `{ "address": "<base58 Solana address>", "chain": "solana" }`. The address must be a valid on-curve 32-byte key.
+`200 { nonce, message, domain, chainId, issuedAt, expiresAt }` with `Cache-Control: no-store`. `message` is the exact text to sign. `400` invalid address/body, `403` bad Origin, `429 TOO_MANY_CHALLENGES` / `RATE_LIMITED`.
+
+### `POST /api/auth/verify` (public)
+Request `{ "address", "nonce", "message", "signature" }` where `signature` is the 64-byte ed25519 signature as **standard base64 with padding** (88 chars) over the UTF-8 bytes of `message`.
+`200 { authenticated:true, user:{id}, wallet:{...ownershipVerified:true...}, session:{expiresAt, authMethod:"wallet_signature"} }` plus `Set-Cookie`. The body never contains the session token.
+`400` malformed input (nonce not consumed). `401 AUTH_FAILED` for every cryptographic/state failure: unknown, expired, used, or wrong-address nonce; message not equal to the issued text; signature invalid. The nonce is consumed on any failure after it is claimed (wrong message, bad signature); an unknown, expired, or other-address nonce has nothing to consume. `403` bad Origin. Signing in while presenting an old session revokes the old one.
+
+### `GET /api/auth/session` (public)
+`{ authenticated:boolean, user:{id}|null, wallet:{...}|null, session:{expiresAt, authMethod}|null }`. Never an error for "not signed in". `Cache-Control: no-store`.
+
+### `POST /api/auth/logout`
+Revokes the presented session (if any), clears the cookie. `200 { loggedOut:true }`. Idempotent. Requires an allowlisted Origin when a cookie is presented.
+
+### `POST /api/auth/dev-session` (dev only)
+`201 { token, expiresAt, warning }` for the seeded demo user. Absent unless `AUTH_MODE=dev-insecure`; 404 in production.
 
 ## Authorization boundary
 Every wallet-, donation-, launch-, and tax-reserve query filters by the session's user id in SQL (`apps/api/src/db/repos.ts`). Tests cover cross-user access for each protected resource.
@@ -129,5 +154,5 @@ Percent: above 0, at most 100, at most 2 decimals. Amount: at most 2 decimals, a
 - No boosts, paid placement, or synthetic metrics exist in the code path. `trending` is unfiltered (no wash-trade detection yet) and says so.
 
 ## Security controls (what exists)
-Zod validation on every body/query/param; strict objects (unknown keys rejected); 64 KB body limit; helmet headers; CORS allowlist (exact origins, no wildcard, GET/POST only, no credentials); global rate limit plus stricter write limit (in-memory); structured errors with no stack traces; log redaction for `Authorization`/`Cookie`; response validation against the contract; parameterized SQL only; localhost bind by default.
+Zod validation on every body/query/param; strict objects (unknown keys rejected); 64 KB body limit; helmet headers; CORS allowlist (exact origins, no wildcard, GET/POST only, credentials only for those origins); Origin check on state-changing requests (CSRF); HttpOnly session cookie; global rate limit plus stricter write limit (in-memory); structured errors with no stack traces; log redaction for `Authorization`/`Cookie`; response validation against the contract; parameterized SQL only; localhost bind by default.
 See `docs/THREAT_MODEL.md` for gaps.

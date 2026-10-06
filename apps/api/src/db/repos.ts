@@ -30,6 +30,12 @@ export async function getOwnedWallet(pool: Pool, userId: string, walletId: strin
   return r.rows[0] ? walletOf(r.rows[0]) : null;
 }
 
+/** For a session's OWN wallet id (taken from the session row, never from client input). */
+export async function getWalletById(pool: Pool, walletId: string): Promise<Wallet | null> {
+  const r = await pool.query("SELECT * FROM wallets WHERE id = $1", [walletId]);
+  return r.rows[0] ? walletOf(r.rows[0]) : null;
+}
+
 export async function ownedAddresses(pool: Pool, userId: string): Promise<string[]> {
   const r = await pool.query("SELECT address FROM wallets WHERE user_id = $1 AND removed_at IS NULL", [userId]);
   return r.rows.map((x) => x.address as string);

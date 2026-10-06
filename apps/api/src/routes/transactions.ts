@@ -7,8 +7,8 @@ import type { Deps } from "./index";
 import { ownedWalletFromParams } from "./walletScope";
 
 /** DEMO-BACKED. Records carry source "demo"; indexed (chain) records do not exist yet. */
-export const transactionRoutes: FastifyPluginAsync<Deps> = async (app, { pool }) => {
-  app.get("/api/transactions/:walletId", { preHandler: requireAuth(pool) }, async (req) => {
+export const transactionRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
+  app.get("/api/transactions/:walletId", { preHandler: requireAuth(pool, config) }, async (req) => {
     const wallet = await ownedWalletFromParams(pool, req);
     const { limit, offset } = parse(TransactionsQuery, req.query);
     const body = wallet.dataSource === "demo" ? buildTransactions(wallet.id, limit, offset) : null;

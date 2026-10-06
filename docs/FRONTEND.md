@@ -61,6 +61,19 @@ Required components exist as: Sidebar, TopBar, DemoDataBanner, StatCard, Portfol
 ## API client layer (Slice 1)
 `src/lib/api/` exposes `getPortfolio`, `getTaxEstimate`, `getTaxReserve`, `getCharities`, `getDonations`, `getLaunches`, `getLaunch`, `getTokenProof`, `getDiscover`. `NEXT_PUBLIC_API_MODE=mock` (default) builds responses locally from shared demo fixtures; `api` calls the Fastify API (`NEXT_PUBLIC_API_BASE_URL`, default http://localhost:4000) and validates every response with the shared Zod schemas. Existing screens still render from `src/mock` and do not call the client yet; switching them over is a later task. The session token is held in memory only (`setSessionToken`).
 
+## Wallet authentication in the UI (Slice 2)
+`NEXT_PUBLIC_API_MODE=api` turns on the real flow in `src/state/wallet.tsx`; the default `mock` keeps the demo connection (it never reports authenticated).
+```
+CONNECT WALLET -> pick Phantom / Solflare / Backpack (Wallet Standard; others listed if detected)
+ -> wallet connects            status: CONNECTED   (amber, "Not authenticated yet")
+ -> explanation shown: "Sign this message to securely authenticate with PROJECT_NAME. This does not send a transaction or move funds."
+ -> SIGN MESSAGE: POST /api/auth/nonce, client checks the challenge is for this wallet + origin, message is displayed,
+    wallet signs the TEXT, POST /api/auth/verify
+ -> API sets an HttpOnly cookie    status: AUTHENTICATED (green)
+ -> page load asks GET /api/auth/session (the cookie is invisible to JS); LOG OUT & DISCONNECT calls /api/auth/logout
+```
+No private key, seed phrase, or session secret is ever handled by the frontend; nothing is stored in web storage (a test enforces it). Components: `WalletConnectModal` (3-step panel), `WalletMenu` (CONNECTED/AUTHENTICATED badge, sign-in prompt, address-mismatch warning, logout), `lib/walletStandard.ts`, `lib/api/auth.ts`. In api mode, adding wallets / labels is disabled (needs wallet-linking endpoints). Screens still render demo data; only `ready` gating (launch wizard, landing CTA) uses the auth state.
+
 ## Known limits and risks
 - Wallet state and wizard state are in-memory; a hard reload resets them (by design for now).
 - "VERIFIED TRANSPARENCY" is not awarded anywhere; demo tokens show "n/9 CHECKS REPORTED · DEMO". Nothing is labeled IMMUTABLE.

@@ -15,7 +15,7 @@ import { ownedWalletFromParams } from "./walletScope";
  * a recorded transaction). A charity must be verified, with a verified wallet, to be selectable.
  */
 export const donationRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
-  const auth = requireAuth(pool);
+  const auth = requireAuth(pool, config);
 
   app.get("/api/donations/:walletId", { preHandler: auth }, async (req) => {
     const wallet = await ownedWalletFromParams(pool, req);

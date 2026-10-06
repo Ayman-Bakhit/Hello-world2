@@ -36,7 +36,7 @@ export function stepErrors(step: LaunchStepId, c: LaunchConfiguration, ctx: Step
   const e: string[] = [];
   switch (step) {
     case "connect":
-      if (!ctx.walletConnected) e.push("Connect a wallet to continue (demo connection).");
+      if (!ctx.walletConnected) e.push("Connect and sign in with a wallet to continue.");
       break;
     case "info":
       if (c.name.trim().length < 1 || c.name.trim().length > 32) e.push("Token name must be 1 to 32 characters.");

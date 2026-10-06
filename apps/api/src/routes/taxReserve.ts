@@ -12,7 +12,7 @@ import { ownedWalletFromParams } from "./walletScope";
  * POST: stores the target configuration ONLY. No transfer, approval, or signing path exists here.
  */
 export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
-  const auth = requireAuth(pool);
+  const auth = requireAuth(pool, config);
 
   const view = async (userId: string, walletId: string) => {
     const t = await getTaxReserveTarget(pool, userId);

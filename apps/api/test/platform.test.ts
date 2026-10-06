@@ -75,8 +75,8 @@ describe("http hardening", () => {
     const limited = await makeCtx({ RATE_LIMIT_WRITE_MAX: "2" });
     try {
       const codes: number[] = [];
-      for (let i = 0; i < 4; i++) codes.push((await limited.app.inject({ method: "POST", url: "/api/auth/nonce" })).statusCode);
-      expect(codes).toEqual([501, 501, 429, 429]);
+      for (let i = 0; i < 4; i++) codes.push((await limited.app.inject({ method: "POST", url: "/api/auth/nonce", payload: {} })).statusCode);
+      expect(codes).toEqual([400, 400, 429, 429]);
     } finally { await limited.close(); }
   });
   it("never logs the Authorization header", async () => {
@@ -102,8 +102,20 @@ describe("config", () => {
     expect(() => loadConfig({ ...base, CORS_ORIGINS: "https://a.example,https://b.example" })).not.toThrow();
   });
   it("refuses dev-insecure auth in production", () => {
-    expect(() => loadConfig({ ...base, NODE_ENV: "production", AUTH_MODE: "dev-insecure" })).toThrow(/not allowed/);
-    expect(loadConfig({ ...base, NODE_ENV: "production" }).AUTH_MODE).toBe("disabled");
+    expect(() => loadConfig({ ...base, NODE_ENV: "production", AUTH_MODE: "dev-insecure", CORS_ORIGINS: "https://a.example" })).toThrow(/not allowed/);
+    expect(loadConfig({ ...base, NODE_ENV: "production", CORS_ORIGINS: "https://a.example" }).AUTH_MODE).toBe("wallet");
+  });
+  it("treats an empty AUTH_ORIGIN as unset", () => expect(loadConfig({ ...base, AUTH_ORIGIN: "" }).authOrigin).toBe("http://localhost:3000"));
+  it("defaults to wallet-only auth", () => expect(loadConfig(base).AUTH_MODE).toBe("wallet"));
+  it("production requires https origins and the AUTH_ORIGIN must be an allowed origin", () => {
+    expect(() => loadConfig({ ...base, NODE_ENV: "production" })).toThrow(/https/);
+    expect(() => loadConfig({ ...base, CORS_ORIGINS: "http://a.example", AUTH_ORIGIN: "http://b.example" })).toThrow(/AUTH_ORIGIN/);
+    const c = loadConfig({ ...base, NODE_ENV: "production", CORS_ORIGINS: "https://app.example.com,https://admin.example.com", AUTH_ORIGIN: "https://admin.example.com" });
+    expect(c).toMatchObject({ authDomain: "admin.example.com", cookieSecure: true, cookieName: "__Host-pn_session", chainId: "solana:devnet" });
+  });
+  it("dev cookies are not Secure by default (http localhost) but can be made so", () => {
+    expect(loadConfig(base)).toMatchObject({ cookieSecure: false, cookieName: "pn_session" });
+    expect(loadConfig({ ...base, COOKIE_SECURE: "true" })).toMatchObject({ cookieSecure: true, cookieName: "__Host-pn_session" });
   });
   it("binds to localhost by default", () => expect(loadConfig(base).HOST).toBe("127.0.0.1"));
 });

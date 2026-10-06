@@ -382,3 +382,44 @@ export type LaunchList = z.infer<typeof LaunchList>;
 export type CharityList = z.infer<typeof CharityList>;
 export type TokenList = z.infer<typeof TokenList>;
 export type HealthResponse = z.infer<typeof HealthResponse>;
+
+// ---------- wallet sign-in ----------
+const Base58 = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/, "base58 Solana address");
+/** 64-byte ed25519 signature, standard base64 with padding. */
+const Base64Signature = z.string().regex(/^[A-Za-z0-9+/]{86}==$/, "64-byte signature as base64");
+
+export const NonceRequest = z.strictObject({ address: Base58, chain: z.literal("solana").default("solana") });
+export const NonceResponse = z.object({
+  nonce: z.string(),
+  /** The exact text the wallet must sign. */
+  message: z.string(),
+  domain: z.string(),
+  chainId: z.string(),
+  issuedAt: Iso,
+  expiresAt: Iso,
+});
+export type NonceResponse = z.infer<typeof NonceResponse>;
+
+export const VerifyRequest = z.strictObject({
+  address: Base58,
+  nonce: z.string().regex(/^[A-Za-z0-9_-]{32}$/, "32 character nonce"),
+  message: z.string().min(1).max(1024),
+  signature: Base64Signature,
+});
+export type VerifyRequest = z.infer<typeof VerifyRequest>;
+
+/** Deliberately contains NO session token: browsers receive it only as an HttpOnly cookie. */
+export const SessionResponse = z.object({
+  authenticated: z.boolean(),
+  user: z.object({ id: Uuid }).nullable(),
+  wallet: Wallet.nullable(),
+  session: z.object({ expiresAt: Iso, authMethod: z.enum(["wallet_signature", "dev_insecure"]) }).nullable(),
+});
+export type SessionResponse = z.infer<typeof SessionResponse>;
+export const LogoutResponse = z.object({ loggedOut: z.literal(true) });
+export const AuthStatusResponse = z.object({
+  mode: z.enum(["wallet", "dev-insecure"]),
+  walletSignIn: z.object({ implemented: z.literal(true), messageVersion: z.string(), nonceTtlSeconds: z.number().int(), chainId: z.string(), domain: z.string() }),
+  productionReady: z.boolean(),
+});
+export type AuthStatusResponse = z.infer<typeof AuthStatusResponse>;

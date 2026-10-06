@@ -6,3 +6,4 @@ export * from "./api/schemas";
 export * from "./demo/index";
 export * from "./discover";
 export * from "./launch";
+export * from "./auth/message";

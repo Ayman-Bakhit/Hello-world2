@@ -36,3 +36,13 @@ Migrations tool (choose node-pg-migrate or similar), row-level security review, 
 | index `sessions(user_id)` | session lookups |
 Existing data is untouched. The one replaced constraint (`donations_status_check`) only widens allowed values. If existing `tax_reserves` rows had duplicate users, the unique index would fail loudly and roll back; the table was never written before this slice.
 Tax reserve mapping: API `percentage` = `rule FIXED_PERCENT` + `percent_bps`; `amount` = `MANUAL_TARGET` + `target_cents`.
+
+### 002_wallet_auth (additive)
+| Change | Why |
+|---|---|
+| `auth_nonces.message`, `.domain`, `.chain_id` (defaults dropped) | store the exact challenge text; verification requires an exact match |
+| CHECK `nonce ~ '^[A-Za-z0-9_-]{32}$'`, CHECK consumed_at >= issued_at; indexes on (address, issued_at) and expires_at | nonce format/lifecycle integrity, fast per-address cap and cleanup |
+| `sessions.auth_method` (`wallet_signature` \| `dev_insecure`, default dropped), `sessions.wallet_id` | production rejects `dev_insecure`; sessions name the wallet that signed |
+| CHECK `wallet_signature` sessions must have `wallet_id` | no wallet session without a wallet |
+| CHECK `wallets_demo_never_verified` | demo wallets can never be marked verified |
+Pre-existing session rows (only the dev endpoint could have created them) become `dev_insecure`. No data is dropped. Wallet/user creation relies on the existing `UNIQUE(chain, address)`; the sign-in transaction also takes a per-address advisory lock.

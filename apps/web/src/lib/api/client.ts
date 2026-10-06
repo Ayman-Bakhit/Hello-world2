@@ -1,10 +1,11 @@
 import {
-  ApiErrorBody, CharityList, DiscoverResponse, DonationsResponse, Launch, LaunchList, PortfolioResponse,
+  CharityList, DiscoverResponse, DonationsResponse, Launch, LaunchList, PortfolioResponse,
   TaxReserveResponse, TaxResponse, TokenProof, WEB_MOCK_ID_MAP, buildCharityList, buildDiscover, buildDonations,
   buildPortfolio, buildTax, buildTaxReserve, buildTokenProof, DiscoverQuery, type Charity, type StoredTarget,
 } from "@project-name/shared";
 import type { z } from "zod";
 import { API_BASE_URL, API_MODE, type ApiMode } from "./config";
+import { ApiClientError, requestJson } from "./http";
 
 /**
  * Typed API client. Same function signatures in both modes, and the same response types (validated
@@ -13,15 +14,10 @@ import { API_BASE_URL, API_MODE, type ApiMode } from "./config";
  *  - mock: builds responses locally from shared demo fixtures. No network. dataSource is "demo".
  *  - api:  calls the Fastify API. Protected endpoints need a session token (setSessionToken).
  *
- * The session token is kept in memory only: no localStorage, no cookies, nothing persisted by this layer.
+ * Any bearer token (dev/API use only) is kept in memory: nothing is persisted by this layer. Browsers authenticate with an HttpOnly cookie.
  */
 
-export class ApiClientError extends Error {
-  constructor(public readonly status: number, public readonly code: string, message: string, public readonly fields?: Record<string, string[]>) {
-    super(message);
-    this.name = "ApiClientError";
-  }
-}
+export { ApiClientError } from "./http";
 
 export interface ClientOptions {
   mode?: ApiMode;
@@ -45,22 +41,8 @@ export function createApiClient(opts: ClientOptions = {}) {
   const token = opts.getToken ?? (() => sessionToken);
   const mockId = (id: string) => WEB_MOCK_ID_MAP[id] ?? id;
 
-  async function http<S extends z.ZodType>(schema: S, path: string, query?: Record<string, string | number | boolean | undefined>): Promise<z.infer<S>> {
-    const url = new URL(`${baseUrl}${path}`);
-    for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined) url.searchParams.set(k, String(v));
-    const t = token();
-    let res: Response;
-    try {
-      res = await doFetch(url.toString(), { headers: { accept: "application/json", ...(t ? { authorization: `Bearer ${t}` } : {}) } });
-    } catch {
-      throw new ApiClientError(0, "NETWORK_ERROR", "Could not reach the API");
-    }
-    const json: unknown = await res.json().catch(() => null);
-    if (!res.ok) {
-      const e = ApiErrorBody.safeParse(json);
-      throw e.success ? new ApiClientError(res.status, e.data.error.code, e.data.error.message, e.data.error.fields) : new ApiClientError(res.status, "HTTP_ERROR", `Request failed (${res.status})`);
-    }
-    return schema.parse(json);
+  function http<S extends z.ZodType>(schema: S, path: string, query?: Record<string, string | number | boolean | undefined>): Promise<z.infer<S>> {
+    return requestJson(schema, { baseUrl, fetchImpl: doFetch, path, ...(query ? { query } : {}), token: token() });
   }
 
   const notFound = (what: string) => new ApiClientError(404, "NOT_FOUND", `${what} not found`);

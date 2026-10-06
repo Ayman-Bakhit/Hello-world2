@@ -1,9 +1,11 @@
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Config } from "./config";
 import type { Pool } from "./db/pool";
+import { csrfGuard } from "./auth/plugin";
 import { registerErrorHandling } from "./errors";
 import { registerRoutes } from "./routes";
 
@@ -26,9 +28,12 @@ export async function buildApp(deps: { config: Config; pool: Pool; logStream?: {
     origin: config.CORS_ORIGINS,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type"],
-    credentials: false,
+    // Needed for the HttpOnly session cookie. Safe only because origins are an exact allowlist (wildcards are rejected at config load).
+    credentials: true,
     maxAge: 600,
   });
+  await app.register(cookie);
+  app.addHook("onRequest", csrfGuard(config));
   // In-memory limiter: fine for one process. Use a shared store (Redis) before running multiple instances.
   await app.register(rateLimit, { global: true, max: config.RATE_LIMIT_MAX, timeWindow: config.RATE_LIMIT_WINDOW });
 

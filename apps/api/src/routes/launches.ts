@@ -14,7 +14,7 @@ const IdParams = z.strictObject({ id: z.string().uuid() });
  * built. The fee split is validated by the shared implementation and described as "Configured fee split".
  */
 export const launchRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
-  const auth = requireAuth(pool);
+  const auth = requireAuth(pool, config);
   const writeLimit = { rateLimit: { max: config.RATE_LIMIT_WRITE_MAX, timeWindow: config.RATE_LIMIT_WINDOW } };
 
   app.post("/api/launches", { preHandler: auth, config: writeLimit }, async (req, reply) => {

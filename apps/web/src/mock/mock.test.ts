@@ -88,3 +88,17 @@ describe("parity with the shared demo fixtures the API serves", () => {
     expect(buildTaxReserve(DEMO_IDS.wallets.trading, null, "demo").currentReserveCents).toBe(DEMO_TAX_RESERVE.reserveCents.toString());
   });
 });
+
+
+describe("no browser-readable secret storage", () => {
+  const files = walk(join(__dirname, "..")).filter((f) => /\.(tsx?)$/.test(f) && !f.endsWith(".test.ts"));
+  it("no source file touches localStorage, sessionStorage, or document.cookie", () => {
+    for (const f of files) {
+      const t = readFileSync(f, "utf8");
+      expect(t, f).not.toMatch(/localStorage|sessionStorage|document\.cookie|indexedDB/);
+    }
+  });
+  it("never handles key material", () => {
+    for (const f of files) expect(readFileSync(f, "utf8"), f).not.toMatch(/private_?key|seed_?phrase|mnemonic|secretKey/i);
+  });
+});

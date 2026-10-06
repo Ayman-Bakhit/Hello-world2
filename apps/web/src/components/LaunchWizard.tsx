@@ -21,9 +21,9 @@ import { RiskPanel, type Row } from "./RiskPanel";
 const IDS = LAUNCH_STEPS.map((s) => s.id);
 
 export function useStepContext(charities: Charity[]): StepContext {
-  const { connected, wallets } = useWallet();
+  const { ready, wallets } = useWallet();
   return {
-    walletConnected: connected,
+    walletConnected: ready,
     verifiedCharityIds: charities.filter((c) => c.verification === "verified").map((c) => c.id),
     walletIds: wallets.map((w) => w.id),
   };
@@ -87,9 +87,9 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
       <Card title={`Step ${idx + 1} of ${IDS.length} · ${LAUNCH_STEPS[idx]?.title}`} right={<Badge tone="demo">MOCK ONLY</Badge>}>
         {step === "connect" ? (
           <div className="space-y-3 text-sm">
-            <p className="text-muted">The creator wallet signs launch transactions. In this build the connection is a demo and nothing is signed.</p>
-            {wallet.connected ? (
-              <p className="text-gain">Demo wallet connected: {wallet.wallets.map((w) => w.label).join(", ")}</p>
+            <p className="text-muted">The creator wallet signs launch transactions. Launches are mock-only in this build and nothing is deployed.</p>
+            {wallet.ready ? (
+              <p className="text-gain">{wallet.mode === "api" ? "Authenticated" : "Demo wallet connected"}: {wallet.wallets.map((w) => w.label).join(", ")}</p>
             ) : (
               <Button variant="primary" onClick={wallet.openModal}>CONNECT WALLET</Button>
             )}

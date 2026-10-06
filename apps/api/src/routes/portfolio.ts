@@ -7,8 +7,8 @@ import type { Deps } from "./index";
 import { ownedWalletFromParams } from "./walletScope";
 
 /** DEMO-BACKED: ownership is checked in the database; balances come from demo fixtures (dataSource "demo"). */
-export const portfolioRoutes: FastifyPluginAsync<Deps> = async (app, { pool }) => {
-  app.get("/api/portfolio/:walletId", { preHandler: requireAuth(pool) }, async (req) => {
+export const portfolioRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
+  app.get("/api/portfolio/:walletId", { preHandler: requireAuth(pool, config) }, async (req) => {
     const wallet = await ownedWalletFromParams(pool, req);
     // Only demo wallets have fixtures. A real (non-demo) wallet has no indexed data yet.
     const body = wallet.dataSource === "demo" ? buildPortfolio(wallet.id) : null;

@@ -8,10 +8,15 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "e2e:auth": "node e2e/auth.e2e.mjs"
   },
   "dependencies": {
     "@project-name/shared": "workspace:*",
+    "@solana/wallet-standard-features": "^1.5.0",
+    "@wallet-standard/app": "^1.1.1",
+    "@wallet-standard/base": "^1.1.1",
+    "@wallet-standard/features": "^1.1.1",
     "next": "^16.3.8",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -24,6 +29,7 @@
     "@types/react-dom": "^19.3.0",
     "eslint": "^9.39.0",
     "eslint-config-next": "^16.3.8",
+    "playwright-core": "^1.63.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
