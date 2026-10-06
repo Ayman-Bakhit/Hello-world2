@@ -12,6 +12,7 @@ import { ButtonLink } from "../Button";
 import { Card } from "../Card";
 import { DataSourceBadge, DemoDataNotice } from "../DataSource";
 import { ManualBasisPanel } from "../ManualBasisPanel";
+import { TaxReportPanel } from "../TaxReportPanel";
 import { PageHeader } from "../PageHeader";
 import { AuthRequired, LoadingState, NoLiveData, ResourceView } from "../states";
 import { StatCard } from "../StatCard";
@@ -116,9 +117,10 @@ function Body({ walletId, wallets, onSelect }: { walletId: string; wallets: Para
       {data ? (
         <>
           <TaxView tax={data.tax} reserve={reserve.status === "ok" ? reserve.data : null} details={data.details} />
+          <TaxReportPanel walletId={walletId} refreshKey={rev} />
           {data.tax.dataSource === "chain" ? (
             <>
-              <ManualBasisPanel walletId={walletId} details={data.details} onChanged={() => setRev((n) => n + 1)} />
+              <div id="manual-basis"><ManualBasisPanel walletId={walletId} details={data.details} onChanged={() => setRev((n) => n + 1)} /></div>
               <div className="mt-6"><TaxInputsForm onApply={setQ} /></div>
             </>
           ) : null}

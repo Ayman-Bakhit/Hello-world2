@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import {
-  TAX_DATA_VERSION, TAX_DISCLAIMER, centsToUsdString, resolveTargetCents, type StoredTarget, type TaxReserveResponse, TAX_ENGINE_VERSION, TAX_LIMITATIONS, computeTax, type CostBasisMethod, type SwapTreatment, type TaxCalcResult, type TaxDetailsResponse,
+  TAX_DATA_VERSION, TAX_DISCLAIMER, buildTaxReport, canonicalReport, type TaxReport, centsToUsdString, resolveTargetCents, type StoredTarget, type TaxReserveResponse, TAX_ENGINE_VERSION, TAX_LIMITATIONS, computeTax, type CostBasisMethod, type SwapTreatment, type TaxCalcResult, type TaxDetailsResponse,
   type ManualBasisReview, type TaxCalculateRequest, type TaxEvent, type TaxResponse,
 } from "@project-name/shared";
 import { loadManualForTax } from "../db/manualBasisRepos";
 import { loadTaxInputs, type TaxInputs } from "../db/taxRepos";
 import type { Pool } from "../db/pool";
 import type { HistoricalPriceProvider } from "../prices/historical";
+import type { TaxGate } from "./taxGate";
 
 export interface TaxRun {
   result: TaxCalcResult;
@@ -19,6 +20,14 @@ export interface TaxRun {
 
 /** Loads the user's indexed transactions + prices and runs the shared calculation. Read-only, deterministic. */
 export async function runUserTax(
+  d: { pool: Pool; prices: HistoricalPriceProvider; maxTransactions: number; gate: TaxGate; now?: () => number },
+  userId: string,
+  q: TaxCalculateRequest,
+): Promise<TaxRun> {
+  return d.gate.run(userId, () => compute(d, userId, q));
+}
+
+async function compute(
   d: { pool: Pool; prices: HistoricalPriceProvider; maxTransactions: number; now?: () => number },
   userId: string,
   q: TaxCalculateRequest,
@@ -133,4 +142,15 @@ export function taxReserveOf(walletId: string, run: TaxRun, target: (StoredTarge
     ],
     dataSource: "chain", verifiedOnChain: false,
   };
+}
+
+
+/** The report is a read-only view over the SAME calculation (no second engine). The hash covers everything except generation metadata. */
+export function taxReportOf(walletId: string, run: TaxRun, limits: { maxRows: number; transactionCap: number }, now: () => Date = () => new Date()): TaxReport {
+  const rep = buildTaxReport({
+    result: run.result, walletId, fingerprint: run.fingerprint, generatedAt: now().toISOString(),
+    limits: { transactionCap: limits.transactionCap, transactionsTruncated: run.inputs.truncated, maxRows: limits.maxRows },
+  });
+  rep.reportHash = createHash("sha256").update(canonicalReport(rep)).digest("hex");
+  return rep;
 }

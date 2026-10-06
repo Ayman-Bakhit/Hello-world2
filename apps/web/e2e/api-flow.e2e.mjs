@@ -190,9 +190,9 @@ check("tax API: chain data, unverified, not complete, fingerprint present", taxA
 await page.getByRole("tab", { name: /All \(/ }).click();
 t = await text();
 check("tax: event list shows the failed transaction as a network fee and the received token as an unresolved transfer", t.includes("Network fee") && t.includes("Transfer in") && t.includes("UNRESOLVED"));
-await page.locator('select').first().selectOption("HIFO");
+await page.locator("form").filter({ has: page.getByRole("button", { name: "RECALCULATE" }) }).locator("select").first().selectOption("HIFO");
 await page.getByRole("button", { name: "RECALCULATE" }).click();
-await page.getByText("HIFO", { exact: true }).first().waitFor({ timeout: 8000 });
+await page.locator('section[aria-label="Calculation status"] span').filter({ hasText: /^HIFO/ }).first().waitFor({ timeout: 8000 });
 check("tax: choosing HIFO is applied and echoed (no longer 'default')", !(await text()).includes("HIFO (DEFAULT)"));
 await shot("5c-tax-live");
 
@@ -218,6 +218,7 @@ await page.getByLabel(/Acquisition date and time/).fill("2024-01-01T00:00:00Z");
 await page.getByLabel(/Total cost basis/).fill("75.00");
 await page.getByRole("button", { name: "SAVE COST BASIS" }).click();
 await page.getByText(/Saved as revision 1/).waitFor({ timeout: 8000 });
+await page.getByText("$75.00 USD").first().waitFor({ timeout: 8000 });
 t = await text();
 check("after saving: saved notice names USER_PROVIDED and says it is not verified on-chain; the record is listed with the provenance label", t.includes("USER_PROVIDED") && /not verified on-chain/.test(t) && t.includes("$75.00 USD"));
 // 2. SOL received: second basis, with hostile notes
@@ -228,14 +229,14 @@ await page.getByText(/Saved as revision 1/).waitFor({ timeout: 8000 });
 await page.getByRole("button", { name: /^ADD COST BASIS/ }).first().waitFor({ timeout: 8000 });
 await addFor("Received, origin unknown", "2024-01-02T00:00:00Z", "10.00");
 await page.getByText(/Saved as revision 1/).waitFor({ timeout: 8000 });
-await page.getByText("COMPLETE (ESTIMATE)").waitFor({ timeout: 10000 });
+await page.getByText("COMPLETE (ESTIMATE)").first().waitFor({ timeout: 10000 });
 t = await text();
 check("with basis for every transfer the status becomes COMPLETE (an estimate), only because the Slice 6 completeness rules are met", t.includes("COMPLETE (ESTIMATE)") && !t.includes("COST BASIS REQUIRED"));
 check("notes are rendered as inert text (no element created, no script ran)", (await page.locator("main img").count()) === 0 && (await page.evaluate(() => window.__xss)) === undefined && t.includes("<img src=x onerror=window.__xss=1>"));
 const apiList = await (await apiGet(`/api/wallets/${WALLET_ID}/manual-basis`)).json();
 check("API: records are USER_PROVIDED, verifiedOnChain false, exact raw quantities", apiList.records.length === 3 && apiList.records.every((r) => r.source === "USER_PROVIDED" && r.verifiedOnChain === false) && apiList.records.some((r) => r.quantityRaw === "1500000"));
 // 3. audit history
-await page.getByRole("button", { name: "AUDIT HISTORY" }).first().click();
+await page.getByRole("button", { name: "AUDIT HISTORY", exact: true }).first().click();
 await page.getByText("Hash chain intact").waitFor({ timeout: 5000 });
 check("audit history shows revisions and an intact hash chain", /Earlier values are never overwritten/.test(await text()));
 // 4. duplicate: add the token basis again
@@ -254,9 +255,30 @@ check("duplicate basis is flagged, EXCLUDED from the calculation, explained, and
 page.once("dialog", (d) => d.accept("duplicate entry"));
 await page.locator("li", { hasText: "POTENTIAL DUPLICATE" }).getByRole("button", { name: "VOID" }).first().click();
 await page.getByText("VOIDED").first().waitFor({ timeout: 8000 });
-await page.getByText("COMPLETE (ESTIMATE)").waitFor({ timeout: 10000 });
+await page.getByText("COMPLETE (ESTIMATE)").first().waitFor({ timeout: 10000 });
 const all = await (await apiGet(`/api/wallets/${WALLET_ID}/manual-basis?includeVoided=true`)).json();
 check("void keeps the record (no hard delete) and the status returns to COMPLETE", all.records.length === 4 && all.records.filter((r) => r.status === "voided").length === 1);
+// ---- Slice 8: TAX REPORT and export ----
+const rpt = page.locator('section[aria-label="Tax report"]');
+await rpt.getByText("COMPLETE (ESTIMATE)").waitFor({ timeout: 10000 });
+t = await rpt.innerText();
+check("tax report: estimated report, status COMPLETE (ESTIMATE), explicit UTC calendar-year boundary, summary cards", /TAX REPORT/i.test(t) && t.includes("Estimated tax report") && t.includes("UTC, by disposal time") && /Realized proceeds/i.test(t) && /Net gain \/ loss/i.test(t) && /Unresolved/i.test(t));
+check("tax report: states 'Includes user-provided tax data.', lists the records, fixture/unverified wording, no banned claims", t.includes("Includes user-provided tax data.") && /USER-PROVIDED/.test(t) && /not independently verified/.test(t) && !/irs-ready|tax filing ready|guaranteed|verified tax return|your tax bill/i.test(t));
+await rpt.locator("select").nth(0).selectOption("HIFO");
+await rpt.getByRole("button", { name: "UPDATE REPORT" }).click();
+await rpt.locator('section[aria-label="Report status"] span', { hasText: /^HIFO$/ }).first().waitFor({ timeout: 8000 });
+check("tax report: accounting method change is applied and shown", true);
+const [csvDl] = await Promise.all([page.waitForEvent("download", { timeout: 10000 }), rpt.getByRole("button", { name: "DOWNLOAD CSV" }).click()]);
+const csvText = (await import("node:fs")).readFileSync(await csvDl.path(), "utf8");
+check("CSV download: safe filename, header row with all columns, CRLF, no secrets", /^estimated-tax-report-\d{4}-hifo-[0-9a-f]{12}\.csv$/.test(csvDl.suggestedFilename()) && csvText.split("\r\n")[0].split(",").length === 31 && csvText.startsWith("report_status,tax_year,asset") && !csvText.includes("pn_session") && !csvText.includes("127.0.0.1"), JSON.stringify([csvDl.suggestedFilename(), csvText.slice(0, 120)]));
+const [jsonDl] = await Promise.all([page.waitForEvent("download", { timeout: 10000 }), rpt.getByRole("button", { name: "DOWNLOAD JSON" }).click()]);
+const jsonRep = JSON.parse((await import("node:fs")).readFileSync(await jsonDl.path(), "utf8"));
+check("JSON download: metadata, status, summary, provenance, manual basis disclosure, fingerprint; accounting method HIFO; verifiedOnChain false", jsonRep.accountingMethod === "HIFO" && jsonRep.status === "COMPLETE" && jsonRep.manualBasis.disclosure === "Includes user-provided tax data." && /^[0-9a-f]{64}$/.test(jsonRep.fingerprint) && jsonRep.provenance.verifiedOnChain === false && jsonRep.label === "ESTIMATED_TAX_REPORT" && !JSON.stringify(jsonRep).includes("<img"));
+const apiRep = await (await apiGet(`/api/tax/${WALLET_ID}/report?taxYear=${jsonRep.taxYear}&method=HIFO`)).json();
+check("report API equals the downloaded JSON (same fingerprint and hash)", apiRep.fingerprint === jsonRep.fingerprint && apiRep.reportHash === jsonRep.reportHash);
+check("report export requires a session and is refused for rates in a URL", (await fetch(`${API}/api/tax/${WALLET_ID}/report`)).status === 401 && (await apiGet(`/api/tax/${WALLET_ID}/report?shortTermRateBps=1&longTermRateBps=1&stateRateBps=1`)).status() === 400);
+await shot("5e-tax-report");
+
 // 6. API protection (no cookie => 401; foreign wallet ids are not reachable)
 const anon = await fetch(`${API}/api/wallets/${WALLET_ID}/manual-basis`);
 check("manual basis API requires a session", anon.status === 401);

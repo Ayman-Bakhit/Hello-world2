@@ -63,6 +63,11 @@ const Env = z.object({
   TAX_PRICE_MAX_AGE_SECONDS: blank(z.coerce.number().int().min(60).max(86_400 * 7).default(3600)),
   /** Hard cap on transactions read for one tax calculation; beyond it the result is marked incomplete. */
   TAX_MAX_TRANSACTIONS: blank(z.coerce.number().int().min(100).max(50_000).default(5000)),
+  /** Rows listed in a tax report/export. More than this is reported as DATA_REQUIRED (listing capped, totals complete); an export is refused. */
+  REPORT_MAX_ROWS: blank(z.coerce.number().int().min(1).max(200_000).default(20_000)),
+  /** Concurrent tax calculations: process-wide and per user. Over the limit is an explicit 503/429, not a queue. */
+  TAX_MAX_CONCURRENT: blank(z.coerce.number().int().min(1).max(64).default(16)),
+  TAX_MAX_CONCURRENT_PER_USER: blank(z.coerce.number().int().min(1).max(16).default(8)),
   // ---- Prices ----
   /** none = no prices (assets show PRICE DATA UNAVAILABLE). coingecko = SOL only. */
   PRICE_PROVIDER: blank(z.enum(["none", "coingecko"]).default("none")),

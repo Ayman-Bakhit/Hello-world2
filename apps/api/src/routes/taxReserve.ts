@@ -18,7 +18,7 @@ export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, co
   const view = async (userId: string, wallet: { id: string; dataSource: string }, q: TaxCalculateRequest) => {
     const t = await getTaxReserveTarget(pool, userId);
     if (wallet.dataSource === "demo") return respond(TaxReserveResponse, buildTaxReserve(wallet.id, t, t?.dataSource ?? "database"));
-    const run = await runUserTax({ pool, prices: app.taxPrices, maxTransactions: config.TAX_MAX_TRANSACTIONS }, userId, q);
+    const run = await runUserTax({ pool, prices: app.taxPrices, maxTransactions: config.TAX_MAX_TRANSACTIONS, gate: app.taxGate }, userId, q);
     return respond(TaxReserveResponse, taxReserveOf(wallet.id, run, t));
   };
 

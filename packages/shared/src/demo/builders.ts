@@ -8,6 +8,7 @@ import { percentOfGains, estimateTax, reserveStatus } from "../tax/engine";
 import { percentToBps } from "../feesplit";
 import { centsToUsdString, parseUsdToCents } from "../money";
 import { formatUnits } from "../chain/units";
+import { REPORT_DISCLAIMER, REPORT_VERSION, yearBoundary, type TaxReport } from "../taxdata/report";
 import {
   DEMO_ASSETS, DEMO_HOLDINGS, DEMO_REFERENCE_TIME, DEMO_RESERVE_CENTS, DEMO_TAX_ASSUMPTIONS, DEMO_TOKENS, DEMO_TRANSACTIONS,
   DEMO_WALLETS, TRANSPARENCY_CHECK_KEYS, demoRealizedEvents, type DemoToken,
@@ -128,6 +129,24 @@ export function buildTaxDetails(walletId: string): TaxDetailsResponse | null {
   return {
     walletId, taxYear: DEMO_TAX_ASSUMPTIONS.taxYear, costBasisMethod: "FIFO", status: "COMPLETE", realized: [], events: [], manualBasisReview: [], truncated: false,
     note: "Demo fixture: only aggregate figures exist. There are no itemized transactions behind them.", ...DEMO_PROVENANCE,
+  };
+}
+
+/** Demo report: aggregate fixture figures only (the fixture has no itemized proceeds or cost basis). Labeled demo. */
+export function buildDemoTaxReport(walletId: string, generatedAt: string): TaxReport | null {
+  if (!isDemoWallet(walletId)) return null;
+  const e = demoTaxEstimate();
+  const net = e.totalRealizedGainsCents - e.totalRealizedLossesCents;
+  return {
+    reportVersion: REPORT_VERSION, meta: { generatedAt }, label: "ESTIMATED_TAX_REPORT", walletId, taxYear: e.assumptions.taxYear, yearBoundary: yearBoundary(e.assumptions.taxYear),
+    accountingMethod: "FIFO", swapTreatment: "DISPOSAL_AND_ACQUISITION", feePolicy: "RECORDED_NOT_APPLIED", status: "COMPLETE",
+    summary: { proceedsCents: null, costBasisCents: null, gainLossCents: net.toString(), shortTermGainLossCents: e.shortTermNetCents.toString(), longTermGainLossCents: e.longTermNetCents.toString(), shortTermProceedsCents: null, longTermProceedsCents: null, disposalCount: e.taxableEventCount },
+    counts: { unresolvedEvents: 0, dataRequiredEvents: 0, unknownEvents: 0, matchedTransfers: 0, duplicatesIgnored: 0 },
+    requirements: [{ kind: "DEMO", severity: "info", count: 1, message: "DEMO DATA: fictional aggregate figures. There are no itemized transactions, proceeds or cost basis behind them." }],
+    manualBasis: { included: false, disclosure: null, records: [], recordsUnderReview: 0 },
+    priceProvenance: { sources: [], observations: [], note: "Demo fixture: no prices." },
+    provenance: { dataSource: "demo", verifiedOnChain: false, chainDataNote: "Nothing was read from a blockchain.", priceNote: "Demo fixture: no prices.", userProvidedNote: "No user-provided data." },
+    limits: { transactionCap: 0, transactionsTruncated: false, maxRows: 0, rowsExceeded: false }, disposals: [], unresolvedEvents: [], fingerprint: "demo-fixture", reportHash: "demo-fixture", disclaimer: REPORT_DISCLAIMER,
   };
 }
 

@@ -447,6 +447,67 @@ export type TaxCalculateRequest = z.infer<typeof TaxCalculateRequest>;
 export const TaxCalculateResponse = z.object({ tax: TaxResponse, details: TaxDetailsResponse });
 export type TaxCalculateResponse = z.infer<typeof TaxCalculateResponse>;
 
+// ---------- tax report (read-only view over the calculation) ----------
+const ReportStatus = TaxStatusEnum;
+const OriginEnum = z.enum(["CHAIN", "USER_PROVIDED"]);
+const PriceConf = z.enum(["FIXTURE", "OBSERVED"]);
+export const TaxReportDisposal = z.object({
+  id: z.string(), taxYear: z.number().int(), asset: z.string(), mint: z.string().nullable(), decimals: z.number().int(), quantityRaw: z.string(), quantity: z.string(),
+  acquiredAt: Iso, disposedAt: Iso, costBasisCents: Cents, proceedsCents: Cents, gainLossCents: Cents, holdingPeriod: z.enum(["SHORT_TERM", "LONG_TERM"]), accountingMethod: z.string(),
+  disposalSignature: z.string(), disposalWalletId: z.string(), acquisitionSignature: z.string().nullable(), acquisitionWalletId: z.string(),
+  acquisitionSource: OriginEnum, disposalSource: z.literal("CHAIN"), manualBasisId: z.string().nullable(),
+  proceedsValuation: z.enum(["PRICE", "COUNTER_LEG"]).nullable(), proceedsPriceSource: z.string().nullable(), proceedsPriceObservedAt: Iso.nullable(), proceedsPriceConfidence: PriceConf.nullable(),
+  costPriceSource: z.string().nullable(), costPriceObservedAt: Iso.nullable(), costPriceConfidence: PriceConf.nullable(),
+  feeLamports: z.string().nullable(), confidence: z.literal("ESTIMATED"), verifiedOnChain: z.literal(false), reportStatus: ReportStatus,
+});
+export const TaxReportUnresolved = z.object({
+  id: z.string(), signature: z.string(), walletId: z.string(), timestamp: Iso.nullable(), kind: z.string(), asset: z.string(), mint: z.string().nullable(), quantityRaw: z.string(),
+  status: z.string(), missing: z.array(z.string()), reason: z.string(), origin: OriginEnum, manualBasisId: z.string().nullable(),
+});
+export const TaxReportResponse = z.object({
+  reportVersion: z.string(),
+  meta: z.object({ generatedAt: Iso }),
+  label: z.literal("ESTIMATED_TAX_REPORT"),
+  walletId: Uuid,
+  taxYear: z.number().int(),
+  yearBoundary: z.object({ kind: z.literal("UTC_CALENDAR_YEAR"), from: Iso, toExclusive: Iso, basis: z.string() }),
+  accountingMethod: z.enum(["FIFO", "LIFO", "HIFO"]),
+  swapTreatment: z.enum(["DISPOSAL_AND_ACQUISITION", "NOT_ASSESSED"]),
+  feePolicy: z.string(),
+  status: ReportStatus,
+  summary: z.object({
+    proceedsCents: Cents.nullable(), costBasisCents: Cents.nullable(), gainLossCents: Cents, shortTermGainLossCents: Cents, longTermGainLossCents: Cents, shortTermProceedsCents: Cents.nullable(), longTermProceedsCents: Cents.nullable(),
+    disposalCount: z.number().int(),
+  }).nullable(),
+  counts: z.object({ unresolvedEvents: z.number().int(), dataRequiredEvents: z.number().int(), unknownEvents: z.number().int(), matchedTransfers: z.number().int(), duplicatesIgnored: z.number().int() }),
+  requirements: z.array(z.object({ kind: z.string(), severity: z.enum(["blocks_total", "incomplete", "info"]), message: z.string(), count: z.number().int() })),
+  manualBasis: z.object({
+    included: z.boolean(), disclosure: z.string().nullable(), recordsUnderReview: z.number().int(),
+    records: z.array(z.object({ id: z.string(), asset: z.string(), mint: z.string().nullable(), quantityRaw: z.string(), acquiredAt: Iso, costBasisCents: Cents, reviewState: z.string(), includedInCalculation: z.boolean(), linkedTransferEventId: z.string().nullable(), disposalSlicesUsing: z.number().int() })),
+  }),
+  priceProvenance: z.object({
+    sources: z.array(z.string()), note: z.string(),
+    observations: z.array(z.object({ asset: z.string(), source: z.string(), observedAt: Iso, confidence: PriceConf, priceMicroUsd: z.string(), events: z.number().int() })),
+  }),
+  provenance: z.object({ dataSource: z.enum(["chain", "demo"]), verifiedOnChain: z.literal(false), chainDataNote: z.string(), priceNote: z.string(), userProvidedNote: z.string() }),
+  limits: z.object({ transactionCap: z.number().int(), transactionsTruncated: z.boolean(), maxRows: z.number().int(), rowsExceeded: z.boolean() }),
+  disposals: z.array(TaxReportDisposal),
+  unresolvedEvents: z.array(TaxReportUnresolved),
+  fingerprint: z.string(),
+  reportHash: z.string(),
+  disclaimer: z.array(z.string()),
+});
+export type TaxReportResponse = z.infer<typeof TaxReportResponse>;
+/** Report parameters. All validated server-side; none are financial inputs, but exports use POST so nothing is cached or logged in URLs. */
+export const TaxReportQuery = TaxQuery;
+export const TaxReportExportRequest = z.strictObject({
+  format: z.enum(["csv", "json"]),
+  taxYear: z.number().int().min(2009).max(2100).optional(),
+  method: z.enum(["FIFO", "LIFO", "HIFO"]).optional(),
+  swapTreatment: z.enum(["DISPOSAL_AND_ACQUISITION", "NOT_ASSESSED"]).optional(),
+});
+export type TaxReportExportRequest = z.infer<typeof TaxReportExportRequest>;
+
 // ---------- tax reserve ----------
 export const TaxReserveTarget = z.object({
   targetType: z.enum(["percentage", "amount"]),

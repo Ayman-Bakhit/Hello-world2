@@ -22,4 +22,8 @@ export const BANNED_PHRASES = [
   "safe crypto",
   "anti-rug",
   "your tax bill",
+  "irs-ready",
+  "tax filing ready",
+  "guaranteed tax result",
+  "verified tax return",
 ] as const;

@@ -14,7 +14,7 @@ import { ownedWalletFromParams } from "./walletScope";
 export const taxRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
   const limit = { rateLimit: { max: config.RATE_LIMIT_WRITE_MAX * 3, timeWindow: config.RATE_LIMIT_WINDOW } };
   const run = (req: Parameters<typeof actorOf>[0], q: TaxCalculateRequest) =>
-    runUserTax({ pool, prices: app.taxPrices, maxTransactions: config.TAX_MAX_TRANSACTIONS }, actorOf(req).userId, q);
+    runUserTax({ pool, prices: app.taxPrices, maxTransactions: config.TAX_MAX_TRANSACTIONS, gate: app.taxGate }, actorOf(req).userId, q);
 
   app.get("/api/tax/:walletId", { preHandler: requireAuth(pool, config), config: limit }, async (req) => {
     const wallet = await ownedWalletFromParams(pool, req);

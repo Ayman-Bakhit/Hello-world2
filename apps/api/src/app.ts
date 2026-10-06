@@ -8,6 +8,7 @@ import type { Pool } from "./db/pool";
 import { csrfGuard } from "./auth/plugin";
 import { registerErrorHandling } from "./errors";
 import { ObservationHistoricalPriceProvider, type HistoricalPriceProvider } from "./prices/historical";
+import { TaxGate } from "./services/taxGate";
 import { IndexerService, createIndexerParts, type IndexerParts } from "./indexer/service";
 import { registerRoutes } from "./routes";
 
@@ -15,6 +16,7 @@ declare module "fastify" {
   interface FastifyInstance {
     indexer: IndexerService;
     taxPrices: HistoricalPriceProvider;
+    taxGate: TaxGate;
   }
 }
 
@@ -37,6 +39,8 @@ export async function buildApp(deps: { config: Config; pool: Pool; logStream?: {
     origin: config.CORS_ORIGINS,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type"],
+    // lets the browser read the server-validated export filename (and nothing else extra)
+    exposedHeaders: ["Content-Disposition"],
     // Needed for the HttpOnly session cookie. Safe only because origins are an exact allowlist (wildcards are rejected at config load).
     credentials: true,
     maxAge: 600,
@@ -49,6 +53,7 @@ export async function buildApp(deps: { config: Config; pool: Pool; logStream?: {
   app.decorateRequest("actor", null);
   const indexer = new IndexerService(deps.pool, config, deps.indexer ?? createIndexerParts(config), app.log);
   app.decorate("indexer", indexer);
+  app.decorate("taxGate", new TaxGate(config.TAX_MAX_CONCURRENT, config.TAX_MAX_CONCURRENT_PER_USER));
   app.decorate("taxPrices", deps.taxPrices ?? new ObservationHistoricalPriceProvider(deps.pool, config.TAX_PRICE_MAX_AGE_SECONDS));
   await indexer.sweepStale();
   app.addHook("onClose", async () => { await indexer.drain(); });

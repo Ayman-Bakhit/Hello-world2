@@ -1,6 +1,6 @@
 import {
   CharityList, DEMO_CHARITIES, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
-  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, ManualBasisDetail, ManualBasisList, ManualBasisView,
+  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
   type CreateManualBasisRequest, type ReviseManualBasisRequest, type VoidManualBasisRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
   buildTax, buildTaxDetails, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
@@ -153,6 +153,36 @@ export function createApiClient(opts: ClientOptions = {}) {
     calculateTaxReserve: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxReserveResponse> =>
       mode === "api" ? send(TaxReserveResponse, `/api/tax-reserve/${encodeURIComponent(walletId)}/calculate`, toCalculateRequest(q)) : buildTaxReserve(mockId(walletId), mockTarget, "demo"),
 
+    /** Estimated tax report (read-only view over the calculation). GET carries only non-sensitive parameters. */
+    getTaxReport: async (walletId: string, q: Pick<TaxQueryParams, "taxYear" | "method" | "swapTreatment"> = {}): Promise<TaxReportResponse> =>
+      mode === "api" ? http(TaxReportResponse, `/api/tax/${encodeURIComponent(walletId)}/report`, { ...q }) : TaxReportResponse.parse(need(buildDemoTaxReport(mockId(walletId), new Date().toISOString()), "Tax report")),
+
+    /** Export as a file's text. POST body, never a URL. The filename is the server's validated one. */
+    exportTaxReport: async (walletId: string, req: { format: "csv" | "json"; taxYear?: number; method?: "FIFO" | "LIFO" | "HIFO"; swapTreatment?: "DISPOSAL_AND_ACQUISITION" | "NOT_ASSESSED" }): Promise<{ filename: string; mime: string; text: string }> => {
+      if (mode !== "api") {
+        const rep = need(buildDemoTaxReport(mockId(walletId), new Date().toISOString()), "Tax report");
+        return { filename: exportFilename(rep, req.format), mime: req.format === "csv" ? "text/csv" : "application/json", text: req.format === "csv" ? reportToCsv(rep) : reportToJson(rep) };
+      }
+      let res: Response;
+      try {
+        res = await doFetch(`${baseUrl}/api/tax/${encodeURIComponent(walletId)}/report/export`, {
+          method: "POST", credentials: "include", cache: "no-store",
+          headers: { accept: "text/csv,application/json", "content-type": "application/json", ...(token() ? { authorization: `Bearer ${token()}` } : {}) },
+          body: JSON.stringify(req),
+        });
+      } catch {
+        throw new ApiClientError(0, "NETWORK_ERROR", "Could not reach the API");
+      }
+      const text = await res.text();
+      if (!res.ok) {
+        let code = "HTTP_ERROR", message = `Request failed (${res.status})`;
+        try { const j = JSON.parse(text) as { error?: { code?: string; message?: string } }; if (j.error?.code) { code = j.error.code; message = j.error.message ?? message; } } catch { /* not JSON */ }
+        throw new ApiClientError(res.status, code, message);
+      }
+      const cd = /filename="([A-Za-z0-9._-]{1,120})"/.exec(res.headers.get("content-disposition") ?? "");
+      return { filename: cd?.[1] ?? `estimated-tax-report.${req.format}`, mime: req.format === "csv" ? "text/csv" : "application/json", text };
+    },
+
     // ---- USER_PROVIDED cost basis (real wallets only; never blockchain data) ----
     listManualBasis: async (walletId: string, includeVoided = false): Promise<z.infer<typeof ManualBasisList>> => {
       if (mode !== "api") throw manualUnsupported();
@@ -207,4 +237,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

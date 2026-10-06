@@ -34,7 +34,7 @@ export const manualBasisRoutes: FastifyPluginAsync<Deps> = async (app, { pool, c
     return { wallet: w, basisId: p.basisId };
   };
   const reviews = async (userId: string): Promise<Map<string, ManualBasisReview>> => {
-    const run = await runUserTax({ pool, prices: app.taxPrices, maxTransactions: config.TAX_MAX_TRANSACTIONS }, userId, {});
+    const run = await runUserTax({ pool, prices: app.taxPrices, maxTransactions: config.TAX_MAX_TRANSACTIONS, gate: app.taxGate }, userId, {});
     return new Map(run.result.manualBasisReview.map((r) => [r.manualBasisId, r]));
   };
   const toApi = (e: unknown): never => {

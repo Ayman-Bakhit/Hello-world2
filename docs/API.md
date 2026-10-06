@@ -41,6 +41,8 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 | `GET /api/tax-reserve/:walletId` | session + owner | target: db; balance/exposure: demo | mixed |
 | `POST /api/tax-reserve/:walletId/target` | session + owner | db | production-capable (config only, moves no funds) |
 | `POST /api/tax/:walletId/calculate`, `POST /api/tax-reserve/:walletId/calculate` | session + owner | derived | same results as the GET routes, with year/method/swap treatment/**tax rates in the body** |
+| `GET /api/tax/:walletId/report` | session + owner | derived | estimated tax report (JSON) for a year/method/swap treatment |
+| `POST /api/tax/:walletId/report/export` | session + owner, rate limited | derived | CSV or JSON file download |
 | `GET/POST /api/wallets/:id/manual-basis` | session + owner | db (USER_PROVIDED) | list / create user-provided cost basis (real wallets only) |
 | `GET /api/wallets/:id/manual-basis/:basisId` | session + owner | db | record + full audit history + `historyIntact` |
 | `POST /api/wallets/:id/manual-basis/:basisId/revisions`, `.../void` | session + owner | db | auditable correction / soft removal. **No DELETE** |
@@ -191,3 +193,8 @@ All routes: session, wallet ownership checked in SQL (`user_id` AND `wallet_id`)
 - `POST .../:basisId/void` body `{ changeReason, expectedRevision }` -> a `void` revision; the record stays visible with `includeVoided=true` and stops counting.
 - Review states in `review.state`: `OK`, `POTENTIAL_DUPLICATE`, `OVERLAPPING_BASIS`, `DECIMALS_MISMATCH`, with `included`, `acknowledged`, `linkedEventId`, `conflicts[]`, `explanation`.
 - Tax: `GET /api/tax/:walletId[/details]` accept only `taxYear`, `method`, `swapTreatment` (rates in a URL are `400`). `POST /api/tax/:walletId/calculate` takes `{ taxYear?, method?, swapTreatment?, rates? }` and returns `{ tax, details }` from one calculation; `POST /api/tax-reserve/:walletId/calculate` likewise. Details add `manualBasisReview[]`; events carry `origin` (`CHAIN|USER_PROVIDED`) and `manualBasisId`; realized slices carry `acquisitionOrigin`; counts include `MANUAL_BASIS`; requirement kind `BASIS_REVIEW`.
+
+### Tax report and export (Slice 8)
+- `GET /api/tax/:walletId/report?taxYear=&method=FIFO|LIFO|HIFO&swapTreatment=DISPOSAL_AND_ACQUISITION|NOT_ASSESSED` -> `TaxReportResponse` (see TAX_ENGINE.md for fields). Unknown query fields, tax rates and out-of-range years are `400`. Demo wallets get a labeled demo report (aggregate figures only). Never-synced real wallets: `status: "UNAVAILABLE"`, `summary: null`.
+- `POST /api/tax/:walletId/report/export` body `{ format: "csv"|"json", taxYear?, method?, swapTreatment? }` (strict; unknown fields `400`; body limit 64 KB, larger is `413`). Returns the file with `Content-Disposition: attachment; filename="estimated-tax-report-<year>-<method>-<hex12>.<ext>"`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`; CORS exposes only `Content-Disposition` so the browser can read the filename. `413 EXPORT_TOO_LARGE` if the report lists more than `REPORT_MAX_ROWS` disposals (never truncated). Parameters travel in the body (not a URL).
+- Errors: `401`, `404` (not your wallet; identical for unknown), `400`, `429 TAX_IN_PROGRESS` (too many of your calculations already running), `503 TAX_BUSY` (process-wide limit), `500` generic (no stack, path or message).
