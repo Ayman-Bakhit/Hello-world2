@@ -9,7 +9,9 @@ import type { CostBasisMethod, HoldingPeriod, TaxAssumptions, TaxEstimate } from
 export const TAX_DATA_VERSION = "1";
 
 export type TaxStatus = "COMPLETE" | "PARTIAL" | "DATA_REQUIRED" | "UNAVAILABLE";
-export type TaxEventKind = "BUY" | "SELL" | "TRANSFER_IN" | "TRANSFER_OUT" | "FEE" | "UNKNOWN";
+/** MANUAL_BASIS is NOT a blockchain event: it is cost basis the USER supplied (origin USER_PROVIDED). */
+export type TaxEventKind = "BUY" | "SELL" | "TRANSFER_IN" | "TRANSFER_OUT" | "FEE" | "UNKNOWN" | "MANUAL_BASIS";
+export type EventOrigin = "CHAIN" | "USER_PROVIDED";
 /**
  * READY          usable in the calculation (it may still be an estimate)
  * DATA_REQUIRED  cannot be used until data (a price, a timestamp, cost basis) exists
@@ -18,7 +20,7 @@ export type TaxEventKind = "BUY" | "SELL" | "TRANSFER_IN" | "TRANSFER_OUT" | "FE
  * EXCLUDED       nothing moved for the wallet (e.g. a failed transaction it did not pay for); reason stated, no tax effect
  */
 export type TaxEventStatus = "READY" | "DATA_REQUIRED" | "UNRESOLVED" | "MATCHED" | "EXCLUDED";
-export type MissingKind = "PRICE" | "COST_BASIS" | "TIMESTAMP" | "CLASSIFICATION" | "TRANSFER_MATCH";
+export type MissingKind = "PRICE" | "COST_BASIS" | "TIMESTAMP" | "CLASSIFICATION" | "TRANSFER_MATCH" | "BASIS_REVIEW";
 /** Never "verified": the underlying chain data is read from an RPC node and is not independently verified. */
 export type Confidence = "ESTIMATED" | "NONE";
 export type SwapTreatment = "DISPOSAL_AND_ACQUISITION" | "NOT_ASSESSED";
@@ -71,6 +73,7 @@ export interface TaxCoverage {
  * supports them so that a COMPLETE result is possible at all and so a future "enter cost basis" feature has a home.
  */
 export interface OpeningLotInput {
+  /** manual basis record id */
   id: string;
   walletId: string;
   asset: string;
@@ -78,6 +81,38 @@ export interface OpeningLotInput {
   quantity: bigint;
   acquiredAt: number;
   costBasisCents: bigint;
+  /** current revision number of the record */
+  revision?: number;
+  /** unix MILLISECONDS the record was first created (orders duplicates: the earlier record wins) */
+  createdAt?: number;
+  /** optional transaction signature the user says the basis belongs to (used to LINK it to a transfer-in) */
+  signature?: string | null;
+  reason?: string;
+  /** the user reviewed an overlap/duplicate warning and says the record is distinct */
+  acknowledgedOverlap?: boolean;
+}
+export type ManualBasisInput = OpeningLotInput;
+
+export type ReviewState = "OK" | "POTENTIAL_DUPLICATE" | "OVERLAPPING_BASIS" | "DECIMALS_MISMATCH";
+export interface ReviewConflict {
+  source: "CHAIN" | "USER_PROVIDED";
+  /** event id or manual basis id */
+  id: string;
+  signature: string;
+  asset: string;
+  quantity: bigint;
+  timestamp: number | null;
+}
+export interface ManualBasisReview {
+  manualBasisId: string;
+  state: ReviewState;
+  acknowledged: boolean;
+  /** false = excluded from the calculation until reviewed */
+  included: boolean;
+  /** the transfer-in this record resolved, if any */
+  linkedEventId: string | null;
+  conflicts: ReviewConflict[];
+  explanation: string;
 }
 
 export interface TaxCalcInput {
@@ -124,6 +159,10 @@ export interface TaxEvent {
   candidates: string[];
   /** SELL: base units for which no acquisition lot existed (cost basis missing) */
   uncoveredQuantity: bigint;
+  /** where the data came from. MANUAL_BASIS events are always USER_PROVIDED and never "from Solana" */
+  origin: EventOrigin;
+  /** the user-provided basis record that supplied/resolved this event's cost basis */
+  manualBasisId: string | null;
 }
 
 export interface RealizedSlice {
@@ -143,6 +182,8 @@ export interface RealizedSlice {
   acquisitionSignature: string;
   walletId: string;
   sourceWalletIdOfLot: string;
+  acquisitionOrigin: EventOrigin;
+  manualBasisId: string | null;
   proceedsPrice: PriceQuote | null;
   costPrice: PriceQuote | null;
   /** fees recorded for the disposal transaction (lamports), not applied */
@@ -169,6 +210,7 @@ export interface TaxCalcResult {
   /** exposure needs user-supplied rates */
   exposureCents: bigint | null;
   requirements: Requirement[];
+  manualBasisReview: ManualBasisReview[];
   counts: Record<TaxEventKind, number> & { unresolved: number; dataRequired: number; matched: number; duplicatesIgnored: number };
   /** deterministic description of the inputs, for hashing by the caller */
   canonicalInput: string;

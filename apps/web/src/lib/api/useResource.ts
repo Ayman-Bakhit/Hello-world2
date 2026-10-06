@@ -5,16 +5,20 @@ import { describeApiError, type ApiErrorView } from "./errors";
 
 export type Resource<T> =
   | { status: "idle" }
-  | { status: "loading" }
+  /** `previous` = the last successful data while a reload is in flight, so screens can stay mounted */
+  | { status: "loading"; previous?: T }
   | { status: "ok"; data: T }
   | { status: "error"; error: ApiErrorView };
 
 type Action<T> = { type: "idle" } | { type: "loading" } | { type: "ok"; data: T } | { type: "error"; error: ApiErrorView };
 
-function reducer<T>(_s: Resource<T>, a: Action<T>): Resource<T> {
+function reducer<T>(s: Resource<T>, a: Action<T>): Resource<T> {
   switch (a.type) {
     case "idle": return { status: "idle" };
-    case "loading": return { status: "loading" };
+    case "loading": {
+      const previous = s.status === "ok" ? s.data : s.status === "loading" ? s.previous : undefined;
+      return previous !== undefined ? { status: "loading", previous } : { status: "loading" };
+    }
     case "ok": return { status: "ok", data: a.data };
     case "error": return { status: "error", error: a.error };
   }

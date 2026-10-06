@@ -114,7 +114,7 @@ export function TaxReserveView({ data, onSave, saving, saveError, savedNotice }:
 function Body({ walletId, wallets, onSelect }: { walletId: string; wallets: Parameters<typeof WalletPicker>[0]["wallets"]; onSelect: (id: string) => void }) {
   const w = useWallet();
   const [q, setQ] = useState<TaxQueryParams>({});
-  const res = useResource(`reserve-screen:${walletId}:${JSON.stringify(q)}`, () => api.getTaxReserve(walletId, q), () => void w.refreshSession());
+  const res = useResource(`reserve-screen:${walletId}:${JSON.stringify(q)}`, () => api.calculateTaxReserve(walletId, q), () => void w.refreshSession());
   const [latest, setLatest] = useState<TaxReserveResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<ApiErrorView | null>(null);

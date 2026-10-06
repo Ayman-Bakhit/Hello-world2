@@ -43,3 +43,16 @@ export function draftToQuery(d: TaxFormDraft): { ok: true; query: TaxQueryParams
   }
   return { ok: true, query: q };
 }
+
+/** The POST body for /calculate: rates and every other input travel in the body, never in a URL. */
+export function toCalculateRequest(q: TaxQueryParams): {
+  taxYear?: number; method?: "FIFO" | "LIFO" | "HIFO"; swapTreatment?: "DISPOSAL_AND_ACQUISITION" | "NOT_ASSESSED";
+  rates?: { shortTermRateBps: number; longTermRateBps: number; stateRateBps: number };
+} {
+  return {
+    ...(q.taxYear !== undefined ? { taxYear: q.taxYear } : {}),
+    ...(q.method ? { method: q.method } : {}),
+    ...(q.swapTreatment ? { swapTreatment: q.swapTreatment } : {}),
+    ...(q.shortTermRateBps !== undefined ? { rates: { shortTermRateBps: q.shortTermRateBps, longTermRateBps: q.longTermRateBps!, stateRateBps: q.stateRateBps! } } : {}),
+  };
+}

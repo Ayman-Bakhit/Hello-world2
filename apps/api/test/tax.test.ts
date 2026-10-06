@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  KNOWN_DEX_PROGRAMS, SYSTEM_PROGRAM, TOKEN_PROGRAM, TaxDetailsResponse, TaxReserveResponse, TaxResponse, fakeBase58, fakeMint, fakeSignature, fakeTokenAccount, type TxSpec,
+  KNOWN_DEX_PROGRAMS, SYSTEM_PROGRAM, TOKEN_PROGRAM, TaxCalculateResponse, TaxDetailsResponse, TaxReserveResponse, TaxResponse, fakeBase58, fakeMint, fakeSignature, fakeTokenAccount, type TxSpec,
 } from "@project-name/shared";
 import { createSession } from "../src/auth/session";
 import { FixtureHistoricalPriceProvider, ObservationHistoricalPriceProvider, pointLookup } from "../src/prices/historical";
@@ -38,6 +38,8 @@ const sync = async (u: { token: string; walletId: string }) => {
 };
 const get = (u: { token: string }, url: string) => ctx.app.inject({ method: "GET", url, headers: bearer(u.token) });
 const tax = async (u: U, q = "") => TaxResponse.parse((await get(u, `/api/tax/${u.walletId}${q}`)).json());
+const postTo = (u: { token: string; walletId: string }, path: string, body: unknown) => ctx.app.inject({ method: "POST", url: path.replace(":id", u.walletId), headers: bearer(u.token), payload: body as object });
+const calc = async (u: U, body: object) => TaxCalculateResponse.parse((await postTo(u, "/api/tax/:id/calculate", body)).json());
 const details = async (u: U, q = "") => TaxDetailsResponse.parse((await get(u, `/api/tax/${u.walletId}/details${q}`)).json());
 
 /** wallet swaps 1 SOL for 25 tokens through a recognized DEX at time T+n */
@@ -118,7 +120,7 @@ describe("tax API: real wallets", () => {
     const spec: TxSpec = { signature: fakeSignature("internal"), slot: 50, blockTime: T, fee: 5000, accounts: [{ key: a.address, pre: 5n * SOL, post: 4n * SOL - 5000n }, { key: b.address, pre: 0, post: SOL }], programs: [SYSTEM_PROGRAM] };
     rpc.addTx([a.address, b.address], spec);
     await sync(a); await sync(b);
-    const t = await tax(a, "?taxYear=2023&shortTermRateBps=3000&longTermRateBps=1500&stateRateBps=500");
+    const t = (await calc(a, { taxYear: 2023, rates: { shortTermRateBps: 3000, longTermRateBps: 1500, stateRateBps: 500 } })).tax;
     expect(t.calculation!.walletsIncluded).toBe(2);
     expect(t.calculation!.counts).toMatchObject({ matched: 2, unresolved: 0, TRANSFER_IN: 1, TRANSFER_OUT: 1 });
     expect(t.status).toBe("COMPLETE");
@@ -160,11 +162,15 @@ describe("tax API: real wallets", () => {
     expect(none.estimatedTaxExposureCents).toBeNull();
     expect(none.assumptions).toBeNull();
     expect(none.requirements.find((r) => r.kind === "RATES")!.severity).toBe("info");
-    const some = await tax(u, "?taxYear=2023&shortTermRateBps=3000&longTermRateBps=1500&stateRateBps=0");
+    const some = (await calc(u, { taxYear: 2023, rates: { shortTermRateBps: 3000, longTermRateBps: 1500, stateRateBps: 0 } })).tax;
     expect(some.assumptions).toEqual({ jurisdiction: "US", taxYear: 2023, shortTermRateBps: 3000, longTermRateBps: 1500, stateRateBps: 0 });
     expect(some.estimatedTaxExposureCents).toBe("0");
-    expect((await get(u, `/api/tax/${u.walletId}?shortTermRateBps=3000`)).statusCode).toBe(400);
-    expect((await get(u, `/api/tax/${u.walletId}?shortTermRateBps=99999&longTermRateBps=1&stateRateBps=1`)).statusCode).toBe(400);
+    // rates are personal financial inputs: refused in a URL, accepted only in a POST body, and validated
+    expect((await get(u, `/api/tax/${u.walletId}?shortTermRateBps=3000&longTermRateBps=1&stateRateBps=1`)).statusCode).toBe(400);
+    expect((await postTo(u, "/api/tax/:id/calculate", { rates: { shortTermRateBps: 3000 } })).statusCode).toBe(400);
+    expect((await postTo(u, "/api/tax/:id/calculate", { rates: { shortTermRateBps: 99999, longTermRateBps: 1, stateRateBps: 1 } })).statusCode).toBe(400);
+    expect((await postTo(u, "/api/tax/:id/calculate", { taxYear: 2023, extra: 1 })).statusCode).toBe(400);
+    expect((await ctx.app.inject({ method: "POST", url: `/api/tax/${u.walletId}/calculate`, payload: {} })).statusCode).toBe(401);
   });
   it("reproducible: same inputs => same fingerprint; new transaction => different fingerprint", async () => {
     await boot();
@@ -252,7 +258,7 @@ describe("tax reserve (estimate only, no money movement)", () => {
     await sync(u);
     const post = await ctx.app.inject({ method: "POST", url: `/api/tax-reserve/${u.walletId}/target`, payload: { targetType: "percentage", targetPercentage: "30" }, headers: bearer(u.token) });
     expect(post.statusCode).toBe(200);
-    const r = TaxReserveResponse.parse((await get(u, `/api/tax-reserve/${u.walletId}?taxYear=2023&shortTermRateBps=3000&longTermRateBps=1500&stateRateBps=0`)).json());
+    const r = TaxReserveResponse.parse((await postTo(u, "/api/tax-reserve/:id/calculate", { taxYear: 2023, rates: { shortTermRateBps: 3000, longTermRateBps: 1500, stateRateBps: 0 } })).json());
     expect(r).toMatchObject({ custody: "none", currentReserveCents: null, reserveDataSource: null, coverageBps: null, recommendedAdditionalReserveCents: null, estimatedTaxExposureCents: "0", resolvedTargetCents: "0", dataSource: "chain" });
     expect(r.target).toMatchObject({ targetType: "percentage", targetPercentage: "30" });
     expect(r.disclaimer.join(" ")).toMatch(/never moves funds/);

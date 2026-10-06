@@ -65,3 +65,26 @@ The existing `realize()` (FIFO/LIFO/HIFO) is used unchanged. The method is a req
 
 ### Known limits (in addition to the list above)
 No manual cost-basis entry, no income classification (airdrops/staking), no wash-sale, no specific-ID. Sub-cent values are floored. A wallet history capped by the initial indexing limit is `PARTIAL` by construction, so realistic real-wallet results are PARTIAL or DATA_REQUIRED until backfill and a historical price source exist. `UNKNOWN`/unresolved items are excluded from every figure and listed instead.
+
+## Manual cost basis (Slice 7)
+Code: `taxdata/manual.ts` (strict parsing), `taxdata/compute.ts` (review, linking, lots), `apps/api/src/{db/manualBasisRepos,services/manualBasis,routes/manualBasis}.ts`.
+
+### What user-provided basis means (and does not)
+A record is the **user's own statement** that a quantity of an asset in one of their wallets has a given USD cost basis and acquisition time. Everything about it carries `source: USER_PROVIDED` / `origin: USER_PROVIDED`; it is never presented as blockchain data and `verifiedOnChain` is always `false`. It does **not** prove the user acquired the asset, when, or for how much; it is not checked against any exchange, receipt or chain. It does **not** supply prices (a missing historical price still blocks COMPLETE), does **not** classify UNKNOWN transactions, and does **not** complete missing history. The system never calls it "verified".
+
+### Model
+`MANUAL_BASIS` is a separate event kind (not a purchase, not a transfer, not a blockchain transaction). Input to the engine (`openingLots`): wallet, asset, decimals, raw quantity, acquisition time, total cost basis (cents), revision, created-at (ms), optional signature, reason, `acknowledgedOverlap`. Quantities are exact bigint raw units; the user types whole-token decimals, which are converted losslessly or **rejected** (more decimals than the asset has; USD with more than 2 decimals; non-canonical numbers; non-UTC or sub-second or future or pre-2009 times).
+
+### How it enters the calculation
+- **As lots**: each included record is an acquisition lot (same engine, FIFO/LIFO/HIFO unchanged). **Wallet scoping**: a manual lot is only eligible for disposals in the SAME wallet (no cross-wallet matching). On-chain lots stay pooled per asset across the user's wallets (Slice 6). Disposals are processed in time order against the remaining lots, so a lot cannot go negative or be consumed twice.
+- **Resolving a transfer-in**: an unmatched TRANSFER_IN (same wallet, same asset) is linked to user records when (a) records carry that transaction's signature and together equal its quantity, or (b) exactly one record has the exact quantity and an earlier acquisition time. The transfer becomes READY, names the manual record(s), and stays `origin: CHAIN` (it is a blockchain transaction); the record stays `USER_PROVIDED`. Partial coverage (less than the received quantity) leaves it UNRESOLVED and says how much is covered. Ambiguity (several exact matches) is not linked. A linked record is the basis for those units; it does not add units (no double count).
+- **Status**: unchanged rules. Basis can turn `DATA_REQUIRED` (missing cost basis) into `PARTIAL`/`COMPLETE` only if every other requirement (prices, timestamps, classification, history, holdings, transfer matches, review) is satisfied. A record under review adds `BASIS_REVIEW` (PARTIAL).
+
+### Duplicates and overlaps (excluded, never merged or deleted)
+Review states: `POTENTIAL_DUPLICATE`, `OVERLAPPING_BASIS`, `DECIMALS_MISMATCH`, `OK`. A record is **POTENTIAL_DUPLICATE** when, in the same wallet and asset, it matches an earlier user record or an on-chain BUY by the same transaction signature (against chain) or the same quantity within 24 hours (or same quantity and signature against a user record). The earlier record wins; the later is **excluded** from lots until the user acknowledges (a new revision with `acknowledgeOverlap=true`) or voids it. **OVERLAPPING_BASIS**: records tied to one transfer's signature that together exceed what it received. **DECIMALS_MISMATCH**: decimals contradict the asset's on-chain decimals (not acknowledgeable). Each review lists conflicts with source (`CHAIN`/`USER_PROVIDED`), id, signature, quantity and time, and an explanation. Same signature with different quantities is allowed (a transfer explained in pieces); the overlap rule catches excess.
+
+### Audit history
+Every change is an immutable, hash-chained revision (see DATABASE.md). The calculation fingerprint covers record id, revision, quantity, time, cost, signature, acknowledgement and creation time, so any edit changes it.
+
+### Limits
+No automatic matching beyond the rules above; no proceeds or price entry; no income treatment; no multi-currency; on-chain lots remain user-pooled while manual lots are wallet-scoped (so a manual lot moved to another wallet by a matched transfer does not follow it; add basis for the receiving wallet).

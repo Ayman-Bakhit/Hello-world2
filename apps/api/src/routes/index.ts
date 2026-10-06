@@ -7,6 +7,7 @@ import { discoverRoutes } from "./discover";
 import { donationRoutes } from "./donations";
 import { healthRoutes } from "./health";
 import { launchRoutes } from "./launches";
+import { manualBasisRoutes } from "./manualBasis";
 import { portfolioRoutes } from "./portfolio";
 import { proofRoutes } from "./proof";
 import { syncRoutes } from "./sync";
@@ -27,6 +28,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
   await app.register(authRoutes, deps);
   await app.register(walletRoutes, deps);
   await app.register(syncRoutes, deps);
+  await app.register(manualBasisRoutes, deps);
   await app.register(portfolioRoutes, deps);
   await app.register(transactionRoutes, deps);
   await app.register(taxRoutes, deps);

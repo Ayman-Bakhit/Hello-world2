@@ -126,7 +126,7 @@ export function buildTax(walletId: string): TaxResponse {
 export function buildTaxDetails(walletId: string): TaxDetailsResponse | null {
   if (!isDemoWallet(walletId)) return null;
   return {
-    walletId, taxYear: DEMO_TAX_ASSUMPTIONS.taxYear, costBasisMethod: "FIFO", status: "COMPLETE", realized: [], events: [], truncated: false,
+    walletId, taxYear: DEMO_TAX_ASSUMPTIONS.taxYear, costBasisMethod: "FIFO", status: "COMPLETE", realized: [], events: [], manualBasisReview: [], truncated: false,
     note: "Demo fixture: only aggregate figures exist. There are no itemized transactions behind them.", ...DEMO_PROVENANCE,
   };
 }

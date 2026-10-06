@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { SetTaxReserveTargetRequest, TaxQuery, TaxReserveResponse, buildTaxReserve, targetFromRequest } from "@project-name/shared";
+import { SetTaxReserveTargetRequest, TaxCalculateRequest, TaxQuery, TaxReserveResponse, buildTaxReserve, targetFromRequest } from "@project-name/shared";
 import { actorOf, requireAuth } from "../auth/plugin";
 import { getTaxReserveTarget, upsertTaxReserveTarget } from "../db/repos";
 import { parse, respond } from "../http/validate";
@@ -15,7 +15,7 @@ import { ownedWalletFromParams } from "./walletScope";
 export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
   const auth = requireAuth(pool, config);
 
-  const view = async (userId: string, wallet: { id: string; dataSource: string }, q: TaxQuery) => {
+  const view = async (userId: string, wallet: { id: string; dataSource: string }, q: TaxCalculateRequest) => {
     const t = await getTaxReserveTarget(pool, userId);
     if (wallet.dataSource === "demo") return respond(TaxReserveResponse, buildTaxReserve(wallet.id, t, t?.dataSource ?? "database"));
     const run = await runUserTax({ pool, prices: app.taxPrices, maxTransactions: config.TAX_MAX_TRANSACTIONS }, userId, q);
@@ -25,6 +25,12 @@ export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, co
   app.get("/api/tax-reserve/:walletId", { preHandler: auth }, async (req) => {
     const wallet = await ownedWalletFromParams(pool, req);
     return view(actorOf(req).userId, wallet, parse(TaxQuery, req.query));
+  });
+
+  /** Same estimate with the tax rates in the body (never in a URL). */
+  app.post("/api/tax-reserve/:walletId/calculate", { preHandler: auth }, async (req) => {
+    const wallet = await ownedWalletFromParams(pool, req);
+    return view(actorOf(req).userId, wallet, parse(TaxCalculateRequest, req.body ?? {}));
   });
 
   app.post(

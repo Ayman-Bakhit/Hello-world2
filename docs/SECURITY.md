@@ -109,3 +109,14 @@ No idle timeout or sliding refresh; no "list/revoke my sessions" or revoke-all; 
 - No double counting: duplicates by id or (wallet, signature) are ignored and counted; a same-signature internal transfer is matched, not taxed twice; failed transactions never create lots.
 - Precision: bigint/integer strings end to end; no unsafe `Number` conversion of quantities or money.
 - Remaining: chain data unverified; no real historical prices; per-request recalculation cost is bounded only by `TAX_MAX_TRANSACTIONS` and a rate limit; user-entered rates travel in the query string (not secret, but visible in logs/history).
+
+## Slice 7: manual cost basis
+- **IDOR / cross-wallet**: wallet id comes from the path, is resolved against the session's user in SQL, and every record query filters by user AND wallet. Foreign, other-wallet and unknown records are indistinguishable (`404`). Tested for create, list, read, revise, void, and for reaching a record through the owner's other wallet. Mutation check: dropping either filter fails tests.
+- **Audit-log tampering**: identity and revisions are append-only by trigger; "current" is a view; revisions are hash-chained and re-verified on read. A superuser who disables triggers can still edit, but the edit is detected. Not protected against rewriting the whole chain.
+- **Duplicates / double counting**: duplicates and overlaps are excluded from the calculation (not merged, not deleted) until the user acknowledges; consumed lots cannot be reused (remaining-lot tracking); manual lots are wallet-scoped. Mutation checks: disabling duplicate review, cross-wallet scoping, lot consumption, and completeness each fail tests.
+- **Precision**: exact decimal-to-raw conversion in bigint, `numeric(40,0)` storage, u64-max and >2^53 tested end to end; inexpressible input is rejected, never rounded.
+- **Unsafe input / XSS**: strict schemas; notes limited to 1000 plain-text characters, control and bidi-override characters rejected; markup is stored as inert text and rendered escaped by React (browser-tested with an `<img onerror>` payload). Reasons are an enum.
+- **Sensitive data in URLs/logs**: amounts, notes and tax rates are only sent in POST bodies (the GET tax routes now refuse rates); request bodies are not logged (tested with a log capture).
+- **Provenance honesty**: `source`, `origin` and the UI label `USER-PROVIDED TAX DATA` always travel with the data; `verifiedOnChain` is false; nothing calls it verified.
+- **Demo/live**: demo wallets cannot receive records; demo tax ignores them; real wallets never see demo numbers.
+- Residual: a user can enter any number (that is the feature); the system cannot detect a false statement, only duplicates and inconsistencies. Records are per wallet and are not shared. Rate limiting is per process.

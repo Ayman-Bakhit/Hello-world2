@@ -40,6 +40,10 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 | `GET /api/tax/:walletId/details` | session + owner | same | realized slices, every tax event with status/reason/missing data |
 | `GET /api/tax-reserve/:walletId` | session + owner | target: db; balance/exposure: demo | mixed |
 | `POST /api/tax-reserve/:walletId/target` | session + owner | db | production-capable (config only, moves no funds) |
+| `POST /api/tax/:walletId/calculate`, `POST /api/tax-reserve/:walletId/calculate` | session + owner | derived | same results as the GET routes, with year/method/swap treatment/**tax rates in the body** |
+| `GET/POST /api/wallets/:id/manual-basis` | session + owner | db (USER_PROVIDED) | list / create user-provided cost basis (real wallets only) |
+| `GET /api/wallets/:id/manual-basis/:basisId` | session + owner | db | record + full audit history + `historyIntact` |
+| `POST /api/wallets/:id/manual-basis/:basisId/revisions`, `.../void` | session + owner | db | auditable correction / soft removal. **No DELETE** |
 | `GET /api/charities`, `GET /api/charities/:id` | public | db (`demo` rows) | db-backed |
 | `GET /api/donations/:walletId` | session + owner | db | db-backed |
 | `POST /api/donations` | session + owner | db | creates `demo` record only; no transfer |
@@ -177,3 +181,13 @@ Percent: above 0, at most 100, at most 2 decimals. Amount: at most 2 decimals, a
 ## Security controls (what exists)
 Zod validation on every body/query/param; strict objects (unknown keys rejected); 64 KB body limit; helmet headers; CORS allowlist (exact origins, no wildcard, GET/POST only, credentials only for those origins); Origin check on state-changing requests (CSRF); HttpOnly session cookie; global rate limit plus stricter write limit (in-memory); structured errors with no stack traces; log redaction for `Authorization`/`Cookie`; response validation against the contract; parameterized SQL only; localhost bind by default.
 See `docs/THREAT_MODEL.md` for gaps.
+
+### Manual cost basis (Slice 7)
+All routes: session, wallet ownership checked in SQL (`user_id` AND `wallet_id`), strict Zod bodies (unknown fields 400), write rate limit, Origin/CSRF guard. Demo wallets: `409 MANUAL_BASIS_UNSUPPORTED`. A record id never grants access on its own; another user's, another wallet's or an unknown record is `404`.
+- `POST /api/wallets/:id/manual-basis` body `{ asset: "native"|<mint>, decimals?, quantity: "1.5", acquiredAt: "2023-05-17T14:30:00Z", costBasis: "1234.56", currency: "USD", reason: EXCHANGE_PURCHASE|PRIOR_WALLET|GIFT_RECEIVED|INCOME_OR_REWARD|OTHER, signature?, notes? }`. `quantity` is whole tokens as an exact decimal; **more decimals than the asset has is an error, never rounded**; `decimals` is required only for a mint the system has not seen (a contradicting value is refused). Cost basis: at most 2 decimals. `201` returns the record (`source: "USER_PROVIDED"`, `verifiedOnChain: false`, `quantity`, `quantityRaw`, `costBasis`, `costBasisCents`, `revision`, `status`, `review`). Limit 500 records per account (`409 LIMIT_REACHED`).
+- `GET /api/wallets/:id/manual-basis?includeVoided=true|false` -> `{ records[], source }`; `review` is the latest tax calculation's state for each record.
+- `GET .../:basisId` -> `{ record, history[], historyIntact }`.
+- `POST .../:basisId/revisions` body = the editable fields + `changeReason` (3-300 chars, required) + `expectedRevision` + `acknowledgeOverlap`. Asset and wallet are fixed (void and re-add to change them). `409 STALE_REVISION` if the record moved on; `409 BASIS_VOIDED` after a void.
+- `POST .../:basisId/void` body `{ changeReason, expectedRevision }` -> a `void` revision; the record stays visible with `includeVoided=true` and stops counting.
+- Review states in `review.state`: `OK`, `POTENTIAL_DUPLICATE`, `OVERLAPPING_BASIS`, `DECIMALS_MISMATCH`, with `included`, `acknowledged`, `linkedEventId`, `conflicts[]`, `explanation`.
+- Tax: `GET /api/tax/:walletId[/details]` accept only `taxYear`, `method`, `swapTreatment` (rates in a URL are `400`). `POST /api/tax/:walletId/calculate` takes `{ taxYear?, method?, swapTreatment?, rates? }` and returns `{ tax, details }` from one calculation; `POST /api/tax-reserve/:walletId/calculate` likewise. Details add `manualBasisReview[]`; events carry `origin` (`CHAIN|USER_PROVIDED`) and `manualBasisId`; realized slices carry `acquisitionOrigin`; counts include `MANUAL_BASIS`; requirement kind `BASIS_REVIEW`.

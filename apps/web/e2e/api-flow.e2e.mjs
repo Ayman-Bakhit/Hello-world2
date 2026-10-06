@@ -196,6 +196,73 @@ await page.getByText("HIFO", { exact: true }).first().waitFor({ timeout: 8000 })
 check("tax: choosing HIFO is applied and echoed (no longer 'default')", !(await text()).includes("HIFO (DEFAULT)"));
 await shot("5c-tax-live");
 
+// ---- Slice 7: USER_PROVIDED cost basis ----
+t = await text();
+check("cost basis: COST BASIS REQUIRED with the no-verified-basis wording, USER-PROVIDED label, and both buttons", t.includes("COST BASIS REQUIRED") && t.includes("This asset has no verified historical cost basis.") && t.includes("USER-PROVIDED TAX DATA") && t.includes("REVIEW EXISTING BASIS") && !/verified on-chain/i.test(t));
+const addFor = async (needle, date, cost, notes) => {
+  await page.locator("li", { hasText: needle }).getByRole("button", { name: "ADD COST BASIS" }).first().click();
+  await page.getByLabel(/Acquisition date and time/).fill(date);
+  await page.getByLabel(/Total cost basis/).fill(cost);
+  if (notes) await page.getByLabel(/Notes \(optional/).fill(notes);
+  await page.getByRole("button", { name: "SAVE COST BASIS" }).click();
+};
+// 1. token received: prefilled from the transfer (asset, decimals, quantity, signature)
+await page.locator("li", { hasText: "1.5" }).getByRole("button", { name: "ADD COST BASIS" }).first().click();
+check("cost basis form is prefilled from the unresolved transfer (quantity, decimals, signature) and labeled USER-PROVIDED", (await page.getByLabel(/Quantity \(whole tokens\)/).inputValue()) === "1.5" && (await page.getByLabel(/Token decimals/).inputValue()) === "6" && (await page.getByLabel(/Transaction signature/).inputValue()).length > 60);
+await page.getByLabel(/Acquisition date and time/).fill("2099-01-01T00:00:00Z");
+await page.getByLabel(/Total cost basis/).fill("75.005");
+await page.getByRole("button", { name: "SAVE COST BASIS" }).click();
+t = await text();
+check("invalid input is rejected with field messages and nothing is saved", /in the future/.test(t) && /at most 2 decimals/.test(t) && (await (await apiGet(`/api/wallets/${WALLET_ID}/manual-basis`)).json()).records.length === 0);
+await page.getByLabel(/Acquisition date and time/).fill("2024-01-01T00:00:00Z");
+await page.getByLabel(/Total cost basis/).fill("75.00");
+await page.getByRole("button", { name: "SAVE COST BASIS" }).click();
+await page.getByText(/Saved as revision 1/).waitFor({ timeout: 8000 });
+t = await text();
+check("after saving: saved notice names USER_PROVIDED and says it is not verified on-chain; the record is listed with the provenance label", t.includes("USER_PROVIDED") && /not verified on-chain/.test(t) && t.includes("$75.00 USD"));
+// 2. SOL received: second basis, with hostile notes
+await page.getByRole("button", { name: /^ADD COST BASIS/ }).first().waitFor({ timeout: 8000 });
+await addFor("Received, origin unknown", "2024-01-01T00:00:00Z", "100.00", "<img src=x onerror=window.__xss=1> bought on an exchange");
+await page.getByText(/Saved as revision 1/).waitFor({ timeout: 8000 });
+// the earlier "refresh" step added a second (0.1 SOL) incoming transfer: give it basis too
+await page.getByRole("button", { name: /^ADD COST BASIS/ }).first().waitFor({ timeout: 8000 });
+await addFor("Received, origin unknown", "2024-01-02T00:00:00Z", "10.00");
+await page.getByText(/Saved as revision 1/).waitFor({ timeout: 8000 });
+await page.getByText("COMPLETE (ESTIMATE)").waitFor({ timeout: 10000 });
+t = await text();
+check("with basis for every transfer the status becomes COMPLETE (an estimate), only because the Slice 6 completeness rules are met", t.includes("COMPLETE (ESTIMATE)") && !t.includes("COST BASIS REQUIRED"));
+check("notes are rendered as inert text (no element created, no script ran)", (await page.locator("main img").count()) === 0 && (await page.evaluate(() => window.__xss)) === undefined && t.includes("<img src=x onerror=window.__xss=1>"));
+const apiList = await (await apiGet(`/api/wallets/${WALLET_ID}/manual-basis`)).json();
+check("API: records are USER_PROVIDED, verifiedOnChain false, exact raw quantities", apiList.records.length === 3 && apiList.records.every((r) => r.source === "USER_PROVIDED" && r.verifiedOnChain === false) && apiList.records.some((r) => r.quantityRaw === "1500000"));
+// 3. audit history
+await page.getByRole("button", { name: "AUDIT HISTORY" }).first().click();
+await page.getByText("Hash chain intact").waitFor({ timeout: 5000 });
+check("audit history shows revisions and an intact hash chain", /Earlier values are never overwritten/.test(await text()));
+// 4. duplicate: add the token basis again
+await page.getByRole("button", { name: /^ADD COST BASIS/ }).first().click();
+await page.getByLabel(/^Asset/).fill(apiList.records.find((r) => r.mint)?.mint ?? "");
+await page.getByLabel(/Token decimals/).fill("6");
+await page.getByLabel(/Quantity \(whole tokens\)/).fill("1.5");
+await page.getByLabel(/Acquisition date and time/).fill("2024-01-01T06:00:00Z");
+await page.getByLabel(/Total cost basis/).fill("75.00");
+await page.getByRole("button", { name: "SAVE COST BASIS" }).click();
+await page.getByText(/Review needed: POTENTIAL DUPLICATE/).waitFor({ timeout: 8000 });
+await page.getByText("PARTIAL", { exact: true }).first().waitFor({ timeout: 10000 });
+t = await text();
+check("duplicate basis is flagged, EXCLUDED from the calculation, explained, and the status drops from COMPLETE (never double counted)", /POTENTIAL DUPLICATE/.test(t) && /Excluded from the calculation until reviewed/.test(t) && /counted twice/.test(t) && !t.includes("COMPLETE (ESTIMATE)"));
+// 5. void the duplicate (soft, audited)
+page.once("dialog", (d) => d.accept("duplicate entry"));
+await page.locator("li", { hasText: "POTENTIAL DUPLICATE" }).getByRole("button", { name: "VOID" }).first().click();
+await page.getByText("VOIDED").first().waitFor({ timeout: 8000 });
+await page.getByText("COMPLETE (ESTIMATE)").waitFor({ timeout: 10000 });
+const all = await (await apiGet(`/api/wallets/${WALLET_ID}/manual-basis?includeVoided=true`)).json();
+check("void keeps the record (no hard delete) and the status returns to COMPLETE", all.records.length === 4 && all.records.filter((r) => r.status === "voided").length === 1);
+// 6. API protection (no cookie => 401; foreign wallet ids are not reachable)
+const anon = await fetch(`${API}/api/wallets/${WALLET_ID}/manual-basis`);
+check("manual basis API requires a session", anon.status === 401);
+check("no DELETE route exists", (await context.request.delete(`${API}/api/wallets/${WALLET_ID}/manual-basis/${all.records[0].id}`, { headers: { origin: WEB } })).status() === 404);
+await shot("5d-manual-basis");
+
 await go("/tax-reserve");
 t = await text();
 check("tax reserve: estimate only for the real wallet; balance not read; no demo reserve; funding unavailable", /estimated reserve requirement/i.test(t) && /not read from any chain yet/i.test(t) && !t.includes("$14,200") && t.includes("UNAVAILABLE"), t.slice(0, 700));

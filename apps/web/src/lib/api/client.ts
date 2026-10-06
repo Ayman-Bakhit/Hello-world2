@@ -1,15 +1,16 @@
 import {
   CharityList, DEMO_CHARITIES, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
-  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxDetailsResponse, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
+  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, ManualBasisDetail, ManualBasisList, ManualBasisView,
+  type CreateManualBasisRequest, type ReviseManualBasisRequest, type VoidManualBasisRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
   buildTax, buildTaxDetails, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
   targetFromRequest, type Charity, type LaunchConfig, type StoredTarget, type Wallet,
 } from "@project-name/shared";
-import type { z } from "zod";
+import { z } from "zod";
 import { API_BASE_URL, API_MODE, type ApiMode } from "./config";
 import { ApiClientError, requestJson } from "./http";
 import { zodToClientError } from "./zodError";
-import type { TaxQueryParams } from "../taxQuery";
+import { toCalculateRequest, type TaxQueryParams } from "../taxQuery";
 
 /**
  * Typed API client. Same function signatures in both modes, and the same response types (validated
@@ -65,6 +66,7 @@ export function createApiClient(opts: ClientOptions = {}) {
     });
   };
 
+  const manualUnsupported = () => new ApiClientError(409, "MANUAL_BASIS_UNSUPPORTED", "Demo data has no editable cost basis. Cost basis can only be added to real wallets.");
   const notFound = (what: string) => new ApiClientError(404, "NOT_FOUND", `${what} not found`);
   const need = <T,>(v: T | null, what: string): T => { if (v === null) throw notFound(what); return v; };
 
@@ -132,15 +134,47 @@ export function createApiClient(opts: ClientOptions = {}) {
     getPortfolio: async (walletId: string): Promise<PortfolioResponse> =>
       mode === "api" ? http(PortfolioResponse, `/api/portfolio/${encodeURIComponent(walletId)}`) : need(buildPortfolio(mockId(walletId)), "Portfolio"),
 
-    /** Mock mode ignores the query: it only has the labeled demo fixture. */
-    getTaxEstimate: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxResponse> =>
+    /** GET carries only non-sensitive parameters. Mock mode ignores them: it only has the labeled demo fixture. */
+    getTaxEstimate: async (walletId: string, q: Pick<TaxQueryParams, "taxYear" | "method" | "swapTreatment"> = {}): Promise<TaxResponse> =>
       mode === "api" ? http(TaxResponse, `/api/tax/${encodeURIComponent(walletId)}`, { ...q }) : buildTax(mockId(walletId)),
 
-    getTaxDetails: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxDetailsResponse> =>
+    getTaxDetails: async (walletId: string, q: Pick<TaxQueryParams, "taxYear" | "method" | "swapTreatment"> = {}): Promise<TaxDetailsResponse> =>
       mode === "api" ? http(TaxDetailsResponse, `/api/tax/${encodeURIComponent(walletId)}/details`, { ...q }) : need(buildTaxDetails(mockId(walletId)), "Tax details"),
 
-    getTaxReserve: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxReserveResponse> =>
-      mode === "api" ? http(TaxReserveResponse, `/api/tax-reserve/${encodeURIComponent(walletId)}`, { ...q }) : buildTaxReserve(mockId(walletId), mockTarget, "demo"),
+    getTaxReserve: async (walletId: string): Promise<TaxReserveResponse> =>
+      mode === "api" ? http(TaxReserveResponse, `/api/tax-reserve/${encodeURIComponent(walletId)}`) : buildTaxReserve(mockId(walletId), mockTarget, "demo"),
+
+    /** Summary + details from one calculation. Tax rates go in the POST body, never in a URL. */
+    calculateTax: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxCalculateResponse> =>
+      mode === "api"
+        ? send(TaxCalculateResponse, `/api/tax/${encodeURIComponent(walletId)}/calculate`, toCalculateRequest(q))
+        : { tax: buildTax(mockId(walletId)), details: need(buildTaxDetails(mockId(walletId)), "Tax details") },
+
+    calculateTaxReserve: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxReserveResponse> =>
+      mode === "api" ? send(TaxReserveResponse, `/api/tax-reserve/${encodeURIComponent(walletId)}/calculate`, toCalculateRequest(q)) : buildTaxReserve(mockId(walletId), mockTarget, "demo"),
+
+    // ---- USER_PROVIDED cost basis (real wallets only; never blockchain data) ----
+    listManualBasis: async (walletId: string, includeVoided = false): Promise<z.infer<typeof ManualBasisList>> => {
+      if (mode !== "api") throw manualUnsupported();
+      return http(ManualBasisList, `/api/wallets/${encodeURIComponent(walletId)}/manual-basis`, { includeVoided: includeVoided ? "true" : "false" });
+    },
+    createManualBasis: async (walletId: string, req: CreateManualBasisRequest | Record<string, unknown>): Promise<ManualBasisView> => {
+      if (mode !== "api") throw manualUnsupported();
+      return send(ManualBasisView, `/api/wallets/${encodeURIComponent(walletId)}/manual-basis`, req);
+    },
+    getManualBasis: async (walletId: string, id: string): Promise<ManualBasisDetail & { historyIntact: boolean }> => {
+      if (mode !== "api") throw manualUnsupported();
+      const d = await http(ManualBasisDetail.extend({ historyIntact: z.boolean() }), `/api/wallets/${encodeURIComponent(walletId)}/manual-basis/${encodeURIComponent(id)}`);
+      return d;
+    },
+    reviseManualBasis: async (walletId: string, id: string, req: ReviseManualBasisRequest | Record<string, unknown>): Promise<ManualBasisView> => {
+      if (mode !== "api") throw manualUnsupported();
+      return send(ManualBasisView, `/api/wallets/${encodeURIComponent(walletId)}/manual-basis/${encodeURIComponent(id)}/revisions`, req);
+    },
+    voidManualBasis: async (walletId: string, id: string, req: VoidManualBasisRequest): Promise<ManualBasisView> => {
+      if (mode !== "api") throw manualUnsupported();
+      return send(ManualBasisView, `/api/wallets/${encodeURIComponent(walletId)}/manual-basis/${encodeURIComponent(id)}/void`, req);
+    },
 
     getCharities: async (): Promise<Charity[]> =>
       mode === "api" ? (await http(CharityList, "/api/charities")).charities : buildCharityList(),
@@ -173,4 +207,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

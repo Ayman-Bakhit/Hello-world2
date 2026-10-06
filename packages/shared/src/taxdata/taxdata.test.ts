@@ -20,7 +20,7 @@ const prices = (table: Record<string, [number, bigint][]>): PriceAt => (asset, a
   const rows = (table[asset] ?? []).filter(([t]) => t <= at).sort((a, b) => b[0] - a[0]);
   return rows[0] ? q(asset, rows[0][1], rows[0][0]) : null;
 };
-const evs = (r: { events: TaxEvent[] }) => r.events.filter((e) => !e.id.startsWith("opening:"));
+const evs = (r: { events: TaxEvent[] }) => r.events.filter((e) => !e.id.startsWith("manual:"));
 const FULL = { synced: true, historyComplete: true, hasGap: false, holdingsComplete: true };
 const RATES = { shortTermRateBps: 3000, longTermRateBps: 1500, stateRateBps: 500 };
 /** SOL acquired outside the indexed history, with user-supplied basis ($100/SOL). Without it every SOL leg is (correctly) DATA_REQUIRED. */

@@ -34,7 +34,7 @@ export function TaxStatusPanel({ tax }: { tax: TaxResponse }) {
           {tax.requirements.map((r) => (
             <li key={r.kind} className="flex gap-2">
               <span className={`shrink-0 font-semibold tracking-wide ${r.severity === "blocks_total" ? "text-loss" : r.severity === "incomplete" ? "text-warn" : "text-faint"}`}>
-                {r.kind === "PRICE" ? "PRICE DATA UNAVAILABLE" : r.kind === "COST_BASIS" ? "DATA REQUIRED: COST BASIS" : r.kind === "TRANSFER_MATCH" ? "UNRESOLVED TRANSFERS" : r.kind === "CLASSIFICATION" ? "UNKNOWN" : r.kind === "RATES" ? "RATES REQUIRED" : r.kind}
+                {r.kind === "PRICE" ? "PRICE DATA UNAVAILABLE" : r.kind === "COST_BASIS" ? "DATA REQUIRED: COST BASIS" : r.kind === "TRANSFER_MATCH" ? "UNRESOLVED TRANSFERS" : r.kind === "CLASSIFICATION" ? "UNKNOWN" : r.kind === "RATES" ? "RATES REQUIRED" : r.kind === "BASIS_REVIEW" ? "BASIS NEEDS REVIEW" : r.kind}
                 {" "}({r.count})
               </span>
               <span className="text-muted">{r.message}</span>
@@ -126,11 +126,11 @@ export function RealizedTable({ rows }: { rows: TaxDetailsResponse["realized"] }
   );
 }
 
-const KIND: Record<string, string> = { BUY: "Acquisition (buy)", SELL: "Disposal (sell)", TRANSFER_IN: "Transfer in", TRANSFER_OUT: "Transfer out", FEE: "Network fee", UNKNOWN: "UNKNOWN" };
+const KIND: Record<string, string> = { BUY: "Acquisition (buy)", SELL: "Disposal (sell)", TRANSFER_IN: "Transfer in", TRANSFER_OUT: "Transfer out", FEE: "Network fee", UNKNOWN: "UNKNOWN", MANUAL_BASIS: "Cost basis (user-provided)" };
 const STAT: Record<string, { label: string; tone: "good" | "demo" | "bad" | "neutral" }> = {
   READY: { label: "READY", tone: "good" }, DATA_REQUIRED: { label: "DATA REQUIRED", tone: "bad" }, UNRESOLVED: { label: "UNRESOLVED", tone: "demo" }, MATCHED: { label: "MATCHED (INTERNAL)", tone: "neutral" }, EXCLUDED: { label: "EXCLUDED", tone: "neutral" },
 };
-const FILTERS = [["all", "All"], ["attention", "Needs attention"], ["unknown", "UNKNOWN"], ["price", "Price unavailable"], ["basis", "Cost basis missing"]] as const;
+const FILTERS = [["all", "All"], ["attention", "Needs attention"], ["unknown", "UNKNOWN"], ["price", "Price unavailable"], ["basis", "Cost basis missing"], ["review", "User-provided basis"]] as const;
 type Filter = (typeof FILTERS)[number][0];
 const keep: Record<Filter, (e: TaxDetailsResponse["events"][number]) => boolean> = {
   all: () => true,
@@ -138,6 +138,7 @@ const keep: Record<Filter, (e: TaxDetailsResponse["events"][number]) => boolean>
   unknown: (e) => e.kind === "UNKNOWN",
   price: (e) => e.missing.includes("PRICE"),
   basis: (e) => e.missing.includes("COST_BASIS"),
+  review: (e) => e.missing.includes("BASIS_REVIEW") || e.origin === "USER_PROVIDED",
 };
 
 export function TaxEventsTable({ events, truncated }: { events: TaxDetailsResponse["events"]; truncated: boolean }) {
@@ -158,7 +159,7 @@ export function TaxEventsTable({ events, truncated }: { events: TaxDetailsRespon
               {rows.map((e) => (
                 <tr key={e.id} className="border-b border-line/60 align-top last:border-0">
                   <td className="num px-3 py-2.5 text-muted">{e.timestamp ? formatDate(e.timestamp) : "Unknown"}</td>
-                  <td className="px-3 py-2.5">{KIND[e.kind]}<span className="block font-mono text-xs text-faint" title={e.signature}>{short(e.signature)}</span></td>
+                  <td className="px-3 py-2.5">{KIND[e.kind]}{e.origin === "USER_PROVIDED" ? <span className="ml-2"><Badge tone="demo">USER-PROVIDED</Badge></span> : null}{e.origin === "USER_PROVIDED" && e.signature.startsWith("manual:") ? null : <span className="block font-mono text-xs text-faint" title={e.signature}>{short(e.signature)}</span>}</td>
                   <td className="px-3 py-2.5 font-semibold" title={e.mint ?? undefined}>{asset(e.asset, e.mint)}</td>
                   <td className="num px-3 py-2.5 text-right">{e.kind === "FEE" ? `${formatAmount(BigInt(e.quantity), 9, 6)} SOL` : formatAmount(BigInt(e.quantity), e.decimals, 4)}</td>
                   <td className="num px-3 py-2.5 text-right">{e.usdValueCents === null ? <span className="text-xs text-faint">{e.missing.includes("PRICE") ? "PRICE DATA UNAVAILABLE" : "—"}</span> : <>{formatUsd(BigInt(e.usdValueCents), { cents: true })}{e.valuation === "COUNTER_LEG" ? <span className="block text-xs text-faint">from the other swap leg</span> : null}</>}</td>

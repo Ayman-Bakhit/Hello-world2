@@ -3,11 +3,12 @@ import { estimateTax, realize } from "../tax/engine";
 import type { AcquisitionLot, Disposal, RealizedEvent } from "../tax/types";
 import {
   TaxInputError, type MissingKind, type PriceQuote, type RealizedSlice, type Requirement, type TaxCalcInput, type TaxCalcResult, type TaxEvent,
-  type TaxEventKind, type TaxEventStatus, type TaxTxInput,
+  type TaxEventKind, type TaxEventStatus, type TaxTxInput, type ManualBasisReview, type OpeningLotInput, type ReviewConflict,
 } from "./types";
 
 const abs = (n: bigint) => (n < 0n ? -n : n);
-const KINDS: TaxEventKind[] = ["BUY", "SELL", "TRANSFER_IN", "TRANSFER_OUT", "FEE", "UNKNOWN"];
+const KINDS: TaxEventKind[] = ["BUY", "SELL", "TRANSFER_IN", "TRANSFER_OUT", "FEE", "UNKNOWN", "MANUAL_BASIS"];
+const DAY = 86_400;
 
 function validate(tx: TaxTxInput): void {
   if (!tx.id || !tx.signature || !tx.walletId) throw new TaxInputError("transaction is missing id, signature or wallet");
@@ -30,7 +31,7 @@ function make(tx: TaxTxInput, kind: TaxEventKind, asset: string, decimals: numbe
     id: `${tx.id}:${asset}:${kind}`, txId: tx.id, signature: tx.signature, walletId: tx.walletId, timestamp: tx.occurredAt, kind, asset, decimals, quantity,
     usdValueCents: null, price: null, valuation: null, feeLamports: tx.feeLamports,
     classification: { kind: tx.kind, reason: tx.reason, version: tx.classifierVersion },
-    status: "READY", reason: "", missing: [], confidence: "NONE", matchedWith: null, candidates: [], uncoveredQuantity: 0n, ...o,
+    status: "READY", reason: "", missing: [], confidence: "NONE", matchedWith: null, candidates: [], uncoveredQuantity: 0n, origin: "CHAIN", manualBasisId: null, ...o,
   };
 }
 
@@ -139,6 +140,112 @@ function priceEvents(events: TaxEvent[], priceAt: TaxCalcInput["priceAt"]): void
   }
 }
 
+function validateManual(o: OpeningLotInput): void {
+  if (!o.id) throw new TaxInputError("manual basis record without id");
+  if (o.quantity <= 0n) throw new TaxInputError(`manual basis ${o.id}: quantity must be positive`);
+  if (o.costBasisCents < 0n) throw new TaxInputError(`manual basis ${o.id}: negative cost basis`);
+  if (!Number.isSafeInteger(o.acquiredAt) || o.acquiredAt < 0) throw new TaxInputError(`manual basis ${o.id}: invalid acquisition time`);
+  if (!Number.isInteger(o.decimals) || o.decimals < 0 || o.decimals > 38) throw new TaxInputError(`manual basis ${o.id}: invalid decimals`);
+}
+
+/** Same acquisition = same quantity within a day. Same signature alone is not enough between user records (a transfer can be explained in pieces); against a chain acquisition it is. */
+const sameAcquisition = (m: OpeningLotInput, signature: string | null, quantity: bigint, at: number | null, chain: boolean): boolean =>
+  (chain && m.signature != null && signature !== null && m.signature === signature) || (quantity === m.quantity && ((m.signature != null && signature !== null && m.signature === signature) || (at !== null && Math.abs(at - m.acquiredAt) <= DAY)));
+
+/**
+ * Review of user-provided records BEFORE they enter the calculation. A record that duplicates or overlaps something already
+ * known is EXCLUDED (never silently double-counted, never silently deleted or merged) until the user acknowledges it.
+ */
+function reviewManual(manual: OpeningLotInput[], chain: TaxEvent[]): Map<string, ManualBasisReview> {
+  const out = new Map<string, ManualBasisReview>();
+  const ordered = [...manual].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0) || a.id.localeCompare(b.id));
+  const accepted: OpeningLotInput[] = [];
+  const chainDecimals = new Map<string, number>();
+  for (const e of chain) if (!chainDecimals.has(e.asset)) chainDecimals.set(e.asset, e.decimals);
+  const conflictOf = (e: TaxEvent): ReviewConflict => ({ source: "CHAIN", id: e.id, signature: e.signature, asset: e.asset, quantity: e.quantity, timestamp: e.timestamp });
+  for (const m of ordered) {
+    const ack = m.acknowledgedOverlap === true;
+    const base = { manualBasisId: m.id, acknowledged: ack, linkedEventId: null as string | null };
+    const known = chainDecimals.get(m.asset);
+    if (known !== undefined && known !== m.decimals) {
+      out.set(m.id, { ...base, state: "DECIMALS_MISMATCH", included: false, conflicts: [], explanation: `The record uses ${m.decimals} decimals but this asset has ${known} decimals on-chain. Correct the record; this cannot be acknowledged.` });
+      continue;
+    }
+    const conflicts: ReviewConflict[] = [];
+    for (const e of chain) {
+      if (e.kind === "BUY" && e.walletId === m.walletId && e.asset === m.asset && sameAcquisition(m, e.signature, e.quantity, e.timestamp, true)) conflicts.push(conflictOf(e));
+    }
+    for (const o of accepted) {
+      if (o.walletId === m.walletId && o.asset === m.asset && sameAcquisition(m, o.signature ?? null, o.quantity, o.acquiredAt, false)) {
+        conflicts.push({ source: "USER_PROVIDED", id: o.id, signature: o.signature ?? "", asset: o.asset, quantity: o.quantity, timestamp: o.acquiredAt });
+      }
+    }
+    if (conflicts.length > 0 && !ack) {
+      out.set(m.id, { ...base, state: "POTENTIAL_DUPLICATE", included: false, conflicts, explanation: "This looks like an acquisition that is already known (same asset and wallet, and the same transaction or the same quantity within a day). It is excluded from the calculation so it is not counted twice. Review it, then void it or acknowledge that it is distinct." });
+      continue;
+    }
+    out.set(m.id, { ...base, state: conflicts.length > 0 ? "POTENTIAL_DUPLICATE" : "OK", included: true, conflicts, explanation: conflicts.length > 0 ? "Overlap acknowledged by the user; included." : "" });
+    accepted.push(m);
+  }
+  // Records that point at the same transfer-in (by signature) and together claim more units than it received.
+  for (const e of chain) {
+    if (e.kind !== "TRANSFER_IN" || e.status !== "UNRESOLVED") continue;
+    const group = ordered.filter((m) => out.get(m.id)!.included && m.walletId === e.walletId && m.asset === e.asset && m.signature != null && m.signature === e.signature);
+    const total = group.reduce((s, m) => s + m.quantity, 0n);
+    if (group.length > 0 && total > e.quantity) {
+      for (const m of group) {
+        const r = out.get(m.id)!;
+        if (r.acknowledged) continue;
+        r.state = "OVERLAPPING_BASIS"; r.included = false;
+        r.conflicts = [conflictOf(e), ...group.filter((x) => x.id !== m.id).map((x) => ({ source: "USER_PROVIDED" as const, id: x.id, signature: x.signature ?? "", asset: x.asset, quantity: x.quantity, timestamp: x.acquiredAt }))];
+        r.explanation = `Records tied to this transaction total ${total} base units but the transfer received ${e.quantity}. They are excluded until reviewed; void or correct the extra record, or acknowledge.`;
+      }
+    }
+  }
+  return out;
+}
+
+function manualToEvents(manual: OpeningLotInput[], review: Map<string, ManualBasisReview>): TaxEvent[] {
+  return manual.map((o) => {
+    const r = review.get(o.id)!;
+    return {
+      id: `manual:${o.id}`, txId: `manual:${o.id}`, signature: o.signature ?? `manual:${o.id}`, walletId: o.walletId, timestamp: o.acquiredAt, kind: "MANUAL_BASIS" as const, asset: o.asset, decimals: o.decimals,
+      quantity: o.quantity, usdValueCents: o.costBasisCents, price: null, valuation: null, feeLamports: null,
+      classification: { kind: "manual_basis", reason: o.reason ?? "USER_PROVIDED", version: "1" },
+      status: r.included ? ("READY" as const) : ("UNRESOLVED" as const),
+      reason: r.included
+        ? "USER_PROVIDED cost basis (entered by the user; not derived from, or verified against, any transaction)."
+        : `USER_PROVIDED record excluded pending review (${r.state}). ${r.explanation}`,
+      missing: r.included ? [] : (["BASIS_REVIEW"] as MissingKind[]), confidence: r.included ? ("ESTIMATED" as const) : ("NONE" as const), matchedWith: null, candidates: [], uncoveredQuantity: 0n,
+      origin: "USER_PROVIDED" as const, manualBasisId: o.id,
+    };
+  });
+}
+
+/** A transfer-in with no counterpart can take its cost basis from user records tied to it (same signature, or the exact quantity). */
+function linkManualToTransfers(events: TaxEvent[], manualEvents: TaxEvent[], review: Map<string, ManualBasisReview>): void {
+  const free = (e: TaxEvent) => e.status === "READY" && e.matchedWith === null;
+  for (const t of events) {
+    if (t.kind !== "TRANSFER_IN" || t.status !== "UNRESOLVED" || t.matchedWith !== null) continue;
+    const pool = manualEvents.filter((m) => free(m) && m.walletId === t.walletId && m.asset === t.asset);
+    const bySig = pool.filter((m) => !m.signature.startsWith("manual:") && m.signature === t.signature);
+    let chosen: TaxEvent[] = [];
+    if (bySig.length > 0) {
+      const total = bySig.reduce((s, m) => s + m.quantity, 0n);
+      if (total === t.quantity) chosen = bySig;
+      else if (total < t.quantity) { t.reason += ` User-provided basis tied to this transaction covers ${total} of ${t.quantity} base units: still unresolved.`; continue; }
+    } else {
+      const exact = pool.filter((m) => m.quantity === t.quantity && t.timestamp !== null && m.timestamp! <= t.timestamp);
+      if (exact.length === 1) chosen = exact;
+      else if (exact.length > 1) { t.reason += " Several user-provided records match this transfer; link not applied (ambiguous)."; continue; }
+    }
+    if (chosen.length === 0) continue;
+    t.status = "READY"; t.missing = []; t.matchedWith = chosen[0]!.id; t.manualBasisId = chosen[0]!.manualBasisId; t.confidence = "ESTIMATED";
+    t.reason = `Received from an unknown source; cost basis supplied by USER_PROVIDED record(s) ${chosen.map((m) => m.manualBasisId).join(", ")}. The record is the user's statement, not proof of origin.`;
+    for (const m of chosen) { m.matchedWith = t.id; review.get(m.manualBasisId!)!.linkedEventId = t.id; }
+  }
+}
+
 /**
  * Pure tax calculation over the normalized transaction layer. Pooling is per asset across ALL supplied wallets
  * (the existing engine scope is the user). Inputs are never mutated. The result NEVER reports COMPLETE when a price,
@@ -158,43 +265,40 @@ export function computeTax(input: TaxCalcInput): TaxCalcResult {
   txs.sort((a, b) => (a.occurredAt ?? Infinity) - (b.occurredAt ?? Infinity) || a.signature.localeCompare(b.signature) || a.id.localeCompare(b.id));
 
   const events = txs.flatMap((t) => eventsFromTx(t, input.swapTreatment));
-  for (const o of input.openingLots ?? []) {
-    if (o.quantity <= 0n) throw new TaxInputError(`opening lot ${o.id}: quantity must be positive`);
-    if (o.costBasisCents < 0n) throw new TaxInputError(`opening lot ${o.id}: negative cost basis`);
-    if (!Number.isSafeInteger(o.acquiredAt) || o.acquiredAt < 0) throw new TaxInputError(`opening lot ${o.id}: invalid acquisition time`);
-    events.push({
-      id: `opening:${o.id}`, txId: `opening:${o.id}`, signature: `opening:${o.id}`, walletId: o.walletId, timestamp: o.acquiredAt, kind: "BUY", asset: o.asset, decimals: o.decimals,
-      quantity: o.quantity, usdValueCents: o.costBasisCents, price: null, valuation: null, feeLamports: null,
-      classification: { kind: "opening_lot", reason: "User-supplied opening lot", version: "1" }, status: "READY",
-      reason: "User-supplied opening lot (cost basis entered by the user, not derived from any transaction).", missing: [], confidence: "ESTIMATED", matchedWith: null, candidates: [], uncoveredQuantity: 0n,
-    });
-  }
   matchTransfers(events, input.candidateWindowSeconds ?? 3600);
+  const manual = input.openingLots ?? [];
+  for (const o of manual) validateManual(o);
+  const review = reviewManual(manual, events);
+  const manualEvents = manualToEvents(manual, review);
+  events.push(...manualEvents);
+  linkManualToTransfers(events, manualEvents, review);
   priceEvents(events, input.priceAt);
 
-  // ---- lots and disposals (only READY BUY/SELL with a value and a time) ----
-  const lots: AcquisitionLot[] = [];
-  for (const e of events) if (e.kind === "BUY" && e.status === "READY") lots.push({ lotId: e.id, sourceTxId: e.txId, asset: e.asset, decimals: e.decimals, quantity: e.quantity, acquiredAt: e.timestamp!, costBasisCents: e.usdValueCents! });
+  // ---- lots and disposals ----
+  // Disposals are processed in time order against the REMAINING lots. On-chain lots are pooled per asset across the user's
+  // wallets (Slice 6); USER_PROVIDED lots are only eligible for disposals in the SAME wallet (no cross-wallet matching).
+  const byId0 = new Map(events.map((e) => [e.id, e]));
+  let remaining: AcquisitionLot[] = [];
+  for (const e of events) if ((e.kind === "BUY" || e.kind === "MANUAL_BASIS") && e.status === "READY") remaining.push({ lotId: e.id, sourceTxId: e.txId, asset: e.asset, decimals: e.decimals, quantity: e.quantity, acquiredAt: e.timestamp!, costBasisCents: e.usdValueCents! });
   const sells = events.filter((e) => e.kind === "SELL" && e.status === "READY").sort((a, b) => a.timestamp! - b.timestamp! || a.id.localeCompare(b.id));
-  // Availability is method-independent (see TAX_ENGINE.md), so uncovered quantity can be found before calling the engine.
-  const consumed = new Map<string, bigint>();
-  const disposals: Disposal[] = [];
+  const realizedEngine: RealizedEvent[] = [];
   for (const s of sells) {
-    const eligible = lots.filter((l) => l.asset === s.asset && l.acquiredAt <= s.timestamp!).reduce((n, l) => n + l.quantity, 0n);
-    const free = eligible - (consumed.get(s.asset) ?? 0n);
-    const covered = free <= 0n ? 0n : free < s.quantity ? free : s.quantity;
+    const eligible = remaining.filter((l) => l.asset === s.asset && l.acquiredAt <= s.timestamp! && l.quantity > 0n && (byId0.get(l.lotId)!.origin === "CHAIN" || byId0.get(l.lotId)!.walletId === s.walletId));
+    const free = eligible.reduce((n, l) => n + l.quantity, 0n);
+    const covered = free < s.quantity ? free : s.quantity;
     s.uncoveredQuantity = s.quantity - covered;
     if (covered > 0n) {
       const proceeds = covered === s.quantity ? s.usdValueCents! : (s.usdValueCents! * covered) / s.quantity;
-      disposals.push({ txId: s.id, asset: s.asset, decimals: s.decimals, quantity: covered, disposedAt: s.timestamp!, proceedsCents: proceeds });
-      consumed.set(s.asset, (consumed.get(s.asset) ?? 0n) + covered);
+      const res = realize(eligible, [{ txId: s.id, asset: s.asset, decimals: s.decimals, quantity: covered, disposedAt: s.timestamp!, proceedsCents: proceeds }], method);
+      realizedEngine.push(...res.events);
+      const used = new Set(eligible.map((l) => l.lotId));
+      remaining = remaining.filter((l) => !used.has(l.lotId)).concat(res.remainingLots);
     }
     if (s.uncoveredQuantity > 0n) {
       s.status = "DATA_REQUIRED"; s.missing = ["COST_BASIS"];
-      s.reason += ` Cost basis missing for ${s.uncoveredQuantity} base units: no acquisition record exists for them in the indexed history. Only the covered part is realized.`;
+      s.reason += ` Cost basis missing for ${s.uncoveredQuantity} base units: no acquisition record exists for them in the indexed history or in the cost basis you have provided for this wallet. Only the covered part is realized.`;
     }
   }
-  const realizedEngine: RealizedEvent[] = realize(lots, disposals, method).events;
   const byId = new Map(events.map((e) => [e.id, e]));
   const realized: RealizedSlice[] = realizedEngine.map((r) => {
     const d = byId.get(r.transaction_id)!, l = byId.get(r.lot_id)!;
@@ -202,7 +306,7 @@ export function computeTax(input: TaxCalcInput): TaxCalcResult {
       disposalEventId: d.id, lotEventId: l.id, asset: r.asset, decimals: d.decimals, quantity: r.quantity, acquiredAt: r.acquisition_timestamp, disposedAt: r.disposal_timestamp,
       costBasisCents: r.cost_basis, unitCostBasisMicro: r.acquisition_price_micro, proceedsCents: r.proceeds, gainLossCents: r.gain_loss, holdingPeriod: r.holding_period,
       disposalSignature: d.signature, acquisitionSignature: l.signature, walletId: d.walletId, sourceWalletIdOfLot: l.walletId,
-      proceedsPrice: d.price, costPrice: l.price, feeLamports: d.feeLamports,
+      acquisitionOrigin: l.origin, manualBasisId: l.manualBasisId, proceedsPrice: d.price, costPrice: l.price, feeLamports: d.feeLamports,
     };
   });
 
@@ -215,6 +319,7 @@ export function computeTax(input: TaxCalcInput): TaxCalcResult {
   add({ kind: "PRICE", severity: "blocks_total", count: missing("PRICE"), message: "Price data unavailable: a historical USD price is required for these events. No price is assumed." });
   add({ kind: "COST_BASIS", severity: "blocks_total", count: missing("COST_BASIS"), message: "Data required: cost basis is missing for these disposals (no matching acquisition in the indexed history)." });
   add({ kind: "TIMESTAMP", severity: "blocks_total", count: missing("TIMESTAMP"), message: "Data required: the block time is unknown for these events." });
+  add({ kind: "BASIS_REVIEW", severity: "incomplete", count: missing("BASIS_REVIEW"), message: "User-provided cost basis records excluded pending review (possible duplicate or overlap): they are not counted until you review them." });
   add({ kind: "CLASSIFICATION", severity: "incomplete", count: missing("CLASSIFICATION"), message: "UNKNOWN or unassessed transactions: these are not included in any figure." });
   add({ kind: "TRANSFER_MATCH", severity: "incomplete", count: missing("TRANSFER_MATCH"), message: "Unresolved transfers: not matched to a counterpart; no cost basis is invented for received assets and sent assets are not treated as sales." });
   add({ kind: "HISTORY", severity: "incomplete", count: !cov.historyComplete || cov.hasGap ? 1 : 0, message: "Wallet history is incomplete: older transactions are not indexed, or transactions between syncs may be missing. Acquisitions before the indexed window are unknown." });
@@ -237,13 +342,13 @@ export function computeTax(input: TaxCalcInput): TaxCalcResult {
   for (const e of events) if (e.price) used.set(`${e.asset}@${e.timestamp}`, e.price);
   const canonicalInput = [
     `v=1 method=${method} year=${taxYear} swap=${input.swapTreatment} cov=${cov.synced}/${cov.historyComplete}/${cov.hasGap}/${cov.holdingsComplete}`,
-    ...(input.openingLots ?? []).map((o) => `open ${o.id} ${o.walletId} ${o.asset}:${o.decimals}:${o.quantity} t=${o.acquiredAt} cost=${o.costBasisCents}`).sort(),
+    ...manual.map((o) => `manual ${o.id} r${o.revision ?? 0} ${o.walletId} ${o.asset}:${o.decimals}:${o.quantity} t=${o.acquiredAt} cost=${o.costBasisCents} sig=${o.signature ?? ""} ack=${o.acknowledgedOverlap === true} created=${o.createdAt ?? 0}`).sort(),
     ...txs.map((t) => `tx ${t.walletId} ${t.signature} ${t.id} ${t.status} ${t.kind}@${t.classifierVersion} t=${t.occurredAt} fee=${t.feeLamports} ${t.deltas.map((d) => `${d.asset}:${d.decimals}:${d.delta}`).sort().join(",")}`),
     ...[...used].sort(([a], [b]) => a.localeCompare(b)).map(([k, p]) => `px ${k} ${p.priceMicroUsd} ${p.source} ${p.observedAt}`),
   ].join("\n");
 
   return {
-    status, method, taxYear, swapTreatment: input.swapTreatment, events, realized, estimate, exposureCents: exposure, requirements: reqs,
+    status, method, taxYear, swapTreatment: input.swapTreatment, events, realized, estimate, exposureCents: exposure, requirements: reqs, manualBasisReview: [...review.values()],
     counts: { ...counts, unresolved: stat("UNRESOLVED"), dataRequired: stat("DATA_REQUIRED"), matched: stat("MATCHED"), duplicatesIgnored },
     canonicalInput, feePolicy: "RECORDED_NOT_APPLIED",
   };

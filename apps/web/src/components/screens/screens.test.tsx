@@ -436,7 +436,7 @@ const liveTax = (over: Partial<TaxResponse> = {}): TaxResponse => ({
   ...buildTax(W), dataSource: "chain", verifiedOnChain: false, methodSource: "default", status: "PARTIAL", figuresComplete: false,
   estimatedRealizedGainsCents: "0", estimatedRealizedLossesCents: "0", estimatedShortTermNetCents: "0", estimatedLongTermNetCents: "0", estimatedTaxableEvents: 0,
   estimatedTaxExposureCents: null, assumptions: null,
-  calculation: { engineVersion: "0.1.0", dataModelVersion: "1", feePolicy: "RECORDED_NOT_APPLIED", swapTreatment: "DISPOSAL_AND_ACQUISITION", inputFingerprint: "abcdef0123456789abcdef", counts: { BUY: 0, SELL: 0, TRANSFER_IN: 1, TRANSFER_OUT: 0, FEE: 0, UNKNOWN: 1, unresolved: 2, dataRequired: 0, matched: 0, duplicatesIgnored: 0 }, coverage: { synced: true, historyComplete: false, hasGap: false, holdingsComplete: true }, priceSources: [], walletsIncluded: 1 },
+  calculation: { engineVersion: "0.1.0", dataModelVersion: "1", feePolicy: "RECORDED_NOT_APPLIED", swapTreatment: "DISPOSAL_AND_ACQUISITION", inputFingerprint: "abcdef0123456789abcdef", counts: { BUY: 0, SELL: 0, TRANSFER_IN: 1, TRANSFER_OUT: 0, FEE: 0, UNKNOWN: 1, MANUAL_BASIS: 0, unresolved: 2, dataRequired: 0, matched: 0, duplicatesIgnored: 0 }, coverage: { synced: true, historyComplete: false, hasGap: false, holdingsComplete: true }, priceSources: [], walletsIncluded: 1 },
   requirements: [
     { kind: "TRANSFER_MATCH", severity: "incomplete", message: "Unresolved transfers", count: 1 },
     { kind: "CLASSIFICATION", severity: "incomplete", message: "UNKNOWN or unassessed", count: 1 },
@@ -445,11 +445,12 @@ const liveTax = (over: Partial<TaxResponse> = {}): TaxResponse => ({
   ...over,
 });
 const ev = (o: Partial<TaxDetailsResponse["events"][number]> = {}): TaxDetailsResponse["events"][number] => ({
+  origin: "CHAIN", manualBasisId: null,
   id: "e1", signature: "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UNbmiMeFbvk", walletId: "w", timestamp: "2024-01-02T00:00:00.000Z", kind: "SELL", status: "DATA_REQUIRED",
   asset: "SOL", mint: null, decimals: 9, quantity: "1000000000", usdValueCents: null, priceMicroUsd: null, priceSource: null, priceObservedAt: null, valuation: null, feeLamports: "5000", uncoveredQuantity: "0",
   classification: { kind: "swap", reason: "r", version: "1" }, reason: "PRICE DATA UNAVAILABLE for this asset at this time; no value is assumed.", missing: ["PRICE"], confidence: "NONE", matchedWith: null, candidates: [], ...o,
 });
-const liveDetails = (events: TaxDetailsResponse["events"]): TaxDetailsResponse => ({ walletId: W, taxYear: 2024, costBasisMethod: "FIFO", status: "PARTIAL", realized: [], events, truncated: false, note: null, dataSource: "chain", verifiedOnChain: false });
+const liveDetails = (events: TaxDetailsResponse["events"]): TaxDetailsResponse => ({ walletId: W, taxYear: 2024, costBasisMethod: "FIFO", status: "PARTIAL", realized: [], events, manualBasisReview: [], truncated: false, note: null, dataSource: "chain", verifiedOnChain: false });
 
 describe("live tax view", () => {
   it("PARTIAL: Tax data incomplete, exposure is a dash with RATES REQUIRED, never $0; method shown as default", () => {

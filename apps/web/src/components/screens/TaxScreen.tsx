@@ -1,6 +1,6 @@
 "use client";
 
-import { COPY, type TaxDetailsResponse, type TaxResponse, type TaxReserveResponse } from "@project-name/shared";
+import { COPY, type TaxCalculateResponse, type TaxDetailsResponse, type TaxResponse, type TaxReserveResponse } from "@project-name/shared";
 import { useState, type ReactNode } from "react";
 import { api } from "@/lib/api/client";
 import { useResource } from "@/lib/api/useResource";
@@ -11,6 +11,7 @@ import { useWallet } from "@/state/wallet";
 import { ButtonLink } from "../Button";
 import { Card } from "../Card";
 import { DataSourceBadge, DemoDataNotice } from "../DataSource";
+import { ManualBasisPanel } from "../ManualBasisPanel";
 import { PageHeader } from "../PageHeader";
 import { AuthRequired, LoadingState, NoLiveData, ResourceView } from "../states";
 import { StatCard } from "../StatCard";
@@ -102,21 +103,32 @@ function Body({ walletId, wallets, onSelect }: { walletId: string; wallets: Para
   const w = useWallet();
   const refresh = () => void w.refreshSession();
   const [q, setQ] = useState<TaxQueryParams>({});
-  const key = `${walletId}:${JSON.stringify(q)}`;
-  const tax = useResource(`tax:${key}`, () => api.getTaxEstimate(walletId, q), refresh);
-  const details = useResource(`tax-details:${key}`, () => api.getTaxDetails(walletId, q));
-  const reserve = useResource(`reserve:${key}`, () => api.getTaxReserve(walletId, q));
+  const [rev, setRev] = useState(0);
+  // Rates and other inputs stay in memory and are sent in POST bodies: never in a URL, never persisted.
+  const key = `${walletId}:${JSON.stringify(q)}:${rev}`;
+  const calc = useResource(`tax-calc:${key}`, () => api.calculateTax(walletId, q), refresh);
+  const reserve = useResource(`reserve-calc:${key}`, () => api.calculateTaxReserve(walletId, q));
+  // keep the last good result mounted while a recalculation runs, so open forms and notices are not lost
+  const data: TaxCalculateResponse | null = calc.status === "ok" ? calc.data : calc.status === "loading" ? (calc.previous ?? null) : null;
   return (
     <>
       <WalletPicker wallets={wallets} selectedId={walletId} onSelect={onSelect} />
-      <ResourceView resource={tax} loadingLabel="Loading tax estimate" noData={<NoLiveData title="NO LIVE TAX DATA YET" message="Your wallet is authenticated, but no tax data is available for it yet." />}>
-        {(t) => (
-          <>
-            <TaxView tax={t} reserve={reserve.status === "ok" ? reserve.data : null} details={details.status === "ok" ? details.data : null} />
-            {t.dataSource === "chain" ? <div className="mt-6"><TaxInputsForm onApply={setQ} /></div> : null}
-          </>
-        )}
-      </ResourceView>
+      {data ? (
+        <>
+          <TaxView tax={data.tax} reserve={reserve.status === "ok" ? reserve.data : null} details={data.details} />
+          {data.tax.dataSource === "chain" ? (
+            <>
+              <ManualBasisPanel walletId={walletId} details={data.details} onChanged={() => setRev((n) => n + 1)} />
+              <div className="mt-6"><TaxInputsForm onApply={setQ} /></div>
+            </>
+          ) : null}
+          {calc.status === "loading" ? <p role="status" className="mt-3 text-xs text-muted">Recalculating…</p> : null}
+        </>
+      ) : (
+        <ResourceView resource={calc} loadingLabel="Loading tax estimate" noData={<NoLiveData title="NO LIVE TAX DATA YET" message="Your wallet is authenticated, but no tax data is available for it yet." />}>
+          {() => null}
+        </ResourceView>
+      )}
     </>
   );
 }

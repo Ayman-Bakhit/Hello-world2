@@ -217,11 +217,11 @@ export const TaxAssumptionsSchema = z.object({
   stateRateBps: z.number().int().min(0).max(10_000),
 });
 export const TaxStatusEnum = z.enum(["COMPLETE", "PARTIAL", "DATA_REQUIRED", "UNAVAILABLE"]);
-export const TaxEventKindEnum = z.enum(["BUY", "SELL", "TRANSFER_IN", "TRANSFER_OUT", "FEE", "UNKNOWN"]);
+export const TaxEventKindEnum = z.enum(["BUY", "SELL", "TRANSFER_IN", "TRANSFER_OUT", "FEE", "UNKNOWN", "MANUAL_BASIS"]);
 export const TaxEventStatusEnum = z.enum(["READY", "DATA_REQUIRED", "UNRESOLVED", "MATCHED", "EXCLUDED"]);
-export const TaxMissingKind = z.enum(["PRICE", "COST_BASIS", "TIMESTAMP", "CLASSIFICATION", "TRANSFER_MATCH"]);
+export const TaxMissingKind = z.enum(["PRICE", "COST_BASIS", "TIMESTAMP", "CLASSIFICATION", "TRANSFER_MATCH", "BASIS_REVIEW"]);
 export const TaxRequirementView = z.object({
-  kind: z.enum(["PRICE", "COST_BASIS", "TIMESTAMP", "CLASSIFICATION", "TRANSFER_MATCH", "HISTORY", "HOLDINGS", "SYNC", "RATES"]),
+  kind: z.enum(["PRICE", "COST_BASIS", "TIMESTAMP", "CLASSIFICATION", "TRANSFER_MATCH", "BASIS_REVIEW", "HISTORY", "HOLDINGS", "SYNC", "RATES"]),
   severity: z.enum(["blocks_total", "incomplete", "info"]),
   message: z.string(),
   count: z.number().int(),
@@ -236,7 +236,7 @@ export const TaxCalculationInfo = z.object({
   /** sha256 of the exact inputs (transactions, classifier versions, prices used, method, year): same inputs, same hash. */
   inputFingerprint: z.string(),
   counts: z.object({
-    BUY: z.number().int(), SELL: z.number().int(), TRANSFER_IN: z.number().int(), TRANSFER_OUT: z.number().int(), FEE: z.number().int(), UNKNOWN: z.number().int(),
+    BUY: z.number().int(), SELL: z.number().int(), TRANSFER_IN: z.number().int(), TRANSFER_OUT: z.number().int(), FEE: z.number().int(), UNKNOWN: z.number().int(), MANUAL_BASIS: z.number().int(),
     unresolved: z.number().int(), dataRequired: z.number().int(), matched: z.number().int(), duplicatesIgnored: z.number().int(),
   }),
   coverage: z.object({ synced: z.boolean(), historyComplete: z.boolean(), hasGap: z.boolean(), holdingsComplete: z.boolean() }),
@@ -272,6 +272,91 @@ export const TaxResponse = z.object({
 });
 export type TaxResponse = z.infer<typeof TaxResponse>;
 
+export const ManualBasisReviewView = z.object({
+  manualBasisId: z.string(),
+  state: z.enum(["OK", "POTENTIAL_DUPLICATE", "OVERLAPPING_BASIS", "DECIMALS_MISMATCH"]),
+  acknowledged: z.boolean(),
+  /** false = excluded from the calculation until reviewed */
+  included: z.boolean(),
+  linkedEventId: z.string().nullable(),
+  conflicts: z.array(z.object({ source: z.enum(["CHAIN", "USER_PROVIDED"]), id: z.string(), signature: z.string(), asset: z.string(), quantity: z.string(), timestamp: Iso.nullable() })),
+  explanation: z.string(),
+});
+
+// ---------- manual (USER_PROVIDED) cost basis ----------
+const MintOrNative = z.string().refine((a) => a === "native" || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a), 'must be "native" (SOL) or a token mint address');
+export const ManualBasisReasonEnum = z.enum(["EXCHANGE_PURCHASE", "PRIOR_WALLET", "GIFT_RECEIVED", "INCOME_OR_REWARD", "OTHER"]);
+const manualFields = {
+  /** decimal amount in whole tokens, e.g. "1.5". Never rounded: too many decimals is an error. */
+  quantity: z.string().min(1).max(80),
+  /** UTC, whole seconds: 2023-05-17T14:30:00Z */
+  acquiredAt: z.string().min(1).max(40),
+  /** USD with at most 2 decimals, e.g. "1234.56" */
+  costBasis: z.string().min(1).max(40),
+  reason: ManualBasisReasonEnum,
+  signature: z.string().max(100).nullish(),
+  notes: z.string().max(1000).nullish(),
+};
+export const CreateManualBasisRequest = z.strictObject({
+  asset: MintOrNative,
+  decimals: z.number().int().min(0).max(38).nullish(),
+  currency: z.literal("USD").default("USD"),
+  ...manualFields,
+});
+export type CreateManualBasisRequest = z.infer<typeof CreateManualBasisRequest>;
+/** A revision replaces the editable fields; asset and wallet are fixed (void the record and add a new one to change them). */
+export const ReviseManualBasisRequest = z.strictObject({
+  ...manualFields,
+  currency: z.literal("USD").default("USD"),
+  acknowledgeOverlap: z.boolean().default(false),
+  /** why this change is being made; kept in the audit trail */
+  changeReason: z.string().min(3).max(300),
+  /** the revision the caller last saw: stale writes are refused */
+  expectedRevision: z.number().int().min(1),
+});
+export type ReviseManualBasisRequest = z.infer<typeof ReviseManualBasisRequest>;
+export const VoidManualBasisRequest = z.strictObject({ changeReason: z.string().min(3).max(300), expectedRevision: z.number().int().min(1) });
+export type VoidManualBasisRequest = z.infer<typeof VoidManualBasisRequest>;
+
+const manualRevisionShape = {
+  revision: z.number().int(),
+  action: z.enum(["create", "revise", "void"]),
+  status: z.enum(["active", "voided"]),
+  quantity: z.string(),
+  quantityRaw: z.string(),
+  acquiredAt: Iso,
+  costBasis: z.string(),
+  costBasisCents: Cents,
+  currency: z.literal("USD"),
+  reason: ManualBasisReasonEnum,
+  signature: z.string().nullable(),
+  notes: z.string().nullable(),
+  acknowledgedOverlap: z.boolean(),
+  changeReason: z.string().nullable(),
+  createdAt: Iso,
+};
+export const ManualBasisRevisionView = z.object(manualRevisionShape);
+export const ManualBasisView = z.object({
+  id: Uuid,
+  walletId: Uuid,
+  asset: z.string(),
+  mint: z.string().nullable(),
+  decimals: z.number().int(),
+  /** Always USER_PROVIDED. This data is the user's statement; it is not read from, or verified against, any blockchain. */
+  source: z.literal("USER_PROVIDED"),
+  verifiedOnChain: z.literal(false),
+  ...manualRevisionShape,
+  /** when the record was first created (the current revision's time is `updatedAt`) */
+  createdAt: Iso,
+  updatedAt: Iso,
+  /** present on create/list/detail: duplicate/overlap review from the last tax calculation */
+  review: ManualBasisReviewView.nullable(),
+});
+export type ManualBasisView = z.infer<typeof ManualBasisView>;
+export const ManualBasisList = z.object({ walletId: Uuid, records: z.array(ManualBasisView), source: z.literal("USER_PROVIDED") });
+export const ManualBasisDetail = z.object({ record: ManualBasisView, history: z.array(ManualBasisRevisionView) });
+export type ManualBasisDetail = z.infer<typeof ManualBasisDetail>;
+
 export const TaxEventView = z.object({
   id: z.string(),
   signature: z.string(),
@@ -299,6 +384,9 @@ export const TaxEventView = z.object({
   matchedWith: z.string().nullable(),
   /** SUGGESTED counterparts (same asset and quantity, different transaction). Never applied. */
   candidates: z.array(z.string()),
+  /** CHAIN = derived from an indexed Solana transaction. USER_PROVIDED = entered by the user; never from Solana. */
+  origin: z.enum(["CHAIN", "USER_PROVIDED"]),
+  manualBasisId: z.string().nullable(),
 });
 export const TaxRealizedView = z.object({
   disposalEventId: z.string(),
@@ -317,6 +405,8 @@ export const TaxRealizedView = z.object({
   holdingPeriod: z.enum(["SHORT_TERM", "LONG_TERM"]),
   disposalSignature: z.string(),
   acquisitionSignature: z.string(),
+  acquisitionOrigin: z.enum(["CHAIN", "USER_PROVIDED"]),
+  manualBasisId: z.string().nullable(),
   proceedsPriceSource: z.string().nullable(),
   costPriceSource: z.string().nullable(),
   feeLamports: z.string().nullable(),
@@ -330,24 +420,32 @@ export const TaxDetailsResponse = z.object({
   realized: z.array(TaxRealizedView),
   /** Every derived tax event with its status and why. Newest first, capped. */
   events: z.array(TaxEventView),
+  /** Review state of every active USER_PROVIDED basis record (duplicates / overlaps are excluded until reviewed). */
+  manualBasisReview: z.array(ManualBasisReviewView),
   truncated: z.boolean(),
   note: z.string().nullable(),
   ...provenance,
 });
 export type TaxDetailsResponse = z.infer<typeof TaxDetailsResponse>;
 
+/** GET query: non-sensitive parameters only. Tax rates are NOT accepted in a URL (use POST /calculate). */
 export const TaxQuery = z.strictObject({
   taxYear: z.coerce.number().int().min(2009).max(2100).optional(),
   method: z.enum(["FIFO", "LIFO", "HIFO"]).optional(),
   swapTreatment: z.enum(["DISPOSAL_AND_ACQUISITION", "NOT_ASSESSED"]).optional(),
-  shortTermRateBps: z.coerce.number().int().min(0).max(10_000).optional(),
-  longTermRateBps: z.coerce.number().int().min(0).max(10_000).optional(),
-  stateRateBps: z.coerce.number().int().min(0).max(10_000).optional(),
-}).refine((q) => {
-  const n = [q.shortTermRateBps, q.longTermRateBps, q.stateRateBps].filter((x) => x !== undefined).length;
-  return n === 0 || n === 3;
-}, "supply all three rates (shortTermRateBps, longTermRateBps, stateRateBps) or none");
+});
 export type TaxQuery = z.infer<typeof TaxQuery>;
+
+/** Body of POST /api/tax/:walletId/calculate. Rates and other financial inputs travel in the body, never in a URL. */
+export const TaxCalculateRequest = z.strictObject({
+  taxYear: z.number().int().min(2009).max(2100).optional(),
+  method: z.enum(["FIFO", "LIFO", "HIFO"]).optional(),
+  swapTreatment: z.enum(["DISPOSAL_AND_ACQUISITION", "NOT_ASSESSED"]).optional(),
+  rates: z.strictObject({ shortTermRateBps: z.number().int().min(0).max(10_000), longTermRateBps: z.number().int().min(0).max(10_000), stateRateBps: z.number().int().min(0).max(10_000) }).optional(),
+});
+export type TaxCalculateRequest = z.infer<typeof TaxCalculateRequest>;
+export const TaxCalculateResponse = z.object({ tax: TaxResponse, details: TaxDetailsResponse });
+export type TaxCalculateResponse = z.infer<typeof TaxCalculateResponse>;
 
 // ---------- tax reserve ----------
 export const TaxReserveTarget = z.object({
