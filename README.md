@@ -19,7 +19,8 @@ Phase 1 in progress. Nothing is deployed. No mainnet, no custody, no production 
 | Solana wallet-signature sign-in, HttpOnly cookie sessions, logout, CSRF origin checks | Done (Slice 2) |
 | Frontend wired to the API: auth states, empty/loading/error/demo states, PREPARE LAUNCH, reserve target | Done (Slice 4) |
 | Read-only Solana indexing: RPC abstraction, SOL + SPL balances, transactions with conservative classification, live Portfolio (SYNC WALLET), SOL price abstraction | Done (Slice 5), tested against a fake RPC only; NOT verified on a real network (see docs/INDEXING.md) |
-| Tax from live data, reserve/donation/launch on-chain flows, SPL prices | Not started |
+| Tax data foundation: events, FIFO/LIFO/HIFO over indexed data, status model, Tax Center wiring | Done (Slice 6), fixture-backed; no real prices, no verified chain data |
+| Real historical prices, manual cost basis, reserve/donation/launch on-chain flows | Not started |
 | Smart contracts | Not started (blocked on architecture review) |
 
 ## Layout

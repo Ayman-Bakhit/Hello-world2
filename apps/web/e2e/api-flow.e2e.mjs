@@ -181,11 +181,24 @@ check("sync inside the cooldown is 429 SYNC_COOLDOWN", cool.status() === 429 && 
 
 await go("/tax");
 t = await text();
-check("tax: no live data empty state, no demo estimate", t.includes("NO LIVE TAX DATA YET") && !t.includes("$18,420") && !/your tax bill/i.test(t));
+check("tax: real wallet shows a LIVE (unverified) estimate with status PARTIAL, never demo numbers", t.includes("LIVE DATA (UNVERIFIED)") && t.includes("PARTIAL") && t.includes("Tax data incomplete") && !t.includes("$18,420") && !/DEMO DATA/.test(t), t.slice(0, 400));
+check("tax: accounting method is explicit (FIFO default) and swaps are labeled an assumption", t.includes("FIFO (DEFAULT)") && t.includes("not a legal conclusion"));
+check("tax: unresolved transfers listed, no exposure without user rates, no purchases invented", t.includes("UNRESOLVED TRANSFERS") && t.includes("RATES REQUIRED") && !t.includes("Acquisition (buy)"));
+check("tax: no tax-bill / guarantee wording", !/your tax bill|guaranteed|loophole|tax-free/i.test(t));
+const taxApi = await (await apiGet(`/api/tax/${WALLET_ID}`)).json();
+check("tax API: chain data, unverified, not complete, fingerprint present", taxApi.dataSource === "chain" && taxApi.verifiedOnChain === false && taxApi.figuresComplete === false && taxApi.status !== "COMPLETE" && /^[0-9a-f]{64}$/.test(taxApi.calculation.inputFingerprint));
+await page.getByRole("tab", { name: /All \(/ }).click();
+t = await text();
+check("tax: event list shows the failed transaction as a network fee and the received token as an unresolved transfer", t.includes("Network fee") && t.includes("Transfer in") && t.includes("UNRESOLVED"));
+await page.locator('select').first().selectOption("HIFO");
+await page.getByRole("button", { name: "RECALCULATE" }).click();
+await page.getByText("HIFO", { exact: true }).first().waitFor({ timeout: 8000 });
+check("tax: choosing HIFO is applied and echoed (no longer 'default')", !(await text()).includes("HIFO (DEFAULT)"));
+await shot("5c-tax-live");
 
 await go("/tax-reserve");
 t = await text();
-check("tax reserve: empty state for the real wallet; funding stays unavailable", t.includes("NO LIVE TAX RESERVE DATA YET") && !t.includes("$14,200"));
+check("tax reserve: estimate only for the real wallet; balance not read; no demo reserve; funding unavailable", /estimated reserve requirement/i.test(t) && /not read from any chain yet/i.test(t) && !t.includes("$14,200") && t.includes("UNAVAILABLE"), t.slice(0, 700));
 
 await go("/give");
 t = await text();

@@ -36,7 +36,8 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 | `POST /api/wallets/:id/sync` | session + owner, rate limited, per-wallet cooldown | RPC read, db write | starts a bounded READ-ONLY sync (202); no signing, no sending |
 | `GET /api/portfolio/:walletId` | session + owner | demo wallets: demo; real wallets: **chain** (indexed) or 404 `NO_LIVE_DATA` | live for real wallets after sync |
 | `GET /api/transactions/:walletId` | session + owner | demo wallets: demo; real wallets: **chain** (indexed) or 404 `NO_LIVE_DATA` | live for real wallets after sync |
-| `GET /api/tax/:walletId` | session + owner | demo (shared tax engine) | **demo** (engine is real) |
+| `GET /api/tax/:walletId` | session + owner | demo wallets: demo fixture. Real wallets: derived on demand from indexed transactions + stored prices | status `COMPLETE|PARTIAL|DATA_REQUIRED|UNAVAILABLE`; estimate only |
+| `GET /api/tax/:walletId/details` | session + owner | same | realized slices, every tax event with status/reason/missing data |
 | `GET /api/tax-reserve/:walletId` | session + owner | target: db; balance/exposure: demo | mixed |
 | `POST /api/tax-reserve/:walletId/target` | session + owner | db | production-capable (config only, moves no funds) |
 | `GET /api/charities`, `GET /api/charities/:id` | public | db (`demo` rows) | db-backed |
@@ -114,7 +115,10 @@ Demo wallets:
 `GET /api/transactions/:walletId?limit=25&offset=0` (limit 1-100) → `{ walletId, transactions:[{ id, signature, timestamp, type, asset, decimals, amount, usdValueCents, taxTreatment, source:"demo", explorerUrl:null }], pagination:{ limit, offset, total, nextOffset }, dataSource, verifiedOnChain }`
 `signature` is a `DEMO-SIG-*` placeholder. Records with `source:"chain"` will exist only after the indexer.
 
-### Tax (demo)
+### Tax (Slice 6)
+`GET /api/tax/:walletId?taxYear=&method=FIFO|LIFO|HIFO&swapTreatment=DISPOSAL_AND_ACQUISITION|NOT_ASSESSED&shortTermRateBps=&longTermRateBps=&stateRateBps=` (rates: all three or none; unknown params 400). Scope is the user's real wallets pooled. Response adds to the fields below: `status`, `figuresComplete` (true only for COMPLETE), `methodSource` (`requested|default|demo_fixture`), nullable figures (`null` = not computed, never 0), `assumptions` (null unless the caller supplied rates), `calculation { engineVersion, dataModelVersion, feePolicy: "RECORDED_NOT_APPLIED", swapTreatment, inputFingerprint, counts, coverage, priceSources, walletsIncluded }`, `requirements[] { kind, severity, message, count }`. Real wallets: `dataSource:"chain"`, `verifiedOnChain:false`; never synced = `status:"UNAVAILABLE"` with no figures (200, not demo). `GET /api/tax/:walletId/details` adds `realized[]` (per lot slice, `inTaxYear`) and `events[]` (kind, status, reason, missing, price and source, confidence, matchedWith, candidates; capped at 500, `truncated`). `GET /api/tax-reserve/:walletId` accepts the same query; for real wallets `currentReserveCents`, `coverageBps`, `recommendedAdditionalReserveCents` are `null` (the reserve balance is not read from any chain) and the exposure is an estimate with the underlying `status`. `POST .../target` stores a target only. No endpoint moves funds.
+
+### Tax (demo wallets; same shape)
 `GET /api/tax/:walletId` → `{ scope:"user", taxYear, costBasisMethod, estimatedRealizedGainsCents, estimatedRealizedLossesCents, estimatedShortTermNetCents, estimatedLongTermNetCents, estimatedTaxableEvents, estimatedTaxExposureCents, assumptions, methodology:{ name, version, limitations[] }, disclaimer[], dataSource:"demo", verifiedOnChain:false }`
 Computed by the shared tax engine from synthetic events. Disclaimer: "Estimated tax exposure is a tax planning estimate, not a tax bill or tax advice."
 

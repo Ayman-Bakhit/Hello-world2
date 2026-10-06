@@ -39,7 +39,7 @@ const boot = async (over: Record<string, string> = {}, p: FakePriceProvider | nu
   prices = p ?? new FakePriceProvider();
   ctx = await makeCtx({ INDEXER_MIN_SYNC_INTERVAL_SECONDS: "0", INDEXER_SYNC_ON_LOGIN: "false", ...over }, undefined, { rpc, metadata: rpc, prices: p ? prices : new NullPriceProvider() });
   // prices are global (one SOL asset): isolate the latest-price logic per test
-  await ctx.pool.query("DELETE FROM price_observations");
+  await ctx.pool.query("DELETE FROM price_observations WHERE asset_id IN (SELECT id FROM assets WHERE address = 'native')");
 };
 afterEach(async () => { await ctx?.close(); });
 
@@ -56,10 +56,13 @@ describe("before any sync", () => {
   beforeEach(() => boot());
   it("real wallet: 404 NO_LIVE_DATA everywhere, never demo rows", async () => {
     const u = await liveUser(ctx, "fresh");
-    for (const url of [`/api/portfolio/${u.walletId}`, `/api/transactions/${u.walletId}`, `/api/tax/${u.walletId}`, `/api/tax-reserve/${u.walletId}`]) {
+    for (const url of [`/api/portfolio/${u.walletId}`, `/api/transactions/${u.walletId}`]) {
       const r = await get(u, url);
       expect(r.statusCode, url).toBe(404);
       expect(r.json().error.code).toBe("NO_LIVE_DATA");
+    }
+    for (const url of [`/api/tax/${u.walletId}`, `/api/tax-reserve/${u.walletId}`]) {
+      expect((await get(u, url)).json().status, url).toBe("UNAVAILABLE");
     }
     const s = await status(u);
     expect(s).toMatchObject({ state: "never_synced", configured: true, lastRun: null, window: null });

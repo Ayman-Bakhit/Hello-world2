@@ -6,7 +6,9 @@ import { api } from "@/lib/api/client";
 import { describeApiError, type ApiErrorView } from "@/lib/api/errors";
 import { useResource } from "@/lib/api/useResource";
 import { formatUsd } from "@/lib/format";
+import type { TaxQueryParams } from "@/lib/taxQuery";
 import { useScopedWallet } from "@/lib/useScopedWallet";
+import { TaxInputsForm } from "../TaxParts";
 import { useWallet } from "@/state/wallet";
 import { Badge } from "../Badge";
 import { Button } from "../Button";
@@ -63,11 +65,24 @@ export function TargetForm({ current, onSave, saving, error }: { current: TaxRes
 
 /** Pure view of the reserve plus the controls. */
 export function TaxReserveView({ data, onSave, saving, saveError, savedNotice }: { data: TaxReserveResponse; onSave: Parameters<typeof TargetForm>[0]["onSave"]; saving: boolean; saveError: ApiErrorView | null; savedNotice: boolean }) {
-  const exposure = BigInt(data.estimatedTaxExposureCents);
+  const exposure = data.estimatedTaxExposureCents === null ? null : BigInt(data.estimatedTaxExposureCents);
+  const incomplete = data.status !== "COMPLETE";
   return (
     <div className="space-y-4">
-      <DemoDataNotice dataSource={data.reserveDataSource} message="The reserve balance and exposure are fictional demo numbers. The target below is a saved setting only; no funds are involved." />
-      <TaxReserveCard reserveCents={BigInt(data.currentReserveCents)} exposureCents={exposure} />
+      <DemoDataNotice dataSource={data.reserveDataSource ?? "database"} message="The reserve balance and exposure are fictional demo numbers. The target below is a saved setting only; no funds are involved." />
+      {data.currentReserveCents !== null && exposure !== null ? (
+        <TaxReserveCard reserveCents={BigInt(data.currentReserveCents)} exposureCents={exposure} />
+      ) : (
+        <Card title="Estimated reserve requirement" right={<DataSourceBadge dataSource={data.dataSource} verifiedOnChain={data.verifiedOnChain} />}>
+          <dl className="grid gap-5 sm:grid-cols-3">
+            <div><dt className="eyebrow">{COPY.taxExposure}</dt><dd className="num mt-1 text-xl font-semibold">{exposure === null ? "—" : formatUsd(exposure)}</dd></div>
+            <div><dt className="eyebrow">Reserve balance</dt><dd className="num mt-1 text-xl font-semibold">—</dd><p className="mt-1 text-xs text-muted">Not read from any chain yet</p></div>
+            <div><dt className="eyebrow">Coverage</dt><dd className="num mt-1 text-xl font-semibold">—</dd></div>
+          </dl>
+          {exposure === null ? <p className="mt-3 text-xs text-muted">{data.status === "UNAVAILABLE" ? "Tax data unavailable: sync your wallet first." : "Rates required: enter your own rates below to see an exposure estimate."}</p> : null}
+          {incomplete ? <p role="alert" className="mt-3 text-xs text-warn">Tax data incomplete ({data.status.replace("_", " ")}). This is an estimate from the data available, not a requirement.</p> : null}
+        </Card>
+      )}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Move funds" right={<Badge tone="neutral">UNAVAILABLE</Badge>}>
           <div className="flex flex-wrap gap-2">
@@ -83,7 +98,7 @@ export function TaxReserveView({ data, onSave, saving, saveError, savedNotice }:
         {data.target ? (
           <p className="text-sm">
             {data.target.targetType === "percentage" ? `${data.target.targetPercentage}% of realized gains` : `${data.target.targetAmount} ${data.currency} fixed`}
-            {data.resolvedTargetCents ? <span className="ml-2 num text-muted">= {formatUsd(BigInt(data.resolvedTargetCents))}</span> : null}
+            {data.resolvedTargetCents !== null ? <span className="ml-2 num text-muted">= {formatUsd(BigInt(data.resolvedTargetCents))}</span> : null}
           </p>
         ) : (
           <p className="text-sm text-muted">No target set yet.</p>
@@ -98,7 +113,8 @@ export function TaxReserveView({ data, onSave, saving, saveError, savedNotice }:
 
 function Body({ walletId, wallets, onSelect }: { walletId: string; wallets: Parameters<typeof WalletPicker>[0]["wallets"]; onSelect: (id: string) => void }) {
   const w = useWallet();
-  const res = useResource(`reserve-screen:${walletId}`, () => api.getTaxReserve(walletId), () => void w.refreshSession());
+  const [q, setQ] = useState<TaxQueryParams>({});
+  const res = useResource(`reserve-screen:${walletId}:${JSON.stringify(q)}`, () => api.getTaxReserve(walletId, q), () => void w.refreshSession());
   const [latest, setLatest] = useState<TaxReserveResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<ApiErrorView | null>(null);
@@ -119,8 +135,13 @@ function Body({ walletId, wallets, onSelect }: { walletId: string; wallets: Para
   return (
     <>
       <WalletPicker wallets={wallets} selectedId={walletId} onSelect={onSelect} />
-      <ResourceView resource={res} loadingLabel="Loading tax reserve" noData={<NoLiveData title="NO LIVE TAX RESERVE DATA YET" message="Your wallet is authenticated, but no live reserve or tax data exists yet. Tax estimation for real wallets is not available, and nothing here moves funds." />}>
-        {(d) => <TaxReserveView data={latest ?? d} onSave={save} saving={saving} saveError={saveError} savedNotice={saved} />}
+      <ResourceView resource={res} loadingLabel="Loading tax reserve" noData={<NoLiveData title="NO LIVE TAX RESERVE DATA YET" message="Your wallet is authenticated, but no reserve or tax data is available for it yet. Nothing here moves funds." />}>
+        {(d) => (
+          <>
+            <TaxReserveView data={latest ?? d} onSave={save} saving={saving} saveError={saveError} savedNotice={saved} />
+            {d.dataSource === "chain" ? <div className="mt-4"><TaxInputsForm onApply={(x) => { setLatest(null); setQ(x); }} showMethod={false} /></div> : null}
+          </>
+        )}
       </ResourceView>
     </>
   );

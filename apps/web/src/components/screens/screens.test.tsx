@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import {
   DEMO_IDS, DEMO_WALLETS, DiscoverQuery, NO_LIVE_DATA, buildCharityList, buildDiscover, buildDonations, buildPortfolio, buildTax,
-  buildTaxReserve, buildTokenProof, buildTransactions, LaunchConfigSchema, type PortfolioResponse, type SyncStatusResponse, type TokenProof, type TransactionsResponse,
+  buildTaxDetails, buildTaxReserve, buildTokenProof, buildTransactions, LaunchConfigSchema, type PortfolioResponse, type SyncStatusResponse, type TaxDetailsResponse, type TaxResponse, type TokenProof, type TransactionsResponse,
 } from "@project-name/shared";
 import { describe, expect, it } from "vitest";
 import { charityFromApi } from "@/lib/adapters";
@@ -139,12 +139,12 @@ describe("portfolio and transactions: demo vs empty", () => {
 
 describe("tax and tax reserve", () => {
   it("tax view uses qualified language, shows API disclaimer, labels demo, never says tax bill", () => {
-    const out = html(<TaxView tax={buildTax(W)} reserve={buildTaxReserve(W, null, "demo")} transactions={buildTransactions(W, 100, 0)!} walletLabel="Trading" />);
+    const out = html(<TaxView tax={buildTax(W)} reserve={buildTaxReserve(W, null, "demo")} details={buildTaxDetails(W)} />);
     for (const s of ["Estimated tax exposure", "Estimated realized gains", "Estimated realized losses", "Tax planning estimate", "Estimated tax reserve", "DEMO DATA", "$18,420", "qualified tax professional", "not a tax bill"]) expect(out, s).toContain(s);
     expect(out.toLowerCase()).not.toMatch(/your tax bill|guaranteed|loophole/);
   });
   it("tax view without reserve data shows dashes instead of inventing a reserve", () => {
-    const out = html(<TaxView tax={buildTax(W)} reserve={null} transactions={null} walletLabel="Trading" />);
+    const out = html(<TaxView tax={buildTax(W)} reserve={null} details={null} />);
     expect(out).toContain("No live reserve data");
   });
   it("reserve screen: ADD FUNDS and WITHDRAW are disabled and marked unavailable; no signing UI; target is a stored setting", () => {
@@ -428,5 +428,87 @@ describe("sync panel", () => {
   });
   it("demo wallets get no sync controls", () => {
     expect(html(<SyncPanel status={st({ state: "unsupported_demo_wallet" })} syncing={false} error={null} onSync={() => undefined} />)).toBe("");
+  });
+});
+
+// ---------- Slice 6: live tax view ----------
+const liveTax = (over: Partial<TaxResponse> = {}): TaxResponse => ({
+  ...buildTax(W), dataSource: "chain", verifiedOnChain: false, methodSource: "default", status: "PARTIAL", figuresComplete: false,
+  estimatedRealizedGainsCents: "0", estimatedRealizedLossesCents: "0", estimatedShortTermNetCents: "0", estimatedLongTermNetCents: "0", estimatedTaxableEvents: 0,
+  estimatedTaxExposureCents: null, assumptions: null,
+  calculation: { engineVersion: "0.1.0", dataModelVersion: "1", feePolicy: "RECORDED_NOT_APPLIED", swapTreatment: "DISPOSAL_AND_ACQUISITION", inputFingerprint: "abcdef0123456789abcdef", counts: { BUY: 0, SELL: 0, TRANSFER_IN: 1, TRANSFER_OUT: 0, FEE: 0, UNKNOWN: 1, unresolved: 2, dataRequired: 0, matched: 0, duplicatesIgnored: 0 }, coverage: { synced: true, historyComplete: false, hasGap: false, holdingsComplete: true }, priceSources: [], walletsIncluded: 1 },
+  requirements: [
+    { kind: "TRANSFER_MATCH", severity: "incomplete", message: "Unresolved transfers", count: 1 },
+    { kind: "CLASSIFICATION", severity: "incomplete", message: "UNKNOWN or unassessed", count: 1 },
+    { kind: "RATES", severity: "info", message: "Tax rates were not supplied", count: 1 },
+  ],
+  ...over,
+});
+const ev = (o: Partial<TaxDetailsResponse["events"][number]> = {}): TaxDetailsResponse["events"][number] => ({
+  id: "e1", signature: "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UNbmiMeFbvk", walletId: "w", timestamp: "2024-01-02T00:00:00.000Z", kind: "SELL", status: "DATA_REQUIRED",
+  asset: "SOL", mint: null, decimals: 9, quantity: "1000000000", usdValueCents: null, priceMicroUsd: null, priceSource: null, priceObservedAt: null, valuation: null, feeLamports: "5000", uncoveredQuantity: "0",
+  classification: { kind: "swap", reason: "r", version: "1" }, reason: "PRICE DATA UNAVAILABLE for this asset at this time; no value is assumed.", missing: ["PRICE"], confidence: "NONE", matchedWith: null, candidates: [], ...o,
+});
+const liveDetails = (events: TaxDetailsResponse["events"]): TaxDetailsResponse => ({ walletId: W, taxYear: 2024, costBasisMethod: "FIFO", status: "PARTIAL", realized: [], events, truncated: false, note: null, dataSource: "chain", verifiedOnChain: false });
+
+describe("live tax view", () => {
+  it("PARTIAL: Tax data incomplete, exposure is a dash with RATES REQUIRED, never $0; method shown as default", () => {
+    const out = html(<TaxView tax={liveTax()} reserve={null} details={liveDetails([])} />);
+    expect(out).toContain("PARTIAL");
+    expect(out).toContain("Tax data incomplete");
+    expect(out).toContain("LIVE DATA (UNVERIFIED)");
+    expect(out).toContain("FIFO (DEFAULT)");
+    expect(out).toContain("RATES REQUIRED");
+    expect(out).toContain("UNRESOLVED TRANSFERS (1)");
+    expect(out).toContain("Fees are recorded, not added to cost basis");
+    expect(out).toContain("not personalized tax advice");
+    expect(out).not.toContain("DEMO DATA");
+    expect(out).not.toMatch(/Estimated tax exposure<\/p><p[^>]*>\$0/);
+  });
+  it("DATA_REQUIRED: PRICE DATA UNAVAILABLE and DATA REQUIRED labels; figures carry the incomplete flag", () => {
+    const t = liveTax({ status: "DATA_REQUIRED", requirements: [{ kind: "PRICE", severity: "blocks_total", message: "Price data unavailable", count: 2 }, { kind: "COST_BASIS", severity: "blocks_total", message: "cost basis missing", count: 1 }] });
+    const out = html(<TaxView tax={t} reserve={null} details={liveDetails([ev()])} />);
+    expect(out).toContain("DATA REQUIRED");
+    expect(out).toContain("PRICE DATA UNAVAILABLE (2)");
+    expect(out).toContain("DATA REQUIRED: COST BASIS (1)");
+    expect(out).toContain("Tax data incomplete");
+  });
+  it("UNAVAILABLE: no figures at all, only dashes", () => {
+    const t = liveTax({ status: "UNAVAILABLE", estimatedRealizedGainsCents: null, estimatedRealizedLossesCents: null, estimatedShortTermNetCents: null, estimatedLongTermNetCents: null, calculation: null, requirements: [{ kind: "SYNC", severity: "blocks_total", message: "Unavailable: no wallet has been synced yet.", count: 1 }] });
+    const out = html(<TaxView tax={t} reserve={null} details={null} />);
+    expect(out).toContain("Tax data unavailable");
+    expect(out).not.toMatch(/\$\d/);
+  });
+  it("COMPLETE is only worded as an estimate and still says the chain data is unverified", () => {
+    const t = liveTax({ status: "COMPLETE", figuresComplete: true, requirements: [], estimatedTaxExposureCents: "0" });
+    const out = html(<TaxView tax={t} reserve={null} details={null} />);
+    expect(out).toContain("COMPLETE (ESTIMATE)");
+    expect(out).toContain("not independently verified");
+  });
+  it("events table lists UNKNOWN, unresolved and missing-price items with reasons; suggested matches are not applied", () => {
+    const events = [
+      ev({ id: "a", kind: "UNKNOWN", status: "UNRESOLVED", missing: ["CLASSIFICATION"], reason: "Left as UNKNOWN" }),
+      ev({ id: "b", kind: "TRANSFER_IN", status: "UNRESOLVED", missing: ["TRANSFER_MATCH"], candidates: ["x"], reason: "Received from an unknown source." }),
+      ev({ id: "c" }),
+    ];
+    const out = html(<TaxView tax={liveTax()} reserve={null} details={liveDetails(events)} />);
+    expect(out).toContain("Needs attention (3)");
+    expect(out).toContain("UNKNOWN");
+    expect(out).toContain("suggested only, not applied");
+    expect(out).toContain("PRICE DATA UNAVAILABLE");
+  });
+  it("no banned tax wording anywhere in the live view", () => {
+    const out = html(<TaxView tax={liveTax()} reserve={null} details={liveDetails([ev()])} />);
+    expect(out.toLowerCase()).not.toMatch(/guaranteed|loophole|tax-free|write-off|your tax bill/);
+  });
+  it("reserve view for a real wallet: estimate only, balance not read, incomplete warning, no demo numbers", () => {
+    const d: ReturnType<typeof buildTaxReserve> = { ...buildTaxReserve(W, null, "database"), dataSource: "chain", status: "PARTIAL", currentReserveCents: null, reserveDataSource: null, estimatedTaxExposureCents: null, coverageBps: null, recommendedAdditionalReserveCents: null };
+    const out = html(<TaxReserveView data={d} onSave={() => undefined} saving={false} saveError={null} savedNotice={false} />);
+    expect(out).toContain("Estimated reserve requirement");
+    expect(out).toContain("Not read from any chain yet");
+    expect(out).toContain("Tax data incomplete");
+    expect(out).toContain("Rates required");
+    expect(out).not.toContain("$14,200");
+    expect(out).not.toContain("DEMO DATA");
   });
 });

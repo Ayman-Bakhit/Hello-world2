@@ -58,6 +58,11 @@ const Env = z.object({
   INDEXER_SYNC_ON_LOGIN: blank(z.enum(["true", "false"]).default("true")).transform((v) => v === "true"),
   /** Requests per window per IP for POST /wallets/:id/sync (on top of the per-wallet cooldown). */
   INDEXER_SYNC_RATE_LIMIT_MAX: blank(z.coerce.number().int().min(1).max(100).default(5)),
+  // ---- Tax data (Slice 6) ----
+  /** A stored price counts for a transaction only if it was observed at most this long before it (no look-ahead). */
+  TAX_PRICE_MAX_AGE_SECONDS: blank(z.coerce.number().int().min(60).max(86_400 * 7).default(3600)),
+  /** Hard cap on transactions read for one tax calculation; beyond it the result is marked incomplete. */
+  TAX_MAX_TRANSACTIONS: blank(z.coerce.number().int().min(100).max(50_000).default(5000)),
   // ---- Prices ----
   /** none = no prices (assets show PRICE DATA UNAVAILABLE). coingecko = SOL only. */
   PRICE_PROVIDER: blank(z.enum(["none", "coingecko"]).default("none")),

@@ -82,3 +82,19 @@ Browser (Next.js, static shells)
 - **What the UI deliberately does not do:** sign or send transactions, move funds, create donation records, deploy anything, rank or filter tokens itself.
 - **Slice 5 update:** the Portfolio screen now has SYNC WALLET / REFRESH DATA (`lib/useWalletSync.ts`, `components/SyncPanel.tsx`), shows LIVE DATA for indexed wallets, and distinguishes on-chain balance, price and USD value. Tax, reserve and donations are still `NO_LIVE_DATA` for real wallets.
 - **Remaining blockchain integration** (future slices): price history and more price sources; cost-basis lots from indexed transactions -> real tax estimates; verified charity wallets and real donation transactions; reserve vault flows; token deployment and on-chain fee routing; on-chain proof (`verifiedOnChain`) and explorer links. Each replaces a demo-backed builder behind the same endpoints and the same schemas.
+
+## Tax data foundation (Slice 6)
+```
+transactions + transaction_asset_deltas (Slice 5, derived from immutable raw_transactions)   price_observations
+        \                                                                                      /
+         loadTaxInputs (all of ONE user's non-demo wallets + sync coverage)      HistoricalPriceProvider -> PriceAt
+                              \                                                  /
+                               computeTax (packages/shared/src/taxdata, pure)
+                      events -> transfer matching -> pricing -> lots/disposals -> engine realize() -> estimate
+                               -> requirements -> status (COMPLETE|PARTIAL|DATA_REQUIRED|UNAVAILABLE)
+                                              |
+         GET /api/tax/:walletId, /details, /api/tax-reserve/:walletId  (session + ownership; demo wallets -> labeled fixtures)
+                                              |
+                        Tax Center / Tax Reserve screens (status, method, requirements, unresolved, missing data)
+```
+Scope is the user (all their real wallets pooled per asset), matching the existing engine. Demo and real never mix: demo wallets get fixtures labeled DEMO DATA, real wallets get only derived data or `UNAVAILABLE`. Fixture-backed: the calculation logic and all test data. Dependent on future live verification: the indexed transactions, a real historical price source, and (later) user-supplied cost basis. No money movement exists: the reserve view exposes an estimate and a stored target only.

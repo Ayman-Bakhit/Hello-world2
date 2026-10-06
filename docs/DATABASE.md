@@ -60,3 +60,12 @@ Pre-existing session rows (only the dev endpoint could have created them) become
 | new `transaction_asset_deltas` (PK transaction+asset) | what moved for the wallet, per asset |
 | index `price_observations(asset_id, observed_at DESC)` | latest price lookup |
 Nothing is dropped. The replaced constraint (`transactions_kind_check`) only widens allowed values. Derived tables (`transactions`, `transaction_asset_deltas`, `token_holdings`) can be rebuilt from `raw_transactions` and `balance_observations`. The seed's SOL asset insert is `ON CONFLICT DO NOTHING` so it cannot collide with the indexer's native asset.
+
+### 004_tax_data (additive)
+| Change | Why |
+|---|---|
+| `price_observations.kind` (`spot`/`historical`/`fixture`), `.confidence` (`observed`/`fixture`) | provenance of a price travels to the tax result |
+| CHECK `price_micro_usd > 0` (NOT VALID: new rows only) | a zero price is "no price" |
+| trigger forbidding UPDATE on `price_observations` | a rewritten price would silently change past tax figures. DELETE stays allowed (it only removes a price, giving "PRICE DATA UNAVAILABLE") |
+| partial index `transactions(wallet_id, occurred_at) WHERE data_source='chain'` | tax reads |
+**No tax tables were added.** Tax events, lots and realized slices are derived on demand from `transactions`, `transaction_asset_deltas` (which trace to immutable `raw_transactions`) and `price_observations`. Each response carries an input fingerprint (sha256 over transactions, classifier versions, prices used, method, year), so a result can be reproduced and a change in source data is detectable. The baseline `cost_basis_lots` / `realized_events` tables remain unused; persisting snapshots is a later decision.

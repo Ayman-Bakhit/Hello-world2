@@ -216,24 +216,138 @@ export const TaxAssumptionsSchema = z.object({
   longTermRateBps: z.number().int().min(0).max(10_000),
   stateRateBps: z.number().int().min(0).max(10_000),
 });
+export const TaxStatusEnum = z.enum(["COMPLETE", "PARTIAL", "DATA_REQUIRED", "UNAVAILABLE"]);
+export const TaxEventKindEnum = z.enum(["BUY", "SELL", "TRANSFER_IN", "TRANSFER_OUT", "FEE", "UNKNOWN"]);
+export const TaxEventStatusEnum = z.enum(["READY", "DATA_REQUIRED", "UNRESOLVED", "MATCHED", "EXCLUDED"]);
+export const TaxMissingKind = z.enum(["PRICE", "COST_BASIS", "TIMESTAMP", "CLASSIFICATION", "TRANSFER_MATCH"]);
+export const TaxRequirementView = z.object({
+  kind: z.enum(["PRICE", "COST_BASIS", "TIMESTAMP", "CLASSIFICATION", "TRANSFER_MATCH", "HISTORY", "HOLDINGS", "SYNC", "RATES"]),
+  severity: z.enum(["blocks_total", "incomplete", "info"]),
+  message: z.string(),
+  count: z.number().int(),
+});
+export const TaxCalculationInfo = z.object({
+  engineVersion: z.string(),
+  dataModelVersion: z.string(),
+  /** Network fees are recorded on events but never added to cost basis or proceeds. */
+  feePolicy: z.literal("RECORDED_NOT_APPLIED"),
+  /** How swaps were treated. An ASSUMPTION, not a legal conclusion. */
+  swapTreatment: z.enum(["DISPOSAL_AND_ACQUISITION", "NOT_ASSESSED"]),
+  /** sha256 of the exact inputs (transactions, classifier versions, prices used, method, year): same inputs, same hash. */
+  inputFingerprint: z.string(),
+  counts: z.object({
+    BUY: z.number().int(), SELL: z.number().int(), TRANSFER_IN: z.number().int(), TRANSFER_OUT: z.number().int(), FEE: z.number().int(), UNKNOWN: z.number().int(),
+    unresolved: z.number().int(), dataRequired: z.number().int(), matched: z.number().int(), duplicatesIgnored: z.number().int(),
+  }),
+  coverage: z.object({ synced: z.boolean(), historyComplete: z.boolean(), hasGap: z.boolean(), holdingsComplete: z.boolean() }),
+  /** distinct price sources actually used */
+  priceSources: z.array(z.string()),
+  walletsIncluded: z.number().int(),
+});
 export const TaxResponse = z.object({
   walletId: Uuid,
   /** Tax is estimated across all of the owner's wallets, not per wallet. */
   scope: z.literal("user"),
   taxYear: z.number().int(),
+  /** The accounting method used for every figure. Never mixed. */
   costBasisMethod: z.enum(["FIFO", "LIFO", "HIFO"]),
-  estimatedRealizedGainsCents: Cents,
-  estimatedRealizedLossesCents: Cents,
-  estimatedShortTermNetCents: Cents,
-  estimatedLongTermNetCents: Cents,
+  methodSource: z.enum(["requested", "default", "demo_fixture"]),
+  /** COMPLETE only when no price, cost basis, timestamp, classification, transfer match, history or holdings is missing. */
+  status: TaxStatusEnum,
+  figuresComplete: z.boolean(),
+  /** null = not computed (UNAVAILABLE) */
+  estimatedRealizedGainsCents: Cents.nullable(),
+  estimatedRealizedLossesCents: Cents.nullable(),
+  estimatedShortTermNetCents: Cents.nullable(),
+  estimatedLongTermNetCents: Cents.nullable(),
   estimatedTaxableEvents: z.number().int(),
-  estimatedTaxExposureCents: Cents,
-  assumptions: TaxAssumptionsSchema,
+  /** null when status is UNAVAILABLE or no rates were supplied */
+  estimatedTaxExposureCents: Cents.nullable(),
+  assumptions: TaxAssumptionsSchema.nullable(),
+  calculation: TaxCalculationInfo.nullable(),
+  requirements: z.array(TaxRequirementView),
   methodology: z.object({ name: z.string(), version: z.string(), limitations: z.array(z.string()) }),
   disclaimer: z.array(z.string()),
   ...provenance,
 });
 export type TaxResponse = z.infer<typeof TaxResponse>;
+
+export const TaxEventView = z.object({
+  id: z.string(),
+  signature: z.string(),
+  walletId: z.string(),
+  timestamp: Iso.nullable(),
+  kind: TaxEventKindEnum,
+  status: TaxEventStatusEnum,
+  /** "SOL" or the mint address */
+  asset: z.string(),
+  mint: z.string().nullable(),
+  decimals: z.number().int(),
+  /** absolute raw base units; direction is the kind */
+  quantity: z.string(),
+  usdValueCents: Cents.nullable(),
+  priceMicroUsd: z.string().nullable(),
+  priceSource: z.string().nullable(),
+  priceObservedAt: Iso.nullable(),
+  valuation: z.enum(["PRICE", "COUNTER_LEG"]).nullable(),
+  feeLamports: z.string().nullable(),
+  uncoveredQuantity: z.string(),
+  classification: z.object({ kind: z.string(), reason: z.string(), version: z.string() }),
+  reason: z.string(),
+  missing: z.array(TaxMissingKind),
+  confidence: z.enum(["ESTIMATED", "NONE"]),
+  matchedWith: z.string().nullable(),
+  /** SUGGESTED counterparts (same asset and quantity, different transaction). Never applied. */
+  candidates: z.array(z.string()),
+});
+export const TaxRealizedView = z.object({
+  disposalEventId: z.string(),
+  lotEventId: z.string(),
+  asset: z.string(),
+  mint: z.string().nullable(),
+  decimals: z.number().int(),
+  quantity: z.string(),
+  acquiredAt: Iso,
+  disposedAt: Iso,
+  inTaxYear: z.boolean(),
+  costBasisCents: Cents,
+  unitCostBasisMicro: z.string(),
+  proceedsCents: Cents,
+  gainLossCents: Cents,
+  holdingPeriod: z.enum(["SHORT_TERM", "LONG_TERM"]),
+  disposalSignature: z.string(),
+  acquisitionSignature: z.string(),
+  proceedsPriceSource: z.string().nullable(),
+  costPriceSource: z.string().nullable(),
+  feeLamports: z.string().nullable(),
+});
+export const TaxDetailsResponse = z.object({
+  walletId: Uuid,
+  taxYear: z.number().int(),
+  costBasisMethod: z.enum(["FIFO", "LIFO", "HIFO"]),
+  status: TaxStatusEnum,
+  /** Realized slices (one per lot consumed), all years; `inTaxYear` marks the ones in the estimate. */
+  realized: z.array(TaxRealizedView),
+  /** Every derived tax event with its status and why. Newest first, capped. */
+  events: z.array(TaxEventView),
+  truncated: z.boolean(),
+  note: z.string().nullable(),
+  ...provenance,
+});
+export type TaxDetailsResponse = z.infer<typeof TaxDetailsResponse>;
+
+export const TaxQuery = z.strictObject({
+  taxYear: z.coerce.number().int().min(2009).max(2100).optional(),
+  method: z.enum(["FIFO", "LIFO", "HIFO"]).optional(),
+  swapTreatment: z.enum(["DISPOSAL_AND_ACQUISITION", "NOT_ASSESSED"]).optional(),
+  shortTermRateBps: z.coerce.number().int().min(0).max(10_000).optional(),
+  longTermRateBps: z.coerce.number().int().min(0).max(10_000).optional(),
+  stateRateBps: z.coerce.number().int().min(0).max(10_000).optional(),
+}).refine((q) => {
+  const n = [q.shortTermRateBps, q.longTermRateBps, q.stateRateBps].filter((x) => x !== undefined).length;
+  return n === 0 || n === 3;
+}, "supply all three rates (shortTermRateBps, longTermRateBps, stateRateBps) or none");
+export type TaxQuery = z.infer<typeof TaxQuery>;
 
 // ---------- tax reserve ----------
 export const TaxReserveTarget = z.object({
@@ -250,11 +364,14 @@ export const TaxReserveResponse = z.object({
   scope: z.literal("user"),
   currency: z.literal("USDC"),
   /** Balance of the user-controlled reserve. Demo value until chain reads exist. */
-  currentReserveCents: Cents,
-  reserveDataSource: DataSource,
-  estimatedTaxExposureCents: Cents,
+  currentReserveCents: Cents.nullable(),
+  /** null = the reserve balance is not read from any chain yet */
+  reserveDataSource: DataSource.nullable(),
+  /** Status of the underlying tax estimate. The reserve numbers are only as complete as this. */
+  status: TaxStatusEnum,
+  estimatedTaxExposureCents: Cents.nullable(),
   coverageBps: z.number().int().nullable(),
-  recommendedAdditionalReserveCents: Cents,
+  recommendedAdditionalReserveCents: Cents.nullable(),
   target: TaxReserveTarget.nullable(),
   resolvedTargetCents: Cents.nullable(),
   targetDataSource: DataSource,

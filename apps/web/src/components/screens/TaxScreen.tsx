@@ -1,11 +1,11 @@
 "use client";
 
-import { COPY, type TaxResponse, type TaxReserveResponse, type TransactionsResponse } from "@project-name/shared";
-import type { ReactNode } from "react";
+import { COPY, type TaxDetailsResponse, type TaxResponse, type TaxReserveResponse } from "@project-name/shared";
+import { useState, type ReactNode } from "react";
 import { api } from "@/lib/api/client";
 import { useResource } from "@/lib/api/useResource";
-import { transactionsFromApi } from "@/lib/adapters";
 import { formatPercentBps, formatUsd } from "@/lib/format";
+import type { TaxQueryParams } from "@/lib/taxQuery";
 import { useScopedWallet } from "@/lib/useScopedWallet";
 import { useWallet } from "@/state/wallet";
 import { ButtonLink } from "../Button";
@@ -14,32 +14,45 @@ import { DataSourceBadge, DemoDataNotice } from "../DataSource";
 import { PageHeader } from "../PageHeader";
 import { AuthRequired, LoadingState, NoLiveData, ResourceView } from "../states";
 import { StatCard } from "../StatCard";
+import { RealizedTable, TaxEventsTable, TaxInputsForm, TaxStatusPanel } from "../TaxParts";
 import { TaxReserveCard } from "../TaxReserveCard";
-import { TransactionTable } from "../TransactionTable";
 import { WalletPicker } from "./WalletPicker";
 
-/** Pure view. All wording is "estimated"; there is no tax-bill field in the API and none here. */
-export function TaxView({ tax, reserve, transactions, walletLabel }: { tax: TaxResponse; reserve: TaxReserveResponse | null; transactions: TransactionsResponse | null; walletLabel: string }) {
+const money = (v: string | null, opts?: { negate?: boolean }) => (v === null ? null : formatUsd(opts?.negate ? -BigInt(v) : BigInt(v)));
+
+/**
+ * Pure view. All wording is "estimated"; there is no tax-bill field in the API and none here.
+ * A missing number is shown as a dash with the reason, never as $0. When status is not COMPLETE the figures carry
+ * "Tax data incomplete" so a partial result cannot be mistaken for a total.
+ */
+export function TaxView({ tax, reserve, details }: { tax: TaxResponse; reserve: TaxReserveResponse | null; details: TaxDetailsResponse | null }) {
   const a = tax.assumptions;
-  const exposure = BigInt(tax.estimatedTaxExposureCents);
-  const reserveCents = reserve ? BigInt(reserve.currentReserveCents) : null;
-  const coverage = reserve?.coverageBps ?? null;
-  const disposals = transactions ? transactions.transactions.filter((t) => t.taxTreatment === "disposal") : [];
+  const incomplete = tax.status !== "COMPLETE";
+  const dash = "—";
+  const exposure = tax.estimatedTaxExposureCents === null ? null : BigInt(tax.estimatedTaxExposureCents);
+  const why = tax.status === "UNAVAILABLE" ? "Unavailable" : "Tax data incomplete";
+  const sub = incomplete ? why : undefined;
+  const reserveCents = reserve && reserve.currentReserveCents !== null ? BigInt(reserve.currentReserveCents) : null;
   return (
     <>
       <DemoDataNotice dataSource={tax.dataSource} message="Estimated from fictional demo events with example tax rates. This is not your tax situation and nothing was read from a blockchain." />
+      <TaxStatusPanel tax={tax} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="Estimated realized gains" value={formatUsd(BigInt(tax.estimatedRealizedGainsCents))} tone="gain" />
-        <StatCard label="Estimated realized losses" value={formatUsd(-BigInt(tax.estimatedRealizedLossesCents))} tone="loss" />
-        <StatCard label="Estimated taxable events" value={String(tax.estimatedTaxableEvents)} sub={`Tax year ${tax.taxYear}`} />
-        <StatCard label={COPY.taxExposure} value={formatUsd(exposure)} sub={COPY.taxPlanning} />
-        <StatCard label="Estimated tax reserve" value={reserveCents === null ? "—" : formatUsd(reserveCents)} sub={reserve ? undefined : "No live reserve data"} />
-        <StatCard label="Reserve coverage" value={coverage === null ? "—" : formatPercentBps(coverage)} />
+        <StatCard label="Estimated realized gains" value={money(tax.estimatedRealizedGainsCents) ?? dash} tone="gain" sub={sub} />
+        <StatCard label="Estimated realized losses" value={money(tax.estimatedRealizedLossesCents, { negate: true }) ?? dash} tone="loss" sub={sub} />
+        <StatCard label="Estimated taxable events" value={tax.status === "UNAVAILABLE" ? dash : String(tax.estimatedTaxableEvents)} sub={`Tax year ${tax.taxYear}`} />
+        <StatCard
+          label={COPY.taxExposure}
+          value={exposure === null ? dash : formatUsd(exposure)}
+          sub={exposure === null ? (tax.status === "UNAVAILABLE" ? "Unavailable" : "Rates required: enter your own rates below") : incomplete ? `${COPY.taxPlanning}. ${why}` : COPY.taxPlanning}
+        />
+        <StatCard label="Estimated tax reserve" value={reserveCents === null ? dash : formatUsd(reserveCents)} sub={reserve ? (reserveCents === null ? "Reserve balance not read from any chain" : undefined) : "No live reserve data"} />
+        <StatCard label="Reserve coverage" value={reserve?.coverageBps == null ? dash : formatPercentBps(reserve.coverageBps)} />
       </div>
 
-      {reserve ? (
+      {reserve && reserveCents !== null && exposure !== null ? (
         <div className="mt-6">
-          <TaxReserveCard reserveCents={BigInt(reserve.currentReserveCents)} exposureCents={exposure} actions={<ButtonLink href="/tax-reserve" variant="secondary">MANAGE RESERVE TARGET</ButtonLink>} />
+          <TaxReserveCard reserveCents={reserveCents} exposureCents={exposure} actions={<ButtonLink href="/tax-reserve" variant="secondary">MANAGE RESERVE TARGET</ButtonLink>} />
         </div>
       ) : null}
 
@@ -47,13 +60,13 @@ export function TaxView({ tax, reserve, transactions, walletLabel }: { tax: TaxR
         <Card title="Assumptions used" right={<DataSourceBadge dataSource={tax.dataSource} verifiedOnChain={tax.verifiedOnChain} />}>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             {[
-              ["Jurisdiction", a.jurisdiction],
-              ["Cost basis method", tax.costBasisMethod],
-              ["Short-term rate", formatPercentBps(a.shortTermRateBps, { digits: 0 })],
-              ["Long-term rate", formatPercentBps(a.longTermRateBps, { digits: 0 })],
-              ["State rate", formatPercentBps(a.stateRateBps, { digits: 0 })],
-              ["Short-term net", formatUsd(BigInt(tax.estimatedShortTermNetCents))],
-              ["Long-term net", formatUsd(BigInt(tax.estimatedLongTermNetCents))],
+              ["Jurisdiction", a ? a.jurisdiction : "US (estimate only)"],
+              ["Cost basis method", `${tax.costBasisMethod}${tax.methodSource === "default" ? " (default)" : ""}`],
+              ["Short-term rate", a ? formatPercentBps(a.shortTermRateBps, { digits: 0 }) : "Not supplied"],
+              ["Long-term rate", a ? formatPercentBps(a.longTermRateBps, { digits: 0 }) : "Not supplied"],
+              ["State rate", a ? formatPercentBps(a.stateRateBps, { digits: 0 }) : "Not supplied"],
+              ["Short-term net", money(tax.estimatedShortTermNetCents) ?? dash],
+              ["Long-term net", money(tax.estimatedLongTermNetCents) ?? dash],
               ["Method", `${tax.methodology.name} v${tax.methodology.version}`],
             ].map(([k, v]) => (<div key={k}><dt className="eyebrow">{k}</dt><dd className="num mt-0.5">{v}</dd></div>))}
           </dl>
@@ -62,6 +75,7 @@ export function TaxView({ tax, reserve, transactions, walletLabel }: { tax: TaxR
         </Card>
         <Card title="About these numbers">
           <div className="space-y-2 text-sm text-muted">{tax.disclaimer.map((d) => <p key={d}>{d}</p>)}</div>
+          <p className="mt-3 text-xs text-faint">This is not personalized tax advice.</p>
           <p className="mt-3 text-xs text-faint">
             Official information:{" "}
             <a className="text-accent underline underline-offset-2" href={COPY.irsCrypto} target="_blank" rel="noopener noreferrer">IRS digital assets</a>
@@ -69,28 +83,39 @@ export function TaxView({ tax, reserve, transactions, walletLabel }: { tax: TaxR
         </Card>
       </div>
 
-      <Card title="Potential taxable disposals" className="mt-6" right={transactions ? <DataSourceBadge dataSource={transactions.dataSource} verifiedOnChain={transactions.verifiedOnChain} /> : undefined}>
-        {disposals.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted">No potential disposals to show.</p>
-        ) : (
-          <TransactionTable rows={transactionsFromApi({ ...transactions!, transactions: disposals }, walletLabel)} />
-        )}
-      </Card>
+      {details ? (
+        <>
+          <Card title="Estimated realized gains and losses" className="mt-6" right={<DataSourceBadge dataSource={details.dataSource} verifiedOnChain={details.verifiedOnChain} />}>
+            {details.note ? <p className="mb-3 text-xs text-faint">{details.note}</p> : null}
+            <RealizedTable rows={details.realized} />
+          </Card>
+          <Card title="Tax events, unresolved items and missing data" className="mt-6">
+            <TaxEventsTable events={details.events} truncated={details.truncated} />
+          </Card>
+        </>
+      ) : null}
     </>
   );
 }
 
-function Body({ walletId, walletLabel, wallets, onSelect, wallet }: { walletId: string; walletLabel: string; wallets: Parameters<typeof WalletPicker>[0]["wallets"]; onSelect: (id: string) => void; wallet: string }) {
+function Body({ walletId, wallets, onSelect }: { walletId: string; wallets: Parameters<typeof WalletPicker>[0]["wallets"]; onSelect: (id: string) => void }) {
   const w = useWallet();
   const refresh = () => void w.refreshSession();
-  const tax = useResource(`tax:${walletId}`, () => api.getTaxEstimate(walletId), refresh);
-  const reserve = useResource(`reserve:${walletId}`, () => api.getTaxReserve(walletId));
-  const tx = useResource(`tx-all:${walletId}`, () => api.getTransactions(walletId, { limit: 100 }));
+  const [q, setQ] = useState<TaxQueryParams>({});
+  const key = `${walletId}:${JSON.stringify(q)}`;
+  const tax = useResource(`tax:${key}`, () => api.getTaxEstimate(walletId, q), refresh);
+  const details = useResource(`tax-details:${key}`, () => api.getTaxDetails(walletId, q));
+  const reserve = useResource(`reserve:${key}`, () => api.getTaxReserve(walletId, q));
   return (
     <>
-      <WalletPicker wallets={wallets} selectedId={wallet} onSelect={onSelect} />
-      <ResourceView resource={tax} loadingLabel="Loading tax estimate" noData={<NoLiveData title="NO LIVE TAX DATA YET" message="Your wallet is authenticated, but tax estimates for real wallets are not available yet. Indexed transactions are not tax-classified, and no tax conclusion is drawn from them." />}>
-        {(t) => <TaxView tax={t} reserve={reserve.status === "ok" ? reserve.data : null} transactions={tx.status === "ok" ? tx.data : null} walletLabel={walletLabel} />}
+      <WalletPicker wallets={wallets} selectedId={walletId} onSelect={onSelect} />
+      <ResourceView resource={tax} loadingLabel="Loading tax estimate" noData={<NoLiveData title="NO LIVE TAX DATA YET" message="Your wallet is authenticated, but no tax data is available for it yet." />}>
+        {(t) => (
+          <>
+            <TaxView tax={t} reserve={reserve.status === "ok" ? reserve.data : null} details={details.status === "ok" ? details.data : null} />
+            {t.dataSource === "chain" ? <div className="mt-6"><TaxInputsForm onApply={setQ} /></div> : null}
+          </>
+        )}
       </ResourceView>
     </>
   );
@@ -103,14 +128,14 @@ export function TaxScreen(): ReactNode {
       <PageHeader
         eyebrow="Tax"
         title="TAX CENTER"
-        subtitle="Never lose track of what you may owe. Track realized gains, estimate tax exposure, and keep a dedicated reserve."
+        subtitle="Estimated realized gains and tax exposure from the data available. Incomplete data is flagged, never filled in."
         actions={<ButtonLink href="/tax-reserve" variant="secondary">TAX RESERVE</ButtonLink>}
       />
       {scope.gate === "checking" ? <LoadingState label="Checking session" /> : null}
       {scope.gate === "unauthenticated" ? <AuthRequired /> : null}
       {scope.gate === "ready" ? (
         <ResourceView resource={scope.walletsState} loadingLabel="Loading wallets">
-          {() => scope.wallet ? <Body key={scope.wallet.id} walletId={scope.wallet.id} walletLabel={scope.wallet.label ?? "Wallet"} wallets={scope.wallets} onSelect={scope.select} wallet={scope.wallet.id} /> : <NoLiveData title="NO WALLETS" message="No wallets are linked to this account." />}
+          {() => scope.wallet ? <Body key={scope.wallet.id} walletId={scope.wallet.id} wallets={scope.wallets} onSelect={scope.select} /> : <NoLiveData title="NO WALLETS" message="No wallets are linked to this account." />}
         </ResourceView>
       ) : null}
     </div>

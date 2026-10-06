@@ -7,16 +7,18 @@ import type { Config } from "./config";
 import type { Pool } from "./db/pool";
 import { csrfGuard } from "./auth/plugin";
 import { registerErrorHandling } from "./errors";
+import { ObservationHistoricalPriceProvider, type HistoricalPriceProvider } from "./prices/historical";
 import { IndexerService, createIndexerParts, type IndexerParts } from "./indexer/service";
 import { registerRoutes } from "./routes";
 
 declare module "fastify" {
   interface FastifyInstance {
     indexer: IndexerService;
+    taxPrices: HistoricalPriceProvider;
   }
 }
 
-export async function buildApp(deps: { config: Config; pool: Pool; logStream?: { write(msg: string): void }; /** test seam: replaces the RPC / metadata / price providers */ indexer?: IndexerParts }): Promise<FastifyInstance> {
+export async function buildApp(deps: { config: Config; pool: Pool; logStream?: { write(msg: string): void }; /** test seam: replaces the RPC / metadata / price providers */ indexer?: IndexerParts; /** test seam: historical price source for tax */ taxPrices?: HistoricalPriceProvider }): Promise<FastifyInstance> {
   const { config } = deps;
   const app = Fastify({
     logger: {
@@ -47,6 +49,7 @@ export async function buildApp(deps: { config: Config; pool: Pool; logStream?: {
   app.decorateRequest("actor", null);
   const indexer = new IndexerService(deps.pool, config, deps.indexer ?? createIndexerParts(config), app.log);
   app.decorate("indexer", indexer);
+  app.decorate("taxPrices", deps.taxPrices ?? new ObservationHistoricalPriceProvider(deps.pool, config.TAX_PRICE_MAX_AGE_SECONDS));
   await indexer.sweepStale();
   app.addHook("onClose", async () => { await indexer.drain(); });
   await registerRoutes(app, deps);

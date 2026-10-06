@@ -65,13 +65,22 @@ describe("portfolio", () => {
   });
   it("a non-demo wallet has no fabricated data", async () => {
     // Own wallet, but it is a 'database' wallet with no indexed data: 404 NO_LIVE_DATA, never invented balances.
-    for (const path of ["portfolio", "transactions", "tax", "tax-reserve"]) {
+    for (const path of ["portfolio", "transactions"]) {
       const r = await get(`/api/${path}/${other.walletId}`, other.token);
       expect(r.statusCode, path).toBe(404);
       expect(r.json().error.code, path).toBe("NO_LIVE_DATA");
     }
+    // Tax (Slice 6): 200 with status UNAVAILABLE and no figures, never demo numbers
+    for (const path of ["tax", "tax-reserve"]) {
+      const b = (await get(`/api/${path}/${other.walletId}`, other.token)).json();
+      expect(b.status, path).toBe("UNAVAILABLE");
+      expect(b.dataSource, path).toBe("chain");
+      expect(JSON.stringify(b), path).not.toMatch(/DEMO|18420|1420000/);
+    }
+    // storing a reserve TARGET is configuration only and is allowed for a real wallet
     const post = await ctx.app.inject({ method: "POST", url: `/api/tax-reserve/${other.walletId}/target`, payload: { targetType: "amount", targetAmount: "5.00" }, headers: bearer(other.token) });
-    expect(post.json().error.code).toBe("NO_LIVE_DATA");
+    expect(post.statusCode).toBe(200);
+    expect(post.json().status).toBe("UNAVAILABLE");
     // a foreign or unknown wallet is a plain NOT_FOUND, distinguishable from "yours but empty"
     expect((await get(`/api/portfolio/${W.trading}`, other.token)).json().error.code).toBe("NOT_FOUND");
   });

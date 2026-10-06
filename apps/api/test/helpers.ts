@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { DEMO_IDS } from "@project-name/shared";
 import { buildApp } from "../src/app";
 import type { IndexerParts } from "../src/indexer/service";
+import type { HistoricalPriceProvider } from "../src/prices/historical";
 import { loadConfig, type Config } from "../src/config";
 import { createPool, type Pool } from "../src/db/pool";
 import { createSession } from "../src/auth/session";
@@ -27,10 +28,10 @@ export interface Ctx {
   close(): Promise<void>;
 }
 
-export async function makeCtx(over: Record<string, string> = {}, logStream?: { write(m: string): void }, indexer?: IndexerParts): Promise<Ctx> {
+export async function makeCtx(over: Record<string, string> = {}, logStream?: { write(m: string): void }, indexer?: IndexerParts, taxPrices?: HistoricalPriceProvider): Promise<Ctx> {
   const config = testConfig(over);
   const pool = createPool(config.DATABASE_URL);
-  const app = await buildApp({ config, pool, ...(logStream ? { logStream } : {}), ...(indexer ? { indexer } : {}) });
+  const app = await buildApp({ config, pool, ...(logStream ? { logStream } : {}), ...(indexer ? { indexer } : {}), ...(taxPrices ? { taxPrices } : {}) });
   await app.ready();
   const { token } = await createSession(pool, { userId: DEMO_IDS.user, walletId: null, authMethod: "dev_insecure", ttlHours: 1 });
   return { app, pool, demoToken: token, async close() { await app.close(); await pool.end(); } };

@@ -1,5 +1,5 @@
 import type {
-  DiscoverQuery, DiscoverResponse, PortfolioResponse, TaxReserveResponse, TaxResponse, TokenProof,
+  DiscoverQuery, DiscoverResponse, PortfolioResponse, TaxDetailsResponse, TaxReserveResponse, TaxResponse, TokenProof,
   TokenSummary, TransactionsResponse,
 } from "../api/schemas";
 import { SORT_RULES, allChecksReported, charityGeneratedCents, checksReported, discoverTokens } from "../discover";
@@ -105,6 +105,11 @@ export function buildTax(walletId: string): TaxResponse {
     scope: "user",
     taxYear: e.assumptions.taxYear,
     costBasisMethod: "FIFO",
+    methodSource: "demo_fixture",
+    status: "COMPLETE",
+    figuresComplete: true,
+    calculation: null,
+    requirements: [],
     estimatedRealizedGainsCents: str(e.totalRealizedGainsCents),
     estimatedRealizedLossesCents: str(e.totalRealizedLossesCents),
     estimatedShortTermNetCents: str(e.shortTermNetCents),
@@ -115,6 +120,14 @@ export function buildTax(walletId: string): TaxResponse {
     methodology: { name: "shared-tax-engine", version: TAX_ENGINE_VERSION, limitations: TAX_LIMITATIONS },
     disclaimer: TAX_DISCLAIMER,
     ...DEMO_PROVENANCE,
+  };
+}
+
+export function buildTaxDetails(walletId: string): TaxDetailsResponse | null {
+  if (!isDemoWallet(walletId)) return null;
+  return {
+    walletId, taxYear: DEMO_TAX_ASSUMPTIONS.taxYear, costBasisMethod: "FIFO", status: "COMPLETE", realized: [], events: [], truncated: false,
+    note: "Demo fixture: only aggregate figures exist. There are no itemized transactions behind them.", ...DEMO_PROVENANCE,
   };
 }
 
@@ -140,6 +153,7 @@ export function buildTaxReserve(walletId: string, target: StoredTarget | null, t
     currency: "USDC",
     currentReserveCents: str(DEMO_RESERVE_CENTS),
     reserveDataSource: "demo",
+    status: "COMPLETE",
     estimatedTaxExposureCents: str(exposure),
     coverageBps: s.coverageBps,
     recommendedAdditionalReserveCents: str(s.recommendedAdditionalCents),

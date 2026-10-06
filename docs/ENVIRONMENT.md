@@ -14,6 +14,9 @@ SOLANA_RPC_URL=http://127.0.0.1:8899 SOLANA_CLUSTER=devnet pnpm dev:api
 ```
 Then sign in on the web app, open Portfolio, press SYNC WALLET. With a real devnet RPC URL instead, SOLANA_CLUSTER should match the cluster of the URL. Manual real-RPC check: `SOLANA_RPC_URL=... SMOKE_WALLET_ADDRESS=<public address> pnpm --filter @project-name/api smoke:rpc`.
 
+## Tax variables (Slice 6)
+`TAX_PRICE_MAX_AGE_SECONDS` (default 3600: a stored price counts for a transaction only if observed at most this long before it), `TAX_MAX_TRANSACTIONS` (default 5000: cap per calculation; beyond it the result is marked incomplete). There is no setting that enables fixture prices outside tests, on purpose. Tax rates are never configured server-side: the user supplies them per request, and none are assumed.
+
 ## Run locally
 ```
 cp .env.example .env            # edit DATABASE_URL

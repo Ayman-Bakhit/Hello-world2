@@ -100,3 +100,12 @@ No idle timeout or sliding refresh; no "list/revoke my sessions" or revoke-all; 
 - **No invented numbers.** No hardcoded prices; missing price is "unavailable", never zero; partial sums are never totals; tax is never inferred (`not_assessed`).
 - **Demo isolation.** Real wallets can never receive demo fixtures; demo wallets can never be synced.
 - Residual risks (see INDEXING.md "Verification status"): cluster/URL mismatch is not detected; the RPC node is trusted for data it returns (a malicious/compromised provider can lie; verifiedOnChain stays false for this reason); in-memory rate limiter is per process; `confirmed` commitment is not reorg-safe; the DEX allowlist and Metaplex parsing are unverified against a live network.
+
+## Slice 6: tax data
+- Session + ownership on every tax route; the calculation reads only the caller's own wallets (user id from the session, never the request). Foreign wallet ids are 404.
+- Demo/live isolation: real wallets never receive fixture results (`UNAVAILABLE` instead); demo wallets never read chain data.
+- No fabricated inputs: no hardcoded or default prices, no default tax rates, no invented cost basis (unmatched transfers create no lots), no assumed swap treatment except an explicit, echoed parameter.
+- Historical source data: raw transactions immutable (Slice 5); price rows cannot be updated in place (trigger) and zero prices are refused; results carry a sha256 input fingerprint.
+- No double counting: duplicates by id or (wallet, signature) are ignored and counted; a same-signature internal transfer is matched, not taxed twice; failed transactions never create lots.
+- Precision: bigint/integer strings end to end; no unsafe `Number` conversion of quantities or money.
+- Remaining: chain data unverified; no real historical prices; per-request recalculation cost is bounded only by `TAX_MAX_TRANSACTIONS` and a rate limit; user-entered rates travel in the query string (not secret, but visible in logs/history).

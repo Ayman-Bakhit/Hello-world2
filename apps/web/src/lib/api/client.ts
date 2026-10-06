@@ -1,14 +1,15 @@
 import {
   CharityList, DEMO_CHARITIES, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
-  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
+  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxDetailsResponse, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
-  buildTax, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
+  buildTax, buildTaxDetails, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
   targetFromRequest, type Charity, type LaunchConfig, type StoredTarget, type Wallet,
 } from "@project-name/shared";
 import type { z } from "zod";
 import { API_BASE_URL, API_MODE, type ApiMode } from "./config";
 import { ApiClientError, requestJson } from "./http";
 import { zodToClientError } from "./zodError";
+import type { TaxQueryParams } from "../taxQuery";
 
 /**
  * Typed API client. Same function signatures in both modes, and the same response types (validated
@@ -131,11 +132,15 @@ export function createApiClient(opts: ClientOptions = {}) {
     getPortfolio: async (walletId: string): Promise<PortfolioResponse> =>
       mode === "api" ? http(PortfolioResponse, `/api/portfolio/${encodeURIComponent(walletId)}`) : need(buildPortfolio(mockId(walletId)), "Portfolio"),
 
-    getTaxEstimate: async (walletId: string): Promise<TaxResponse> =>
-      mode === "api" ? http(TaxResponse, `/api/tax/${encodeURIComponent(walletId)}`) : buildTax(mockId(walletId)),
+    /** Mock mode ignores the query: it only has the labeled demo fixture. */
+    getTaxEstimate: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxResponse> =>
+      mode === "api" ? http(TaxResponse, `/api/tax/${encodeURIComponent(walletId)}`, { ...q }) : buildTax(mockId(walletId)),
 
-    getTaxReserve: async (walletId: string): Promise<TaxReserveResponse> =>
-      mode === "api" ? http(TaxReserveResponse, `/api/tax-reserve/${encodeURIComponent(walletId)}`) : buildTaxReserve(mockId(walletId), mockTarget, "demo"),
+    getTaxDetails: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxDetailsResponse> =>
+      mode === "api" ? http(TaxDetailsResponse, `/api/tax/${encodeURIComponent(walletId)}/details`, { ...q }) : need(buildTaxDetails(mockId(walletId)), "Tax details"),
+
+    getTaxReserve: async (walletId: string, q: TaxQueryParams = {}): Promise<TaxReserveResponse> =>
+      mode === "api" ? http(TaxReserveResponse, `/api/tax-reserve/${encodeURIComponent(walletId)}`, { ...q }) : buildTaxReserve(mockId(walletId), mockTarget, "demo"),
 
     getCharities: async (): Promise<Charity[]> =>
       mode === "api" ? (await http(CharityList, "/api/charities")).charities : buildCharityList(),
@@ -168,4 +173,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxReserve, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
