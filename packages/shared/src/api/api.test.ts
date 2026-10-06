@@ -119,6 +119,12 @@ describe("discover", () => {
     expect(discoverTokens(DEMO_TOKENS, q({ verifiedTransparency: "true" })).items.map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH"]);
     expect(discoverTokens(DEMO_TOKENS, q({ verifiedTransparency: "false" })).total).toBe(4);
   });
+  it("launchedWithinDays keeps only recent launches (fixed demo reference time)", () => {
+    expect(discoverTokens(DEMO_TOKENS, q({ launchedWithinDays: 14, sort: "newest" })).items.map((t) => t.symbol)).toEqual(["LNTN", "FNDM"]);
+    expect(discoverTokens(DEMO_TOKENS, q({ launchedWithinDays: 30 })).items.map((t) => t.symbol).sort()).toEqual(["FNDM", "LNTN", "MRDN"]);
+    expect(DiscoverQuery.safeParse({ launchedWithinDays: 0 }).success).toBe(false);
+    expect(DiscoverQuery.safeParse({ launchedWithinDays: "x" }).success).toBe(false);
+  });
   it("paginates", () => {
     const r = discoverTokens(DEMO_TOKENS, q({ limit: 2, offset: 2 }));
     expect(r.items).toHaveLength(2);

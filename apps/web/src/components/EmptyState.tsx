@@ -6,7 +6,7 @@ export function EmptyState({
   description,
   items,
   action,
-  badge = "NOT BUILT YET",
+  badge = "COMING SOON",
 }: {
   title: string;
   description: string;

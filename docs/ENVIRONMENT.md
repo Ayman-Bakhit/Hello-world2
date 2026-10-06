@@ -22,4 +22,5 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
 Optional dev-only session for the demo user (`AUTH_MODE=dev-insecure`): `curl -XPOST localhost:4000/api/auth/dev-session`.
 
 Browser end-to-end check of the sign-in flow (starts nothing; needs API :4000 and web :3000 built with the api-mode env above):
-`pnpm --filter @project-name/web e2e:auth`
+`pnpm --filter @project-name/web e2e:api` (alias `e2e:auth`). The database must also be seeded (`pnpm db:seed-demo`) so the demo charities exist.
+Mock-mode smoke (web built without the api env, any port): `E2E_WEB_URL=http://localhost:3112 pnpm --filter @project-name/web e2e:mock`

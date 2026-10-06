@@ -27,13 +27,23 @@ describe("api auth state machine", () => {
     expect(s.challenge).toBeNull();
     expect(s.session).toBeNull();
   });
+  it("sessionChecked flips on the first answer, authenticated or not, and on failure", () => {
+    expect(INITIAL_API_STATE.sessionChecked).toBe(false);
+    expect(run({ type: "session-loaded", session: session(false) }).sessionChecked).toBe(true);
+    expect(run({ type: "session-check-failed" }).sessionChecked).toBe(true);
+    expect(deriveStatus(run({ type: "session-check-failed" }))).toBe("disconnected");
+  });
+  it("a lost session (401 refresh) drops AUTHENTICATED back to CONNECTED while the wallet stays connected", () => {
+    const s = run({ type: "connected", walletName: "P", address: "A" }, { type: "authenticated", session: session(true) }, { type: "session-loaded", session: session(false) });
+    expect(deriveStatus(s)).toBe("connected");
+  });
   it("an unauthenticated session response does not authenticate", () => {
     expect(deriveStatus(run({ type: "session-loaded", session: session(false) }))).toBe("disconnected");
     expect(deriveStatus(run({ type: "session-loaded", session: session(true) }))).toBe("authenticated");
   });
   it("signed-out resets everything", () => {
     const s = run({ type: "connected", walletName: "P", address: "A" }, { type: "authenticated", session: session(true) }, { type: "signed-out" });
-    expect(s).toEqual(INITIAL_API_STATE);
+    expect(s).toEqual({ ...INITIAL_API_STATE, sessionChecked: true });
   });
   it("connect failure clears wallet and shows the error", () => {
     const s = run({ type: "connecting", walletName: "P" }, { type: "connect-failed", error: "nope" });

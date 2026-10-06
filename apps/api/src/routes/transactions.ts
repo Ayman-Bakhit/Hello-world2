@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { TransactionsQuery, TransactionsResponse, buildTransactions } from "@project-name/shared";
 import { requireAuth } from "../auth/plugin";
-import { notFound } from "../errors";
+import { noLiveData } from "../errors";
 import { parse, respond } from "../http/validate";
 import type { Deps } from "./index";
 import { ownedWalletFromParams } from "./walletScope";
@@ -12,7 +12,7 @@ export const transactionRoutes: FastifyPluginAsync<Deps> = async (app, { pool, c
     const wallet = await ownedWalletFromParams(pool, req);
     const { limit, offset } = parse(TransactionsQuery, req.query);
     const body = wallet.dataSource === "demo" ? buildTransactions(wallet.id, limit, offset) : null;
-    if (!body) throw notFound("Transaction data");
+    if (!body) throw noLiveData("transaction data");
     return respond(TransactionsResponse, body);
   });
 };

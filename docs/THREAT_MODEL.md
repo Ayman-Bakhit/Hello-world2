@@ -66,3 +66,15 @@ Out of scope for v0: nation-state attackers, compromised user device.
 | 50 | Key loss / no recovery | None by design (non-custodial, no email/password) | Accepted; document to users |
 | 51 | Clock skew between app and DB | One clock (database) issues and validates expiry | Done |
 | 52 | Cross-site cookie deployment mistakes | `SameSite=Strict` + `__Host-` require same-site hosting; documented | Documented; verify at deploy |
+
+## Slice 4 additions (frontend wired to the API)
+| # | Threat | Mitigation | Status |
+|---|---|---|---|
+| 53 | Demo data shown as a real user's data | API returns `404 NO_LIVE_DATA` for non-demo wallets (never fixtures); UI labels from `dataSource`; tests assert empty states contain none of the demo values; browser run checks it with a real signed-in wallet | Done |
+| 54 | UI claims verification that does not exist | `lib/transparency.ts` is the single decision point; "VERIFIED TRANSPARENCY" needs API `verifiedOnChain`; tests include a negative and a synthetic positive case | Done |
+| 55 | Server internals leaking into the UI | All errors pass `describeApiError`; 5xx/unknown show generic text; 4xx show only our own messages; tested with stack-trace-like input | Done |
+| 56 | Stale authenticated UI after session loss | Any 401 triggers a session re-check; sessionChecked prevents wrong first paint; logout resets state and revokes server-side | Done |
+| 57 | UI creates donation/transfer records or signs transactions | Donate is disabled; reserve fund buttons disabled; no signing dialogs remain; launch only saves/reviews configurations (no deploy path in API or UI); tests assert disabled controls | Done |
+| 58 | Rendering untrusted strings (charity/token text from the API) | React escapes all text; no `dangerouslySetInnerHTML`; links limited to fixed IRS URLs and wallet install pages | Done; strict CSP still pending (Slice 11) |
+| 59 | Client-side ranking manipulation | Discover sorts/filters only via API parameters; client never re-orders; ranking rule shown from the API | Done |
+| 60 | A real wallet cannot use reserve target / donations | Known limitation: those endpoints are demo-only for now (NO_LIVE_DATA), so real users see empty states | Accepted until real data exists |

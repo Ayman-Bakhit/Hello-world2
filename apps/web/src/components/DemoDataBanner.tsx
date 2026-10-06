@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 import { Badge } from "./Badge";
 
 export const DEFAULT_DEMO_MESSAGE =
-  "Blockchain integration is not connected. Every figure, address and transaction on this screen is fictional.";
+  "Blockchain data is not connected. Anything labeled DEMO DATA is fictional and was not read from a chain. Wallet screens show an empty state until real indexing exists.";
 
 /** Reusable demo-data labeling. `chip` is for individual panels; `bar` for page-level notice. */
 export function DemoDataBanner({

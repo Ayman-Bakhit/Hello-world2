@@ -61,7 +61,7 @@ function walk(dir: string): string[] {
 }
 
 describe("copy lint over the frontend source", () => {
-  const files = walk(join(__dirname, "..")).filter((f) => /\.(tsx?|css)$/.test(f) && !f.endsWith(".test.ts"));
+  const files = walk(join(__dirname, "..")).filter((f) => /\.(tsx?|css)$/.test(f) && !/\.test\.tsx?$/.test(f));
   it("contains no banned phrases and makes no positive safety claims", () => {
     for (const f of files) {
       const text = readFileSync(f, "utf8").toLowerCase();
@@ -91,7 +91,7 @@ describe("parity with the shared demo fixtures the API serves", () => {
 
 
 describe("no browser-readable secret storage", () => {
-  const files = walk(join(__dirname, "..")).filter((f) => /\.(tsx?)$/.test(f) && !f.endsWith(".test.ts"));
+  const files = walk(join(__dirname, "..")).filter((f) => /\.(tsx?)$/.test(f) && !/\.test\.tsx?$/.test(f));
   it("no source file touches localStorage, sessionStorage, or document.cookie", () => {
     for (const f of files) {
       const t = readFileSync(f, "utf8");

@@ -1,6 +1,6 @@
 import { splitAmount } from "./feesplit";
 import type { DiscoverQuery } from "./api/schemas";
-import { DEMO_TOKENS, TRANSPARENCY_CHECK_KEYS, type DemoToken } from "./demo/fixtures";
+import { DEMO_REFERENCE_TIME, DEMO_TOKENS, TRANSPARENCY_CHECK_KEYS, type DemoToken } from "./demo/fixtures";
 
 /** Pure filter + sort over a token list. Ranks only on the real fields supplied; invents nothing. */
 
@@ -29,6 +29,10 @@ export function discoverTokens(tokens: DemoToken[], q: DiscoverQuery): { items: 
     if (q.minLiquidity && t.liquidityCents < usd(q.minLiquidity)) return false;
     if (q.minVolume && t.volume24hCents < usd(q.minVolume)) return false;
     if (q.minHolders !== undefined && t.holders < q.minHolders) return false;
+    if (q.launchedWithinDays !== undefined) {
+      const age = Date.parse(DEMO_REFERENCE_TIME) - Date.parse(t.launchedAt);
+      if (age < 0 || age > q.launchedWithinDays * 86_400_000) return false;
+    }
     if (q.verifiedTransparency === "true" && !allChecksReported(t)) return false;
     if (q.verifiedTransparency === "false" && allChecksReported(t)) return false;
     return true;

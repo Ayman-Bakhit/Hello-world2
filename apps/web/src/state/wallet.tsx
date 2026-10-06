@@ -68,13 +68,16 @@ export interface ApiAuthState {
   connecting: boolean;
   signing: boolean;
   session: SessionResponse | null;
+  /** true once GET /api/auth/session has answered (success or failure), so screens don't flash a wrong state */
+  sessionChecked: boolean;
   error: string | null;
   challenge: { message: string; expiresAt: string } | null;
 }
-export const INITIAL_API_STATE: ApiAuthState = { walletName: null, address: null, connecting: false, signing: false, session: null, error: null, challenge: null };
+export const INITIAL_API_STATE: ApiAuthState = { walletName: null, address: null, connecting: false, signing: false, session: null, sessionChecked: false, error: null, challenge: null };
 
 export type ApiAuthAction =
   | { type: "session-loaded"; session: SessionResponse }
+  | { type: "session-check-failed" }
   | { type: "connecting"; walletName: string }
   | { type: "connected"; walletName: string; address: string }
   | { type: "connect-failed"; error: string }
@@ -88,7 +91,9 @@ export type ApiAuthAction =
 export function apiAuthReducer(s: ApiAuthState, a: ApiAuthAction): ApiAuthState {
   switch (a.type) {
     case "session-loaded":
-      return { ...s, session: a.session.authenticated ? a.session : null };
+      return { ...s, sessionChecked: true, session: a.session.authenticated ? a.session : null };
+    case "session-check-failed":
+      return { ...s, sessionChecked: true };
     case "connecting":
       return { ...s, connecting: true, walletName: a.walletName, error: null };
     case "connected":
@@ -104,7 +109,7 @@ export function apiAuthReducer(s: ApiAuthState, a: ApiAuthAction): ApiAuthState 
     case "sign-failed":
       return { ...s, signing: false, challenge: null, error: a.error };
     case "signed-out":
-      return { ...INITIAL_API_STATE };
+      return { ...INITIAL_API_STATE, sessionChecked: true };
     case "clear-error":
       return { ...s, error: null };
   }
@@ -128,6 +133,10 @@ interface WalletContextValue {
   authenticated: boolean;
   /** Safe to use the signed-in parts of the app: api -> authenticated, mock -> demo connection. */
   ready: boolean;
+  /** Whether the first /api/auth/session answer has arrived (always true in mock mode). */
+  sessionChecked: boolean;
+  /** Re-asks the API who we are (e.g. after any call returned 401). */
+  refreshSession: () => Promise<void>;
   provider: WalletProviderId | null;
   walletName: string | null;
   /** address the wallet extension exposed (api) or the demo address (mock) */
@@ -156,6 +165,9 @@ interface WalletContextValue {
 }
 
 const Ctx = createContext<WalletContextValue | null>(null);
+/** Exported so tests can render components with a chosen wallet state. */
+export const WalletContext = Ctx;
+export type { WalletContextValue };
 
 export function WalletProvider({ children, mode = API_MODE }: { children: ReactNode; mode?: ApiMode }) {
   const [mock, dispatchMock] = useReducer(mockReducer, { provider: null, wallets: [] });
@@ -173,7 +185,10 @@ export function WalletProvider({ children, mode = API_MODE }: { children: ReactN
   useEffect(() => {
     if (mode !== "api") return;
     let live = true;
-    authApi.getSession().then((s) => { if (live) dispatch({ type: "session-loaded", session: s }); }).catch(() => undefined);
+    authApi.getSession().then(
+      (s) => { if (live) dispatch({ type: "session-loaded", session: s }); },
+      () => { if (live) dispatch({ type: "session-check-failed" }); },
+    );
     return () => { live = false; };
   }, [mode]);
 
@@ -222,6 +237,11 @@ export function WalletProvider({ children, mode = API_MODE }: { children: ReactN
     }
   }, [api.address]);
 
+  const refreshSession = useCallback(async () => {
+    if (mode !== "api") return;
+    try { dispatch({ type: "session-loaded", session: await authApi.getSession() }); } catch { dispatch({ type: "session-check-failed" }); }
+  }, [mode]);
+
   const signOut = useCallback(async () => {
     if (mode === "mock") {
       dispatchMock({ type: "disconnect" });
@@ -248,6 +268,8 @@ export function WalletProvider({ children, mode = API_MODE }: { children: ReactN
       connected,
       authenticated,
       ready: mode === "api" ? authenticated : mock.wallets.length > 0,
+      sessionChecked: mode === "api" ? api.sessionChecked : true,
+      refreshSession,
       provider: mode === "api" ? canonicalIdFor(api.walletName ?? "") : mock.provider,
       walletName: mode === "api" ? api.walletName : mock.provider,
       address: mode === "api" ? api.address : (mock.wallets[0]?.address ?? null),
@@ -270,7 +292,7 @@ export function WalletProvider({ children, mode = API_MODE }: { children: ReactN
       labelWallet: (id, label) => dispatchMock({ type: "label", id, label }),
       disconnect: () => { void signOut(); },
     };
-  }, [mode, api, mock, detected, modalOpen, connect, signIn, signOut]);
+  }, [mode, api, mock, detected, modalOpen, connect, signIn, signOut, refreshSession]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

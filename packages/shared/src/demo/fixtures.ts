@@ -19,6 +19,9 @@ export const DEMO_IDS = {
   assetSol: id(0x402),
 } as const;
 
+/** "Now" for demo-token age filters, so results are deterministic. Real data will use the current time. */
+export const DEMO_REFERENCE_TIME = "2026-10-05T00:00:00Z";
+
 /** Frontend mock ids -> demo UUIDs. */
 export const WEB_MOCK_ID_MAP: Record<string, string> = {
   w1: DEMO_IDS.wallets.trading, w2: DEMO_IDS.wallets.creator, w3: DEMO_IDS.wallets.cold,

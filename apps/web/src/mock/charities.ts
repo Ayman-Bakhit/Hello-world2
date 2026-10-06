@@ -5,22 +5,22 @@ export const DEMO_CHARITIES: Charity[] = [
   {
     id: "c1", name: "Open Water Initiative (demo)", category: "Clean water", country: "US",
     description: "Fictional demo charity funding community water systems.",
-    verification: "verified", verificationNote: "Demo status. The real review workflow is not implemented.",
+    dataSource: "demo", verification: "verified", verificationNote: "Demo status. The real review workflow is not implemented.",
   },
   {
     id: "c2", name: "Clear Sky Education Fund (demo)", category: "Education", country: "US",
     description: "Fictional demo charity for scholarships and classroom grants.",
-    verification: "verified", verificationNote: "Demo status. The real review workflow is not implemented.",
+    dataSource: "demo", verification: "verified", verificationNote: "Demo status. The real review workflow is not implemented.",
   },
   {
     id: "c3", name: "Harvest Table Network (demo)", category: "Hunger relief", country: "CA",
     description: "Fictional demo charity coordinating regional food banks.",
-    verification: "verified", verificationNote: "Demo status. The real review workflow is not implemented.",
+    dataSource: "demo", verification: "verified", verificationNote: "Demo status. The real review workflow is not implemented.",
   },
   {
     id: "c4", name: "Reforest Together (demo)", category: "Environment", country: "US",
     description: "Fictional demo charity. Shown as pending to illustrate that unverified wallets cannot receive funds.",
-    verification: "pending", verificationNote: "Pending admin review. Donations are disabled until verified.",
+    dataSource: "demo", verification: "pending", verificationNote: "Pending admin review. Donations are disabled until verified.",
   },
 ];
 

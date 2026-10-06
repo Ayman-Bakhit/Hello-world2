@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "./Badge";
+import { AuthStatusPill } from "./AuthStatusPill";
 import { WalletMenu } from "./WalletMenu";
 
 export function TopBar({ onMenu }: { onMenu: () => void }) {
@@ -15,7 +15,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
         >
           <span aria-hidden className="block h-px w-4 bg-current shadow-[0_5px_0_currentColor,0_-5px_0_currentColor]" />
         </button>
-        <span className="hidden sm:block"><Badge tone="neutral">SOLANA · NOT CONNECTED</Badge></span>
+        <AuthStatusPill />
       </div>
       <WalletMenu />
     </header>

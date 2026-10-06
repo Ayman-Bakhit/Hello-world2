@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { shortAddress } from "@/lib/format";
+import { useWallet } from "@/state/wallet";
 import { isActive, NAV } from "./nav";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const w = useWallet();
+  const who = w.authenticated ? (w.authenticatedAddress ?? "") : w.connected ? (w.address ?? "") : "";
   return (
     <nav aria-label="Primary" className="flex h-full flex-col">
       <Link href="/" onClick={onNavigate} className="flex items-center gap-2.5 px-5 py-5">
@@ -53,6 +57,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </ul>
 
       <div className="space-y-2 border-t border-line px-5 py-4">
+        <div aria-live="polite">
+          <p className="eyebrow">{w.authenticated ? "Signed in" : w.connected ? "Connected, not signed in" : "Not connected"}</p>
+          {who ? <p className="num mt-0.5 font-mono text-xs text-muted">{shortAddress(who)}</p> : null}
+          {w.connected || w.authenticated ? (
+            <button type="button" onClick={() => { void w.signOut(); onNavigate?.(); }} className="mt-1 text-[11px] font-semibold tracking-wider text-loss hover:underline">
+              {w.authenticated ? "LOG OUT" : "DISCONNECT"}
+            </button>
+          ) : null}
+        </div>
         <Link href="/trust" onClick={onNavigate} className="block text-xs font-semibold tracking-wider text-muted hover:text-fg">
           TRUST CENTER
         </Link>

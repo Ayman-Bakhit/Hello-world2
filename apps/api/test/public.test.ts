@@ -68,6 +68,10 @@ describe("discover", () => {
     expect((await q("?minHolders=1000")).tokens.map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH", "TIDE"]);
     expect((await q("?minHolders=1000&minLiquidity=100000&sort=liquidity")).tokens.map((t) => t.symbol)).toEqual(["ORCH", "TIDE"]);
   });
+  it("launchedWithinDays filters recent launches", async () => {
+    expect((await q("?launchedWithinDays=14&sort=newest")).tokens.map((t) => t.symbol)).toEqual(["LNTN", "FNDM"]);
+    expect((await get("/api/discover?launchedWithinDays=0")).statusCode).toBe(400);
+  });
   it("verifiedTransparency=true means all 9 checks REPORTED, and says so", async () => {
     const d = await q("?verifiedTransparency=true");
     expect(d.tokens.map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH"]);

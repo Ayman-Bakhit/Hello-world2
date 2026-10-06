@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { DEFAULT_LAUNCH_CONFIG } from "@/mock";
+import type { Launch } from "@project-name/shared";
 import type { LaunchConfiguration } from "@/lib/types";
 import type { LaunchStepId } from "@/lib/launch";
 
@@ -12,8 +13,9 @@ interface LaunchContextValue {
   setFeeDraft: (bucket: keyof LaunchConfiguration["feeDrafts"], value: string) => void;
   step: LaunchStepId;
   setStep: (s: LaunchStepId) => void;
-  mockDeployed: boolean;
-  setMockDeployed: (v: boolean) => void;
+  /** The configuration most recently saved/reviewed through the API for the CURRENT wizard values. Cleared when values change. */
+  savedLaunch: Launch | null;
+  setSavedLaunch: (l: Launch | null) => void;
 }
 
 const Ctx = createContext<LaunchContextValue | null>(null);
@@ -21,25 +23,25 @@ const Ctx = createContext<LaunchContextValue | null>(null);
 export function LaunchProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<LaunchConfiguration>(DEFAULT_LAUNCH_CONFIG);
   const [step, setStep] = useState<LaunchStepId>("connect");
-  const [mockDeployed, setMockDeployed] = useState(false);
+  const [savedLaunch, setSavedLaunch] = useState<Launch | null>(null);
 
   const value = useMemo<LaunchContextValue>(
     () => ({
       config,
       update: (patch) => {
         setConfig((c) => ({ ...c, ...patch }));
-        setMockDeployed(false);
+        setSavedLaunch(null);
       },
       setFeeDraft: (bucket, v) => {
         setConfig((c) => ({ ...c, feeDrafts: { ...c.feeDrafts, [bucket]: v } }));
-        setMockDeployed(false);
+        setSavedLaunch(null);
       },
       step,
       setStep,
-      mockDeployed,
-      setMockDeployed,
+      savedLaunch,
+      setSavedLaunch,
     }),
-    [config, step, mockDeployed],
+    [config, step, savedLaunch],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -9,6 +9,9 @@ import { validateFeeSplit, percentToBps } from "../feesplit";
 
 export const API_VERSION = "0.1.0";
 
+/** 404 code meaning "this wallet is authenticated but no indexed (live) data exists for it yet". Never means "demo data exists". */
+export const NO_LIVE_DATA = "NO_LIVE_DATA";
+
 export const DataSource = z.enum(["demo", "database", "chain"]);
 export type DataSource = z.infer<typeof DataSource>;
 
@@ -359,6 +362,8 @@ export const DiscoverQuery = z
     minVolume: WholeUsd.optional(),
     minHolders: z.coerce.number().int().min(0).max(100_000_000).optional(),
     verifiedTransparency: z.enum(["true", "false"]).optional(),
+    /** Launched within the last N days (demo tokens: relative to DEMO_REFERENCE_TIME). */
+    launchedWithinDays: z.coerce.number().int().min(1).max(3650).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(25),
     offset: z.coerce.number().int().min(0).max(10_000).default(0),
   })
@@ -423,3 +428,4 @@ export const AuthStatusResponse = z.object({
   productionReady: z.boolean(),
 });
 export type AuthStatusResponse = z.infer<typeof AuthStatusResponse>;
+export type WalletList = z.infer<typeof WalletList>;

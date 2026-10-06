@@ -9,7 +9,8 @@ One vertical slice at a time. After each: tests, typecheck, lint, build, docs.
 | 1 (done) | API foundation: Fastify, Zod, pg, env validation, migrations + demo seed, 13 route groups, session boundary, typed web client with mock/api switch | 97 API tests on real Postgres, typecheck/lint/build green. Wallet sign-in NOT done (slice 2). See API.md |
 | 2 (done) | Wallet auth: nonce, ed25519 verify, user/wallet lookup-or-create, HttpOnly cookie sessions, logout, rotation, CSRF origin checks, real frontend flow (CONNECTED vs AUTHENTICATED) | replay/expiry/wrong-key/modified-message tests (149 API tests), mutation-checked, 22-check browser run. See SECURITY.md |
 | 3b (done in slice 2) | Mock wallet replaced by Wallet Standard connect + server-verified sign-in when `NEXT_PUBLIC_API_MODE=api` (mock stays the default) | real connect + sign in a browser |
-| 3c | Switch UI screens from `src/mock` to the API client; wallet linking (add a 2nd wallet via signature); wallet labels | screens read the API; DEMO labels only where data is demo |
+| 3c (done as Slice 4) | UI screens read the API client in both modes; AUTH states in the shell; NO_LIVE_DATA empty states; launch = PREPARE LAUNCH (save + server review); reserve = target only; donations = information + records only | 332 tests, 47-check API-mode and 82-check mock-mode browser runs. See FRONTEND.md |
+| 3d | Wallet linking (add a 2nd wallet via signature); wallet labels | link requires a fresh signature from the new wallet |
 | 4 | Portfolio: RPC balances, price service interface + one provider, mock fallback labeled DEMO | real balances on devnet/mainnet read-only |
 | 5 | Transaction indexer to raw_transactions, normalizer, history view | idempotent, reorg-safe |
 | 6 | Tax Center: wire engine to indexed data, realized P&L, estimate with user assumptions | numbers trace to signatures |

@@ -11,6 +11,13 @@ Base URL (local): `http://localhost:4000`. All routes are under `/api`; `GET /he
 - Money: integer USD cents as strings (`"1842000"` = $18,420.00). Token amounts: base units as strings. Rates: integer basis points. No floats.
 - Tax language: fields are `estimated*`. There is no tax-bill field anywhere.
 
+## How the web app uses this API (Slice 4)
+The wallet-scoped routes take `:walletId`; the web app always passes the signed-in session's wallet (from `GET /api/wallets`). Per-screen endpoint list: `docs/FRONTEND.md`.
+- **`404 NO_LIVE_DATA`**: returned by portfolio, transactions, tax and tax-reserve (GET and POST target) when the wallet is yours but is not a demo wallet. It means "nothing is indexed for this wallet yet" and is how the UI knows to show an empty state. The API never substitutes demo data for a real wallet. A wallet that is foreign or unknown is a plain `404 NOT_FOUND`, which is deliberately distinguishable from "yours but empty".
+- Data labels the UI relies on: `dataSource` (`demo`/`database`/`chain`) and `verifiedOnChain`. Nothing returns `chain` or `verifiedOnChain:true` yet.
+- `GET /api/discover` also accepts `launchedWithinDays` (1-3650; demo tokens are measured against a fixed demo reference time).
+- Donations are read-only for the UI in this slice: it does not call `POST /api/donations` (that would attach demo records to a user's wallet). Launch configurations (`POST /api/launches`, review) ARE used: they are real saved records and deploy nothing.
+
 ## Endpoint summary
 Capability: **demo** = fixture-backed (not real data). **db** = stored in PostgreSQL. **prod-capable** = logic is real and would not change when real data arrives.
 
@@ -44,7 +51,7 @@ Common error body (all errors):
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "Request validation failed", "fields": { "feeSplit": ["fee split totals 10001 basis points; it must be exactly 10000"] } } }
 ```
-Codes: `VALIDATION_ERROR` 400, `BAD_REQUEST` 400/413, `UNAUTHENTICATED` 401 (with `WWW-Authenticate: Bearer`), `AUTH_FAILED` 401 (any sign-in failure; deliberately uniform), `ORIGIN_NOT_ALLOWED` 403, `NOT_FOUND` 404, `LIMIT_REACHED` 409, `DEMO_DATA_MISSING` 409, `CHARITY_NOT_VERIFIED` 422, `WALLET_NOT_OWNED` 422, `RATE_LIMITED` 429, `TOO_MANY_CHALLENGES` 429, `INTERNAL_ERROR` 500 (no internals leaked).
+Codes: `NO_LIVE_DATA` 404 (see above), `VALIDATION_ERROR` 400, `BAD_REQUEST` 400/413, `UNAUTHENTICATED` 401 (with `WWW-Authenticate: Bearer`), `AUTH_FAILED` 401 (any sign-in failure; deliberately uniform), `ORIGIN_NOT_ALLOWED` 403, `NOT_FOUND` 404, `LIMIT_REACHED` 409, `DEMO_DATA_MISSING` 409, `CHARITY_NOT_VERIFIED` 422, `WALLET_NOT_OWNED` 422, `RATE_LIMITED` 429, `TOO_MANY_CHALLENGES` 429, `INTERNAL_ERROR` 500 (no internals leaked).
 A resource owned by another user is reported as `404`, not `403`, so existence is not revealed. Wallets created by real sign-in are `dataSource:"database"` and have **no** portfolio/transaction/tax data yet (those endpoints return 404 for them: no fabricated data); only the seeded demo user's wallets return demo fixtures.
 
 ## Authentication

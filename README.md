@@ -17,7 +17,8 @@ Phase 1 in progress. Nothing is deployed. No mainnet, no custody, no production 
 | Web (Next.js): 10 demo screens, mock data, responsive | Done (all data is DEMO) |
 | API (Fastify + Zod + Postgres): 13 route groups, demo-backed, session boundary | Done (Slice 1). Not production-ready |
 | Solana wallet-signature sign-in, HttpOnly cookie sessions, logout, CSRF origin checks | Done (Slice 2) |
-| Indexer, price service, real data for the UI | Not started |
+| Frontend wired to the API: auth states, empty/loading/error/demo states, PREPARE LAUNCH, reserve target | Done (Slice 4) |
+| Indexer, price service, real data behind the endpoints | Not started |
 | Smart contracts | Not started (blocked on architecture review) |
 
 ## Layout
@@ -36,7 +37,9 @@ docs/            Architecture, threat model, plan, etc.
 pnpm install
 pnpm dev         # frontend only, http://localhost:3000 (demo data)
 pnpm dev:all     # frontend + API (needs Postgres, see docs/ENVIRONMENT.md)
-                 # real wallet sign-in: set NEXT_PUBLIC_API_MODE=api in apps/web/.env.local
+                 # real wallet sign-in + API-backed screens: set NEXT_PUBLIC_API_MODE=api in apps/web/.env.local
+                 # (api mode: a real wallet has no indexed data yet, so wallet screens show NO LIVE DATA YET;
+                 #  default mock mode shows populated, clearly labeled DEMO DATA)
 pnpm test        # all unit tests
 pnpm typecheck
 ```

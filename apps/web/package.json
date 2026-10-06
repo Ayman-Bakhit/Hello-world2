@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "e2e:auth": "node e2e/auth.e2e.mjs"
+    "e2e:auth": "node e2e/api-flow.e2e.mjs",
+    "e2e:api": "node e2e/api-flow.e2e.mjs",
+    "e2e:mock": "node e2e/mock-smoke.e2e.mjs"
   },
   "dependencies": {
     "@project-name/shared": "workspace:*",

@@ -24,6 +24,6 @@ export const DEFAULT_LAUNCH_CONFIG: LaunchConfiguration = {
   liquiditySupplyPercent: "40",
   liquidityLockDays: "30",
   feeDrafts: draftsFromSplit({ creator: 6000, taxReserve: 1500, charity: 1500, protocol: 1000 }),
-  charityId: "c1",
+  charityId: "",
   reserveWalletId: "",
 };

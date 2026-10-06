@@ -1,4 +1,5 @@
 import type { FastifyError, FastifyInstance } from "fastify";
+import { NO_LIVE_DATA } from "@project-name/shared";
 import { ZodError } from "zod";
 
 export class ApiError extends Error {
@@ -13,6 +14,10 @@ export class ApiError extends Error {
 }
 
 export const notFound = (what = "Resource") => new ApiError(404, "NOT_FOUND", `${what} not found`);
+
+/** The wallet is yours and authenticated, but nothing live is indexed for it. The API never substitutes demo data. */
+export const noLiveData = (what: string) =>
+  new ApiError(404, NO_LIVE_DATA, `No live ${what} exists for this wallet yet. Blockchain indexing is not connected.`);
 
 export function zodFields(err: ZodError): Record<string, string[]> {
   const fields: Record<string, string[]> = {};

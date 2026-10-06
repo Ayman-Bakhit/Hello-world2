@@ -74,7 +74,7 @@ export interface TaxReserve {
   vaultLabel: string;
 }
 
-export type CharityVerification = "verified" | "pending";
+export type CharityVerification = "verified" | "pending" | "rejected" | "revoked";
 
 export interface Charity {
   id: string;
@@ -84,6 +84,8 @@ export interface Charity {
   country: string;
   verification: CharityVerification;
   verificationNote: string;
+  /** where the record comes from; 'demo' records are fictional */
+  dataSource: "demo" | "database" | "chain";
 }
 
 export interface Donation {
@@ -92,7 +94,8 @@ export interface Donation {
   assetSymbol: string;
   amountCents: bigint;
   occurredAt: string;
-  status: "confirmed" | "pending";
+  /** demo = record only (fictional); confirmed = a verifiable on-chain transaction exists */
+  status: "demo" | "pending" | "confirmed" | "failed";
   receiptRef: string;
   signature: string;
 }

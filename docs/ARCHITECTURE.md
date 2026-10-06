@@ -64,3 +64,17 @@ USDC only in V1. User-controlled vault; deposits explicitly signed. No auto-conv
 
 ## Frontend wallet layer (Slice 2)
 `apps/web/src/state/wallet.tsx` has two modes via `NEXT_PUBLIC_API_MODE`. `api`: Wallet Standard discovery (`@wallet-standard/app`), connect, challenge from the API, `solana:signMessage`, verify, cookie session; status `disconnected -> connected -> signing -> authenticated`. `mock` (default): the Slice 3 demo connection, which never reports authenticated. The browser holds no session secret.
+
+## Frontend <-> API relationship (Slice 4)
+```
+Browser (Next.js, static shells)
+  screens -> useResource -> typed client (lib/api/client.ts) -> fetch(credentials: include) -> Fastify API -> PostgreSQL / demo builders
+                              \-> mock mode: same functions answered locally from packages/shared fixtures (+ in-memory saves)
+  session: HttpOnly cookie only. GET /api/auth/session on load; 401 anywhere -> session re-check.
+```
+- **One contract.** Request/response shapes are the Zod schemas in `packages/shared/src/api`; the client validates every response, so UI and server cannot silently drift. In api mode the client parses every response with those schemas; mock mode is built by the same shared builders the API uses, and tests parse its output with the same schemas.
+- **The server decides what is demo and what is live.** The UI renders labels from `dataSource` / `verifiedOnChain` and the `NO_LIVE_DATA` error code; it never decides that a number is "real". Demo fixtures are only reachable through demo wallets, so a real signed-in wallet gets empty states.
+- **Screens = container + pure view.** `components/screens/*Screen.tsx` load data (`useResource`, `ResourceView`); exported `*View` components are pure and unit-tested by static rendering.
+- **Money is strings on the wire, bigint in the UI** (`lib/adapters.ts`). Formatting stays in `lib/format.ts`.
+- **What the UI deliberately does not do:** sign or send transactions, move funds, create donation records, deploy anything, rank or filter tokens itself.
+- **Remaining blockchain integration** (future slices): RPC balances and indexer -> `raw_transactions`; price service; cost-basis lots from indexed transactions -> real tax estimates; verified charity wallets and real donation transactions; reserve vault flows; token deployment and on-chain fee routing; on-chain proof (`verifiedOnChain`) and explorer links. Each replaces a demo-backed builder behind the same endpoints and the same schemas.

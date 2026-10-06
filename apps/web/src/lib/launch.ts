@@ -12,9 +12,9 @@ export const LAUNCH_STEPS = [
   { id: "charity", title: "Charity configuration" },
   { id: "reserve", title: "Tax reserve configuration" },
   { id: "review", title: "Review" },
-  { id: "deploy", title: "Deploy" },
-  { id: "verify", title: "Verify" },
-  { id: "publish", title: "Publish" },
+  { id: "deploy", title: "Deploy (unavailable)" },
+  { id: "verify", title: "Verify (unavailable)" },
+  { id: "publish", title: "Publish (unavailable)" },
 ] as const;
 export type LaunchStepId = (typeof LAUNCH_STEPS)[number]["id"];
 
@@ -23,6 +23,11 @@ const isNonNegInt = (s: string) => /^\d+$/.test(s.trim());
 
 export function effectiveWalletId(id: string, ctx: StepContext): string {
   return ctx.walletIds.includes(id) ? id : (ctx.walletIds[0] ?? "");
+}
+
+/** "" means "the first verified charity". An explicit id must be verified (an unverified one is an error, not silently replaced). */
+export function effectiveCharityId(id: string, ctx: StepContext): string {
+  return id === "" ? (ctx.verifiedCharityIds[0] ?? "") : id;
 }
 
 export interface StepContext {
@@ -70,7 +75,7 @@ export function stepErrors(step: LaunchStepId, c: LaunchConfiguration, ctx: Step
       e.push(...parseFeeDrafts(c.feeDrafts).messages);
       break;
     case "charity":
-      if (!ctx.verifiedCharityIds.includes(c.charityId)) e.push("Select a verified charity.");
+      if (!ctx.verifiedCharityIds.includes(effectiveCharityId(c.charityId, ctx))) e.push("Select a verified charity.");
       break;
     case "reserve":
       if (effectiveWalletId(c.reserveWalletId, ctx) === "") e.push("Connect a wallet to use as the creator-controlled reserve destination.");
@@ -90,4 +95,42 @@ export function allErrors(c: LaunchConfiguration, ctx: StepContext, upTo: Launch
     for (const message of stepErrors(id, c, ctx)) out.push({ step: id, message });
   }
   return out;
+}
+
+/** The steps after "reserve" that exist only as unavailable placeholders. Nothing past "deploy" can be reached. */
+export const LAST_REACHABLE_STEP: LaunchStepId = "deploy";
+
+export interface LaunchRequestContext {
+  creatorAddress: string;
+  reserveAddress: string;
+  charityId: string;
+}
+
+/**
+ * Wizard state -> POST /api/launches body. Pure. The fee split is parsed by the shared validator; if it is invalid this
+ * throws, so an invalid split can never be sent.
+ */
+export function toLaunchRequest(c: LaunchConfiguration, r: LaunchRequestContext) {
+  const fee = parseFeeDrafts(c.feeDrafts);
+  if (!fee.split) throw new Error("Fee split is invalid");
+  return {
+    name: c.name.trim(),
+    symbol: c.symbol,
+    description: c.description,
+    totalSupply: c.totalSupply.trim(),
+    decimals: Number(c.decimals),
+    creatorAllocationPercent: c.creatorAllocationPercent.trim(),
+    creatorWallet: r.creatorAddress,
+    mintAuthority: c.mintAuthority,
+    freezeAuthority: c.freezeAuthority,
+    updateAuthority: c.updateAuthority,
+    liquidityConfiguration: {
+      initialLiquidityUsdc: c.liquidityUsdc.trim(),
+      supplyPercentage: c.liquiditySupplyPercent.trim(),
+      lockDays: Number(c.liquidityLockDays),
+    },
+    feeSplit: fee.split,
+    charityConfiguration: { charityId: r.charityId },
+    taxReserveConfiguration: { destinationType: "creator_controlled" as const, destinationAddress: r.reserveAddress },
+  };
 }

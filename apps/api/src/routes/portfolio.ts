@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { PortfolioResponse, buildPortfolio } from "@project-name/shared";
 import { requireAuth } from "../auth/plugin";
-import { notFound } from "../errors";
+import { noLiveData } from "../errors";
 import { respond } from "../http/validate";
 import type { Deps } from "./index";
 import { ownedWalletFromParams } from "./walletScope";
@@ -12,7 +12,7 @@ export const portfolioRoutes: FastifyPluginAsync<Deps> = async (app, { pool, con
     const wallet = await ownedWalletFromParams(pool, req);
     // Only demo wallets have fixtures. A real (non-demo) wallet has no indexed data yet.
     const body = wallet.dataSource === "demo" ? buildPortfolio(wallet.id) : null;
-    if (!body) throw notFound("Portfolio data");
+    if (!body) throw noLiveData("portfolio data");
     return respond(PortfolioResponse, body);
   });
 };

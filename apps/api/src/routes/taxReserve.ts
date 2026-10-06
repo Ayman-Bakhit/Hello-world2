@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { SetTaxReserveTargetRequest, TaxReserveResponse, buildTaxReserve, targetFromRequest } from "@project-name/shared";
 import { actorOf, requireAuth } from "../auth/plugin";
 import { getTaxReserveTarget, upsertTaxReserveTarget } from "../db/repos";
-import { notFound } from "../errors";
+import { noLiveData } from "../errors";
 import { parse, respond } from "../http/validate";
 import type { Deps } from "./index";
 import { ownedWalletFromParams } from "./walletScope";
@@ -21,7 +21,7 @@ export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, co
 
   app.get("/api/tax-reserve/:walletId", { preHandler: auth }, async (req) => {
     const wallet = await ownedWalletFromParams(pool, req);
-    if (wallet.dataSource !== "demo") throw notFound("Tax reserve data");
+    if (wallet.dataSource !== "demo") throw noLiveData("tax reserve data");
     return view(actorOf(req).userId, wallet.id);
   });
 
@@ -30,7 +30,7 @@ export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, co
     { preHandler: auth, config: { rateLimit: { max: config.RATE_LIMIT_WRITE_MAX, timeWindow: config.RATE_LIMIT_WINDOW } } },
     async (req) => {
       const wallet = await ownedWalletFromParams(pool, req);
-      if (wallet.dataSource !== "demo") throw notFound("Tax reserve data");
+      if (wallet.dataSource !== "demo") throw noLiveData("tax reserve data");
       const body = parse(SetTaxReserveTargetRequest, req.body);
       await upsertTaxReserveTarget(pool, actorOf(req).userId, targetFromRequest(body));
       return view(actorOf(req).userId, wallet.id);

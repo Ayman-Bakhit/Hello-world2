@@ -1,7 +1,7 @@
 "use client";
 
 import { COPY } from "@project-name/shared";
-import { effectiveWalletId, type StepContext } from "@/lib/launch";
+import { effectiveCharityId, effectiveWalletId, type StepContext } from "@/lib/launch";
 import { shortAddress } from "@/lib/format";
 import type { Charity, Wallet } from "@/lib/types";
 import { useLaunch } from "@/state/launch";
@@ -33,11 +33,12 @@ export function WalletSelect({ id, value, wallets, ctx, onChange }: { id: string
 export function CharityConfig({ charities }: { charities: Charity[] }) {
   const { config, update } = useLaunch();
   const verified = charities.filter((c) => c.verification === "verified");
-  const selected = charities.find((c) => c.id === config.charityId);
+  const chosen = effectiveCharityId(config.charityId, { walletConnected: true, verifiedCharityIds: verified.map((c) => c.id), walletIds: [] });
+  const selected = charities.find((c) => c.id === chosen);
   return (
     <div className="space-y-3">
       <Field label="Verified charity" htmlFor="charity-select" hint="Only admin-verified charities can receive fee routing. Unverified wallets are never selectable.">
-        <select id="charity-select" className={inputCls} value={config.charityId} onChange={(e) => update({ charityId: e.target.value })}>
+        <select id="charity-select" className={inputCls} value={chosen} onChange={(e) => update({ charityId: e.target.value })}>
           {verified.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </Field>
@@ -45,7 +46,7 @@ export function CharityConfig({ charities }: { charities: Charity[] }) {
         <div className="rounded-md border border-line bg-surface-2/40 p-3 text-xs text-muted">
           <p className="font-semibold text-fg">{selected.name}</p>
           <p>{selected.category} · {selected.country}</p>
-          <p className="mt-1 text-faint">Destination wallet: shown from the registry once it exists. <Badge tone="demo">DEMO</Badge></p>
+          <p className="mt-1 text-faint">Destination wallet: shown from the registry once it exists. {selected.dataSource === "demo" ? <Badge tone="demo">DEMO DATA</Badge> : null}</p>
         </div>
       ) : null}
       <p className="text-[11px] text-faint">{COPY.donation}</p>
