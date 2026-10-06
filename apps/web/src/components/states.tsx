@@ -23,7 +23,7 @@ export function LoadingState({ label = "Loading" }: { label?: string }) {
 }
 
 /** "Nothing here yet" for authenticated, live users. Never filled with fictional values. */
-export function NoLiveData({ title = "NO LIVE DATA YET", message = "Your wallet is authenticated, but blockchain indexing has not been connected yet." }: { title?: string; message?: string }) {
+export function NoLiveData({ title = "NO LIVE DATA YET", message = "Your wallet is authenticated, but no live data has been loaded for it yet." }: { title?: string; message?: string }) {
   return <EmptyState badge="NO LIVE DATA" title={title} description={message} />;
 }
 

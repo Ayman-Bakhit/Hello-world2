@@ -46,3 +46,17 @@ Tax reserve mapping: API `percentage` = `rule FIXED_PERCENT` + `percent_bps`; `a
 | CHECK `wallet_signature` sessions must have `wallet_id` | no wallet session without a wallet |
 | CHECK `wallets_demo_never_verified` | demo wallets can never be marked verified |
 Pre-existing session rows (only the dev endpoint could have created them) become `dev_insecure`. No data is dropped. Wallet/user creation relies on the existing `UNIQUE(chain, address)`; the sign-in transaction also takes a per-address advisory lock.
+
+### 003_solana_indexing (additive)
+| Change | Why |
+|---|---|
+| `assets.symbol` nullable; `assets.kind` (`native`/`spl`), `assets.data_source` | a real SPL mint can have no known symbol; never fabricate one |
+| new `asset_metadata` (status, name, symbol, uri, source, attempted_at) | untrusted token text kept apart from asset identity |
+| new `wallet_sync_runs` (+ partial UNIQUE index: one `running` run per wallet), `wallet_sync_state` | run history, concurrency guard that survives restarts, anchor and window (`history_complete`, `has_gap`) |
+| `raw_transactions.block_time` nullable; index on `slot` | a node may not know a block time; do not invent one |
+| new `balance_observations` (append-only trigger, UNIQUE wallet+asset+token_account+slot NULLS NOT DISTINCT) | what a node reported, at which slot |
+| `token_holdings.observed_at`, `token_account_count`, `last_sync_run_id`; index on `asset_id` | derived current holdings with provenance |
+| `transactions.kind` CHECK widened (`transfer`, `token_receipt`, `token_send`, `fee`, `unknown`); `occurred_at` nullable; new `status`, `fee_lamports`, `slot`, `classification_reason`, `classifier_version`, `program_ids`, `data_source`; UNIQUE `(wallet_id, raw_transaction_id)`; indexes on `(wallet_id, slot DESC)` and `raw_transaction_id` | re-indexing cannot duplicate; every label is explainable and traceable |
+| new `transaction_asset_deltas` (PK transaction+asset) | what moved for the wallet, per asset |
+| index `price_observations(asset_id, observed_at DESC)` | latest price lookup |
+Nothing is dropped. The replaced constraint (`transactions_kind_check`) only widens allowed values. Derived tables (`transactions`, `transaction_asset_deltas`, `token_holdings`) can be rebuilt from `raw_transactions` and `balance_observations`. The seed's SOL asset insert is `ON CONFLICT DO NOTHING` so it cannot collide with the indexer's native asset.

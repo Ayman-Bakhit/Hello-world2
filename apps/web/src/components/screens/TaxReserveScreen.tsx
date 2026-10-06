@@ -119,7 +119,7 @@ function Body({ walletId, wallets, onSelect }: { walletId: string; wallets: Para
   return (
     <>
       <WalletPicker wallets={wallets} selectedId={walletId} onSelect={onSelect} />
-      <ResourceView resource={res} loadingLabel="Loading tax reserve" noData={<NoLiveData title="NO LIVE TAX RESERVE DATA YET" message="Your wallet is authenticated, but no live reserve or tax data exists yet. Blockchain indexing has not been connected." />}>
+      <ResourceView resource={res} loadingLabel="Loading tax reserve" noData={<NoLiveData title="NO LIVE TAX RESERVE DATA YET" message="Your wallet is authenticated, but no live reserve or tax data exists yet. Tax estimation for real wallets is not available, and nothing here moves funds." />}>
         {(d) => <TaxReserveView data={latest ?? d} onSave={save} saving={saving} saveError={saveError} savedNotice={saved} />}
       </ResourceView>
     </>

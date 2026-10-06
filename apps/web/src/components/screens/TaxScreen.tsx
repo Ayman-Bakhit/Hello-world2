@@ -89,7 +89,7 @@ function Body({ walletId, walletLabel, wallets, onSelect, wallet }: { walletId: 
   return (
     <>
       <WalletPicker wallets={wallets} selectedId={wallet} onSelect={onSelect} />
-      <ResourceView resource={tax} loadingLabel="Loading tax estimate" noData={<NoLiveData title="NO LIVE TAX DATA YET" message="Your wallet is authenticated, but no indexed transactions exist to estimate from. Blockchain indexing has not been connected yet." />}>
+      <ResourceView resource={tax} loadingLabel="Loading tax estimate" noData={<NoLiveData title="NO LIVE TAX DATA YET" message="Your wallet is authenticated, but tax estimates for real wallets are not available yet. Indexed transactions are not tax-classified, and no tax conclusion is drawn from them." />}>
         {(t) => <TaxView tax={t} reserve={reserve.status === "ok" ? reserve.data : null} transactions={tx.status === "ok" ? tx.data : null} walletLabel={walletLabel} />}
       </ResourceView>
     </>

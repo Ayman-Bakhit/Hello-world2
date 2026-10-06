@@ -29,7 +29,10 @@ Wallet-first. API issues a 192-bit single-use nonce bound to the address (5 min 
 - Dev-only bearer session (`AUTH_MODE=dev-insecure`) is separate, flagged `dev_insecure`, and rejected in production.
 
 ## Price service
-`PriceProvider` interface: `getTokenPrice`, `getHistoricalPrice`, `getUSDValue`, `getLiquidity`, `getMarketData`. Observations stored in `price_observations` with provider and timestamp. Tax calcs reference the stored observation so results are reproducible.
+Implemented minimally in Slice 5 (`apps/api/src/prices/provider.ts`): `PriceProvider.getPrices(assets)` returns quotes only for assets it can price; `NullPriceProvider` (default) and `CoinGeckoPriceProvider` (SOL/USD, mainnet only). Observations are stored in `price_observations` with provider and timestamp; a missing price is absence, never zero. Historical prices, liquidity and market data are not built. Tax calcs will reference the stored observation so results are reproducible.
+
+## Solana indexing (Slice 5)
+Read-only chain access behind a replaceable `SolanaRpc` interface, a bounded idempotent sync into immutable raw records and derived tables, conservative classification, and live Portfolio/Transactions. See INDEXING.md.
 
 ## Chains
 Solana first. `chain` enum in DB and a `ChainAdapter` boundary in the indexer keep EVM possible (V3).
@@ -54,7 +57,7 @@ USDC only in V1. User-controlled vault; deposits explicitly signed. No auto-conv
 
 ## API layer (Slice 1)
 `apps/api` (Fastify 5). Routes grouped by domain under `/api`; contracts are Zod schemas in `packages/shared/src/api`, shared by API and web client. See `API.md`.
-- **Provenance is part of the contract.** Every data response says `dataSource` (`demo` | `database` | `chain`) and `verifiedOnChain`. In this slice nothing is `chain`, and nothing may be presented as on-chain fact.
+- **Provenance is part of the contract.** Every data response says `dataSource` (`demo` | `database` | `chain`) and `verifiedOnChain`. Since Slice 5, portfolio and transactions for real wallets are `chain` (read from an RPC node by the indexer) with `verifiedOnChain: false`: observed, not independently verified.
 - **Demo-backed vs database-backed.** Wallets, charities, donations, tax-reserve target, launch configurations, sessions are PostgreSQL. Portfolio, transactions, tax, tokens, proof, discover are pure builders over `shared/src/demo` fixtures (same builders power the web client's mock mode, so shapes cannot drift). The seed uses the same fixtures.
 - **Single implementation of the math.** Fee split (`validateFeeSplit`, `splitAmount`), tax (`estimateTax`, `reserveStatus`), launch review (`reviewLaunchConfig`), discover filters all live in `packages/shared`. The API calls them; it re-implements nothing.
 - **Auth boundary.** `requireAuth` resolves a session (cookie or bearer) to a user id; repositories filter by that id. Sessions are issued by wallet-signature verification (Slice 2); the dev-only session endpoint exists solely under `AUTH_MODE=dev-insecure` and is refused in production. Cookie requests are Origin-checked (CSRF).
@@ -77,4 +80,5 @@ Browser (Next.js, static shells)
 - **Screens = container + pure view.** `components/screens/*Screen.tsx` load data (`useResource`, `ResourceView`); exported `*View` components are pure and unit-tested by static rendering.
 - **Money is strings on the wire, bigint in the UI** (`lib/adapters.ts`). Formatting stays in `lib/format.ts`.
 - **What the UI deliberately does not do:** sign or send transactions, move funds, create donation records, deploy anything, rank or filter tokens itself.
-- **Remaining blockchain integration** (future slices): RPC balances and indexer -> `raw_transactions`; price service; cost-basis lots from indexed transactions -> real tax estimates; verified charity wallets and real donation transactions; reserve vault flows; token deployment and on-chain fee routing; on-chain proof (`verifiedOnChain`) and explorer links. Each replaces a demo-backed builder behind the same endpoints and the same schemas.
+- **Slice 5 update:** the Portfolio screen now has SYNC WALLET / REFRESH DATA (`lib/useWalletSync.ts`, `components/SyncPanel.tsx`), shows LIVE DATA for indexed wallets, and distinguishes on-chain balance, price and USD value. Tax, reserve and donations are still `NO_LIVE_DATA` for real wallets.
+- **Remaining blockchain integration** (future slices): price history and more price sources; cost-basis lots from indexed transactions -> real tax estimates; verified charity wallets and real donation transactions; reserve vault flows; token deployment and on-chain fee routing; on-chain proof (`verifiedOnChain`) and explorer links. Each replaces a demo-backed builder behind the same endpoints and the same schemas.

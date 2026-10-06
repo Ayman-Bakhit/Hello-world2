@@ -89,3 +89,14 @@ Wallet signature only. Required configuration: `NODE_ENV=production`, https-only
 
 ### Still not done (auth-specific)
 No idle timeout or sliding refresh; no "list/revoke my sessions" or revoke-all; no step-up re-authentication for sensitive actions; rate limiting is per IP and in-memory (per-address challenge cap only); no wallet-linking; no account recovery (losing the key loses the account); no audit log of sign-ins; the signed message is not a Solana off-chain-message-standard envelope (wallet UIs show it as plain text); Ed25519 signature malleability is irrelevant here because each nonce is single-use, but any future use of signatures as identifiers must handle it.
+
+## Slice 5: Solana indexing (read-only)
+- **Read-only by construction.** `SolanaRpc` has no method that sends, simulates, or signs. The indexer never asks the wallet for a signature, holds no key, builds no transaction. `POST /api/wallets/:id/sync` only causes reads.
+- **RPC credentials are server-side.** `SOLANA_RPC_URL` (may embed an API key) is read from the environment only, must be https in production, is never returned, logged, or included in an error (provider errors are sanitized; a test asserts no response contains it). Never use a `NEXT_PUBLIC_` variable for it.
+- **Authorization.** Sync and status are session + ownership checked in SQL; foreign wallets are 404. The wallet address comes from the database, never from the request.
+- **Abuse limits.** Per-IP route limit, per-wallet cooldown, one run per wallet (DB-enforced), global concurrency cap, per-sync RPC-call budget and wall-clock cap, bounded token accounts, bounded metadata lookups, response size caps (8 MiB response, 1 MiB stored payload), no redirects followed.
+- **All chain data is untrusted.** Every RPC response goes through size cap, lossless parse, envelope check, then Zod normalizers; malformed data is rejected (`RPC_MALFORMED`), never partially trusted. Requested vs returned signature must match. Amounts are bigint, never float.
+- **Token metadata is hostile text.** Bounded, control/bidi stripped, URI scheme allowlisted, never fetched, rendered escaped, labeled UNVERIFIED. SPL tokens are identified by mint, never by a self-declared symbol. There is no "verified" badge without an objective source.
+- **No invented numbers.** No hardcoded prices; missing price is "unavailable", never zero; partial sums are never totals; tax is never inferred (`not_assessed`).
+- **Demo isolation.** Real wallets can never receive demo fixtures; demo wallets can never be synced.
+- Residual risks: the RPC node is trusted for data it returns (a malicious/compromised provider can lie; verifiedOnChain stays false for this reason); in-memory rate limiter is per process; `confirmed` commitment is not reorg-safe; the DEX allowlist and Metaplex parsing are unverified against a live network.

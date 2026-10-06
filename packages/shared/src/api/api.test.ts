@@ -53,9 +53,9 @@ describe("tax reserve target request", () => {
 
 describe("demo builders", () => {
   it("portfolio totals across the three wallets match the frontend demo ($42,810)", () => {
-    const total = [W.trading, W.creator, W.cold].map((w) => BigInt(buildPortfolio(w)!.totalValueCents)).reduce((a, b) => a + b, 0n);
+    const total = [W.trading, W.creator, W.cold].map((w) => BigInt(buildPortfolio(w)!.totalValueCents!)).reduce((a, b) => a + b, 0n);
     expect(total).toBe(4_281_000n);
-    const realized = [W.trading, W.creator, W.cold].map((w) => BigInt(buildPortfolio(w)!.realizedPnlCents)).reduce((a, b) => a + b, 0n);
+    const realized = [W.trading, W.creator, W.cold].map((w) => BigInt(buildPortfolio(w)!.realizedPnlCents!)).reduce((a, b) => a + b, 0n);
     expect(realized).toBe(5_810_000n);
   });
   it("every response is labeled demo and not on-chain verified", () => {

@@ -39,7 +39,7 @@ export function describeApiError(e: unknown): ApiErrorView {
   }
   if (e.status === 404) {
     if (code === NO_LIVE_DATA) {
-      return { ...base, kind: "no_live_data", title: "NO LIVE DATA YET", message: "Your wallet is authenticated, but blockchain indexing has not been connected yet.", retryable: false };
+      return { ...base, kind: "no_live_data", title: "NO LIVE DATA YET", message: "Your wallet is authenticated, but no live data has been indexed for it yet. Use SYNC WALLET to read it from the blockchain.", retryable: false };
     }
     return { ...base, kind: "not_found", title: "NOT FOUND", message: "That item does not exist or is not available to you.", retryable: false };
   }
@@ -49,8 +49,14 @@ export function describeApiError(e: unknown): ApiErrorView {
   if (e.status === 409 || e.status === 422) {
     return { ...base, kind: e.status === 409 ? "conflict" : "rejected", title: e.status === 409 ? "CONFLICT" : "REQUEST REJECTED", message: e.message, retryable: false };
   }
+  if (e.status === 429 && code === "SYNC_COOLDOWN") {
+    return { ...base, kind: "rate_limited", title: "SYNCED RECENTLY", message: e.message, retryable: true };
+  }
   if (e.status === 429) {
     return { ...base, kind: "rate_limited", title: "SLOW DOWN", message: "Too many requests. Wait a moment, then retry.", retryable: true };
+  }
+  if (e.status === 503 && code === "INDEXING_UNAVAILABLE") {
+    return { ...base, kind: "server", title: "INDEXING NOT CONFIGURED", message: "This server is not connected to a Solana RPC node, so wallets cannot be synced yet.", retryable: false };
   }
   if (e.status >= 500) {
     return { ...base, kind: "server", title: "TEMPORARILY UNAVAILABLE", message: "The service had a problem. Please try again shortly.", retryable: true };

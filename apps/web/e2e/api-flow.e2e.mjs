@@ -3,6 +3,9 @@
  *
  * Needs: API on :4000 (database migrated AND seeded with `pnpm db:seed-demo` so the demo charities exist)
  *        and web on :3000 built with NEXT_PUBLIC_API_MODE=api (see docs/ENVIRONMENT.md).
+ * Slice 5 checks also need a FAKE Solana RPC (never a real one): `pnpm --filter @project-name/api fake:rpc` on :8899, and the API started with
+ *        SOLANA_RPC_URL=http://127.0.0.1:8899 SOLANA_CLUSTER=devnet INDEXER_MIN_SYNC_INTERVAL_SECONDS=2 INDEXER_SYNC_ON_LOGIN=false
+ *        and RATE_LIMIT_MAX / RATE_LIMIT_WRITE_MAX / INDEXER_SYNC_RATE_LIMIT_MAX raised (back-to-back runs otherwise hit the limiter).
  * Run:   pnpm --filter @project-name/web e2e:api
  *
  * A fake Wallet Standard wallet named "Phantom" is injected into the page. Its signMessage calls back into
@@ -126,10 +129,55 @@ const go = async (path) => { await page.goto(`${WEB}${path}`, { waitUntil: "netw
 
 await go("/portfolio");
 let t = await text();
-check("portfolio: authenticated wallet with no indexed data gets the empty state", t.includes("NO LIVE PORTFOLIO DATA YET") && t.includes("Your wallet is authenticated, but blockchain indexing has not been connected yet."));
+check("portfolio: authenticated wallet with no indexed data gets the empty state and a SYNC WALLET button", t.includes("NO LIVE PORTFOLIO DATA YET") && t.includes("Press SYNC WALLET") && (await page.getByRole("button", { name: "SYNC WALLET" }).count()) === 1);
 check("portfolio: no demo balances are attached to the real wallet", !/DEMO DATA|\$34,235|\$42,810|BONK|JUP/.test(t), t.slice(0, 300));
 check("portfolio: transactions empty state, nothing invented", t.includes("NO LIVE TRANSACTIONS YET") && !t.includes("DEMO-SIG"));
 await shot("5-portfolio-empty");
+
+// ---- Slice 5: read-only indexing against the fake RPC (see apps/api/scripts/fake-rpc-server.ts) ----
+const RPC = process.env.E2E_FAKE_RPC_URL ?? "http://127.0.0.1:8899";
+const rpcStats = async () => (await fetch(`${RPC}/__control/stats`)).json();
+const walletsBody = await (await apiGet("/api/wallets")).json();
+const WALLET_ID = walletsBody.wallets[0].id;
+const pre = await (await apiGet(`/api/wallets/${WALLET_ID}/sync`)).json();
+check("sync status before syncing: never_synced, read-only limits exposed, no RPC URL", pre.state === "never_synced" && pre.configured === true && !JSON.stringify(pre).includes("8899"));
+await page.getByRole("button", { name: "SYNC WALLET" }).click();
+await page.getByRole("button", { name: "REFRESH DATA" }).waitFor({ timeout: 15000 });
+await page.getByText("Holdings").first().waitFor({ timeout: 5000 });
+t = await text();
+await shot("5b-portfolio-live");
+check("live portfolio is labeled LIVE DATA, not DEMO", t.includes("LIVE DATA") && !t.includes("DEMO DATA") && !/BONK|JUP|\$34,235/.test(t));
+check("SOL balance comes from the node (3.5 SOL)", /\b3\.5\b/.test(t));
+check("no price source configured: PRICE DATA UNAVAILABLE and no fabricated USD value", t.includes("PRICE DATA UNAVAILABLE") && t.includes("PRICE UNAVAILABLE") && !t.includes("$0.00"));
+check("SPL token is shown by mint with UNVERIFIED METADATA; hostile markup is inert text", t.includes("UNVERIFIED METADATA") && t.includes("<b>E2E Coin</b>") && (await page.locator("main b").count()) === 0);
+check("transactions: 3 indexed, FAILED status, NOT ASSESSED tax, no DEMO-SIG", t.includes("3 indexed") && t.includes("FAILED") && t.includes("NOT ASSESSED") && !t.includes("DEMO-SIG"));
+const link = await page.locator('main a[href^="https://explorer.solana.com/tx/"]').first().getAttribute("href");
+check("signature links to the explorer for the right cluster", !!link && link.endsWith("?cluster=devnet"));
+check("no tax conclusion language on live portfolio", !/your tax bill|taxable gain|you owe/i.test(t));
+const apiPortfolio = await (await apiGet(`/api/portfolio/${WALLET_ID}`)).json();
+check("API portfolio: chain data, unverified, partial/total never fabricated", apiPortfolio.dataSource === "chain" && apiPortfolio.verifiedOnChain === false && apiPortfolio.totalValueCents === null && apiPortfolio.assets.every((a) => a.valueCents === null && a.valuation === "price_unavailable"));
+check("API never exposes the RPC URL", !JSON.stringify(apiPortfolio).includes("127.0.0.1:8899"));
+
+// Idempotent repeat sync: nothing is refetched or duplicated
+const before = await rpcStats();
+await page.waitForTimeout(2500); // per-wallet cooldown (2s in this run)
+await page.getByRole("button", { name: "REFRESH DATA" }).click();
+await page.waitForTimeout(2500);
+const after = await rpcStats();
+const txList = await (await apiGet(`/api/transactions/${WALLET_ID}`)).json();
+check("repeat sync does not refetch known transactions and creates no duplicates", (after.getTransaction ?? 0) === (before.getTransaction ?? 0) && txList.pagination.total === 3 && new Set(txList.transactions.map((x) => x.signature)).size === 3, JSON.stringify({ before, after }));
+
+// New transaction appears after REFRESH DATA
+await fetch(`${RPC}/__control/new-tx?address=${ADDRESS}`, { method: "POST" });
+await page.waitForTimeout(2500);
+await page.getByRole("button", { name: "REFRESH DATA" }).click();
+await page.getByText("4 indexed").first().waitFor({ timeout: 15000 });
+const after2 = await rpcStats();
+check("refresh fetches only the one new transaction", after2.getTransaction === (before.getTransaction ?? 0) + 1, JSON.stringify(after2));
+
+// Cooldown surfaces as a friendly message (no crash)
+const cool = await context.request.post(`${API}/api/wallets/${WALLET_ID}/sync`, { headers: { origin: WEB } });
+check("sync inside the cooldown is 429 SYNC_COOLDOWN", cool.status() === 429 && (await cool.json()).error.code === "SYNC_COOLDOWN");
 
 await go("/tax");
 t = await text();

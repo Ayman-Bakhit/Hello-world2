@@ -4,6 +4,16 @@ See `.env.example`. Never commit `.env`. `ADMIN_WALLET` and `TREASURY_WALLET` ar
 ## API variables (Slice 1)
 See `.env.example` for the full list. `DATABASE_URL` is required. `CORS_ORIGINS` must be exact origins. `AUTH_MODE` defaults to `wallet` (wallet-signature sign-in only); `dev-insecure` additionally enables the dev-only session endpoint, is for local development only, and is refused under `NODE_ENV=production`. Auth settings: `AUTH_ORIGIN` (must be one of `CORS_ORIGINS`; the sign-in message domain is derived from it), `SOLANA_CLUSTER` (`devnet` default; named in the message as `solana:<cluster>`), `NONCE_TTL_SECONDS` (default 300), `MAX_OPEN_NONCES_PER_ADDRESS` (default 10), `SESSION_TTL_HOURS` (default 12), `COOKIE_SAMESITE` (`strict` default), `COOKIE_SECURE` (production is always Secure). Production requires https-only `CORS_ORIGINS`. `HOST` defaults to `127.0.0.1`. Web: `NEXT_PUBLIC_API_MODE` (`mock` default | `api`) and `NEXT_PUBLIC_API_BASE_URL`, set in `apps/web/.env.local`. `NEXT_PUBLIC_*` values are visible to browsers: never put secrets there.
 
+## Solana indexing variables (Slice 5)
+`SOLANA_RPC_URL` (server only; empty disables indexing), `SOLANA_COMMITMENT`, `SOLANA_RPC_TIMEOUT_MS`, `INDEXER_INITIAL_TRANSACTION_LIMIT` (50), `INDEXER_MAX_TRANSACTIONS_PER_SYNC` (100), `INDEXER_MAX_TOKEN_ACCOUNTS`, `INDEXER_MAX_METADATA_LOOKUPS`, `INDEXER_MAX_RPC_CALLS_PER_SYNC`, `INDEXER_MAX_RUN_SECONDS`, `INDEXER_MIN_SYNC_INTERVAL_SECONDS`, `INDEXER_MAX_CONCURRENT_SYNCS`, `INDEXER_SYNC_RATE_LIMIT_MAX`, `INDEXER_SYNC_ON_LOGIN`, `PRICE_PROVIDER` (`none` | `coingecko`), `PRICE_API_URL`, `PRICE_API_KEY`, `PRICE_MAX_AGE_SECONDS`. Blank values mean "default". See `.env.example` and `docs/INDEXING.md`. Never commit a real RPC URL or key.
+
+Try indexing without any real network (fake node, invented data, local only):
+```
+pnpm --filter @project-name/api fake:rpc                       # fake JSON-RPC on 127.0.0.1:8899
+SOLANA_RPC_URL=http://127.0.0.1:8899 SOLANA_CLUSTER=devnet pnpm dev:api
+```
+Then sign in on the web app, open Portfolio, press SYNC WALLET. With a real devnet RPC URL instead, SOLANA_CLUSTER should match the cluster of the URL. Manual real-RPC check: `SOLANA_RPC_URL=... SMOKE_WALLET_ADDRESS=<public address> pnpm --filter @project-name/api smoke:rpc`.
+
 ## Run locally
 ```
 cp .env.example .env            # edit DATABASE_URL

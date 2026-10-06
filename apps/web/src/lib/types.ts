@@ -35,21 +35,34 @@ export interface Portfolio {
   valueSeriesCents: number[];
 }
 
-export type TxKind = "swap" | "transfer_in" | "transfer_out" | "donation" | "fee_in";
-export type TaxTreatment = "disposal" | "income" | "none";
+export type TxKind = "swap" | "transfer_in" | "transfer_out" | "donation" | "fee_in" | "transfer" | "token_receipt" | "token_send" | "fee" | "unknown";
+/** "not_assessed" = live transactions: tax treatment is a later slice and is never inferred from the type. */
+export type TaxTreatment = "disposal" | "income" | "none" | "not_assessed";
 
 export interface Transaction {
   id: string;
   /** placeholder, not a real signature */
   signature: string;
-  occurredAt: string;
+  /** null = the node did not report a block time */
+  occurredAt: string | null;
   kind: TxKind;
+  /** symbol for SOL / demo assets; the mint address (shortened by the view) for SPL tokens */
   assetSymbol: string;
   decimals: number;
+  /** signed for live transactions */
   amount: bigint;
-  usdValueCents: bigint;
+  /** null = no price data: never shown as zero */
+  usdValueCents: bigint | null;
   taxTreatment: TaxTreatment;
   walletLabel: string;
+  /** live (indexed) transactions only */
+  live?: {
+    status: "success" | "failed" | null;
+    feeLamports: bigint | null;
+    explorerUrl: string | null;
+    reason: string | null;
+    deltaCount: number;
+  };
 }
 
 export interface TaxEstimateView {

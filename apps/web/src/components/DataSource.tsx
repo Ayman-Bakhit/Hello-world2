@@ -4,12 +4,13 @@ import { Badge } from "./Badge";
 /**
  * How a record should be labeled, derived ONLY from what the API says.
  *   demo     -> DEMO DATA      (fictional fixture; never associated with the signed-in wallet)
- *   chain    -> LIVE DATA      (only when the API also reports verifiedOnChain; none exists yet)
+ *   chain    -> LIVE DATA      (read from a Solana RPC node by the indexer. This is NOT a claim of independent
+ *                              verification: that needs an objective source and is never inferred)
  *   database -> ACCOUNT DATA   (saved in this app's database; not blockchain data)
  */
 export function dataSourceLabel(dataSource: DataSource, verifiedOnChain = false): { label: string; tone: "demo" | "good" | "info" | "neutral" } {
   if (dataSource === "demo") return { label: "DEMO DATA", tone: "demo" };
-  if (dataSource === "chain") return verifiedOnChain ? { label: "LIVE DATA", tone: "good" } : { label: "UNVERIFIED CHAIN DATA", tone: "neutral" };
+  if (dataSource === "chain") return { label: "LIVE DATA", tone: verifiedOnChain ? "good" : "info" };
   return { label: "ACCOUNT DATA", tone: "info" };
 }
 

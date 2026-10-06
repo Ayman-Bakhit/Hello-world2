@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import {
   DEMO_IDS, DEMO_WALLETS, DiscoverQuery, NO_LIVE_DATA, buildCharityList, buildDiscover, buildDonations, buildPortfolio, buildTax,
-  buildTaxReserve, buildTokenProof, buildTransactions, LaunchConfigSchema, type TokenProof,
+  buildTaxReserve, buildTokenProof, buildTransactions, LaunchConfigSchema, type PortfolioResponse, type SyncStatusResponse, type TokenProof, type TransactionsResponse,
 } from "@project-name/shared";
 import { describe, expect, it } from "vitest";
 import { charityFromApi } from "@/lib/adapters";
@@ -23,6 +23,7 @@ import { ApiErrorState, LoadingState, NoLiveData, ResourceView, UnauthenticatedS
 import { WalletMenu } from "../WalletMenu";
 import { DISCOVER_FILTERS, DiscoverResults } from "./DiscoverScreen";
 import { CharityDirectory, DonationHistory, donationStatusView } from "./GiveScreen";
+import { SyncPanel } from "../SyncPanel";
 import { PortfolioView, TransactionsSection } from "./PortfolioScreen";
 import { TaxReserveView } from "./TaxReserveScreen";
 import { TaxView } from "./TaxScreen";
@@ -116,12 +117,12 @@ describe("portfolio and transactions: demo vs empty", () => {
   });
   it("an authenticated wallet with no indexed data gets the empty state and none of the demo balances", () => {
     const out = withWallet({ authenticated: true, ready: true }, (
-      <ResourceView resource={res({ status: "error", error: apiErr(404, NO_LIVE_DATA) })} noData={<NoLiveData title="NO LIVE PORTFOLIO DATA YET" message="Your wallet is authenticated, but blockchain indexing has not been connected yet." />}>
+      <ResourceView resource={res({ status: "error", error: apiErr(404, NO_LIVE_DATA) })} noData={<NoLiveData title="NO LIVE PORTFOLIO DATA YET" message="Your wallet is authenticated, but nothing has been read from the blockchain for it yet. Press SYNC WALLET." />}>
         {() => <PortfolioView portfolio={buildPortfolio(W)!} extras={{ tax: null, reserve: null, donations: null, walletCount: 1 }} />}
       </ResourceView>
     ));
     expect(out).toContain("NO LIVE PORTFOLIO DATA YET");
-    expect(out).toContain("Your wallet is authenticated, but blockchain indexing has not been connected yet.");
+    expect(out).toContain("Your wallet is authenticated, but nothing has been read from the blockchain for it yet. Press SYNC WALLET.");
     for (const demo of ["DEMO DATA", "$34,235", "BONK", "JUP", "SOL"]) expect(out, demo).not.toContain(demo);
   });
   it("demo transactions are labeled and use placeholder signatures; empty list says so", () => {
@@ -291,5 +292,135 @@ describe("discover", () => {
     expect(out.toLowerCase()).not.toMatch(/followers|likes|trending now|🔥|🚀/);
     const empty = html(<DiscoverResults data={{ ...d, tokens: [] }} />);
     expect(empty).toContain("NO TOKENS MATCH");
+  });
+});
+
+// ---------- live (indexed) data ----------
+const MINT = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
+const livePortfolio = (over: Partial<PortfolioResponse> = {}, price: { micro: string; cents: string } | null = null): PortfolioResponse => ({
+  walletId: DEMO_IDS.wallets.trading, totalValueCents: null, partialValueCents: null, costBasisCents: null, realizedPnlCents: null, unrealizedPnlCents: null,
+  valuation: { status: "unavailable", pricedAssets: 0, unpricedAssets: 2 },
+  source: { kind: "solana_rpc", cluster: "devnet", slot: 123, observedAt: "2026-10-06T00:00:00.000Z", lastSyncedAt: "2026-10-06T00:00:00.000Z" },
+  assets: [
+    { kind: "native", mint: null, symbol: "SOL", name: "Solana", decimals: 9, balance: "2500000000", quantity: "2.5", tokenAccounts: 0,
+      priceMicroUsd: price?.micro ?? null, valuation: price ? "priced" : "price_unavailable", price: price ? { source: "fake", observedAt: "2026-10-06T00:00:00.000Z" } : null,
+      valueCents: price?.cents ?? null, costBasisCents: null, unrealizedPnlCents: null, realizedPnlCents: null, allocationBps: null, isFictionalToken: false,
+      metadata: { status: "not_applicable", name: null, symbol: null, uri: null, source: null, verified: false }, observedSlot: 123, observedAt: "2026-10-06T00:00:00.000Z" },
+    { kind: "spl", mint: MINT, symbol: null, name: null, decimals: 6, balance: "1234567", quantity: "1.234567", tokenAccounts: 1,
+      priceMicroUsd: null, valuation: "price_unavailable", price: null, valueCents: null, costBasisCents: null, unrealizedPnlCents: null, realizedPnlCents: null, allocationBps: null, isFictionalToken: false,
+      metadata: { status: "resolved", name: "<img src=x onerror=alert(1)>", symbol: "USDC", uri: null, source: "metaplex_onchain", verified: false }, observedSlot: 123, observedAt: "2026-10-06T00:00:00.000Z" },
+  ],
+  dataSource: "chain", verifiedOnChain: false, ...over,
+});
+const noExtras = { tax: null, reserve: null, donations: null, walletCount: 1 };
+
+describe("live portfolio view", () => {
+  it("LIVE DATA label; no price means PRICE DATA UNAVAILABLE (never $0); balances are on-chain", () => {
+    const out = html(<PortfolioView portfolio={livePortfolio()} extras={noExtras} />);
+    expect(out).toContain("LIVE DATA");
+    expect(out).toContain("PRICE DATA UNAVAILABLE");
+    expect(out).toContain("PRICE UNAVAILABLE");
+    expect(out).toContain("2.5");
+    expect(out).not.toContain("$0.00");
+    expect(out).not.toContain("DEMO DATA");
+    expect(out).not.toMatch(/BONK|JUP|HRBR|FICTIONAL/);
+  });
+  it("SPL tokens are identified by mint; untrusted metadata is escaped, labeled UNVERIFIED, and never shown as the identity", () => {
+    const out = html(<PortfolioView portfolio={livePortfolio()} extras={noExtras} />);
+    expect(out).toContain("9xQe…VFin");
+    expect(out).toContain("UNVERIFIED METADATA");
+    expect(out).not.toContain("<img");
+    expect(out).toContain("&lt;img");
+  });
+  it("token without metadata shows METADATA UNAVAILABLE", () => {
+    const p = livePortfolio();
+    p.assets[1]!.metadata = { status: "unavailable", name: null, symbol: null, uri: null, source: null, verified: false };
+    expect(html(<PortfolioView portfolio={p} extras={noExtras} />)).toContain("METADATA UNAVAILABLE");
+  });
+  it("partial pricing: partial sum is labeled and is not the total", () => {
+    const p = livePortfolio({ partialValueCents: "30000", valuation: { status: "partial", pricedAssets: 1, unpricedAssets: 1 } }, { micro: "150000000", cents: "30000" });
+    const out = html(<PortfolioView portfolio={p} extras={noExtras} />);
+    expect(out).toContain("Partial: $300.00 from 1 of 2 assets with a price");
+    expect(out).toContain("PRICE DATA UNAVAILABLE"); // headline total
+    expect(out).toContain("$150.00"); // the SOL price is shown
+  });
+  it("empty live wallet", () => {
+    const out = html(<PortfolioView portfolio={livePortfolio({ assets: [], totalValueCents: "0", valuation: { status: "complete", pricedAssets: 0, unpricedAssets: 0 } })} extras={noExtras} />);
+    expect(out).toContain("holds no SOL or tokens");
+    expect(out).toContain("LIVE DATA");
+  });
+  it("P&L and cost basis are dashes for live wallets (no tax conclusions)", () => {
+    const out = html(<PortfolioView portfolio={livePortfolio()} extras={noExtras} />);
+    expect(out).toContain("Needs classified transactions");
+    expect(out).not.toMatch(/taxable|owed|tax bill/i);
+  });
+});
+
+describe("live transactions", () => {
+  const tx = (over: Partial<TransactionsResponse["transactions"][number]> = {}): TransactionsResponse => ({
+    walletId: W, dataSource: "chain", verifiedOnChain: false,
+    pagination: { limit: 25, offset: 0, total: 1, nextOffset: null },
+    window: { newestSlot: 5, oldestSlot: 5, historyComplete: false, hasGap: true, indexedCount: 1 },
+    transactions: [{
+      id: "1", signature: "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UNbmiMeFbvk", timestamp: null, type: "unknown",
+      asset: "SOL", decimals: 9, amount: "-77", usdValueCents: null, taxTreatment: "not_assessed", source: "chain",
+      explorerUrl: "https://explorer.solana.com/tx/5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UNbmiMeFbvk?cluster=devnet",
+      status: "failed", feeLamports: "5000", slot: 5, classification: { kind: "unknown", reason: "why", version: "1" }, programIds: [], deltas: [], ...over,
+    }],
+  });
+  it("shows type, FAILED status, fee, explorer link, NOT ASSESSED tax and unknown date/price honestly", () => {
+    const out = html(<TransactionsSection data={tx()} walletLabel="Live" />);
+    expect(out).toContain("LIVE DATA");
+    expect(out).toContain("Unclassified");
+    expect(out).toContain("FAILED");
+    expect(out).toContain("NOT ASSESSED");
+    expect(out).toContain("PRICE UNAVAILABLE");
+    expect(out).toContain("Unknown");
+    expect(out).toContain('href="https://explorer.solana.com/tx/');
+    expect(out).toContain('rel="noopener noreferrer"');
+    expect(out).toContain("recent history only");
+    expect(out).toContain("may be missing");
+    expect(out).not.toMatch(/DEMO/);
+  });
+  it("refuses an explorer link that is not the Solana explorer", () => {
+    const out = html(<TransactionsSection data={tx({ explorerUrl: "https://evil.example/tx/abc" })} walletLabel="Live" />);
+    expect(out).not.toContain("evil.example");
+    expect(out).not.toContain("<a ");
+  });
+});
+
+describe("sync panel", () => {
+  const st = (over: Partial<SyncStatusResponse> = {}): SyncStatusResponse => ({
+    walletId: W, state: "never_synced", configured: true, cluster: "devnet", priceProvider: "none",
+    limits: { initialTransactionLimit: 50, maxTransactionsPerSync: 100, minSyncIntervalSeconds: 30 }, lastRun: null, lastSuccessAt: null, window: null, nextAllowedAt: null, ...over,
+  });
+  it("never synced: SYNC WALLET, NO LIVE DATA YET, read-only note", () => {
+    const out = html(<SyncPanel status={st()} syncing={false} error={null} onSync={() => undefined} />);
+    expect(out).toContain("SYNC WALLET");
+    expect(out).toContain("NO LIVE DATA YET");
+    expect(out).toContain("nothing is signed or sent");
+    expect(out).not.toContain('disabled=""');
+  });
+  it("syncing: INDEXING WALLET, button disabled and busy", () => {
+    const out = html(<SyncPanel status={st({ state: "syncing" })} syncing onSync={() => undefined} error={null} />);
+    expect(out).toContain("INDEXING WALLET");
+    expect(out).toContain('disabled=""');
+    expect(out).toContain('aria-busy="true"');
+  });
+  it("synced: REFRESH DATA and last-synced details", () => {
+    const out = html(<SyncPanel status={st({ state: "synced", lastSuccessAt: "2026-10-06T00:00:00.000Z", window: { newestSlot: 1, oldestSlot: 1, historyComplete: true, hasGap: false, indexedCount: 3 } })} syncing={false} error={null} onSync={() => undefined} />);
+    expect(out).toContain("REFRESH DATA");
+    expect(out).toContain("3 transactions indexed (full history)");
+  });
+  it("failed and partial runs are shown with their reason", () => {
+    expect(html(<SyncPanel status={st({ state: "failed", lastRun: { id: W, status: "failed", trigger: "manual", startedAt: "x", finishedAt: "x", slot: null, counts: {}, error: { code: "RPC_TIMEOUT", message: "RPC request timed out" } } })} syncing={false} error={null} onSync={() => undefined} />)).toContain("RPC_TIMEOUT");
+  });
+  it("indexing not configured: explained, button disabled", () => {
+    const out = html(<SyncPanel status={st({ state: "indexing_unavailable", configured: false })} syncing={false} error={null} onSync={() => undefined} />);
+    expect(out).toContain("not connected to a Solana RPC node");
+    expect(out).toContain('disabled=""');
+  });
+  it("demo wallets get no sync controls", () => {
+    expect(html(<SyncPanel status={st({ state: "unsupported_demo_wallet" })} syncing={false} error={null} onSync={() => undefined} />)).toBe("");
   });
 });

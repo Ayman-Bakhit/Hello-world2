@@ -13,7 +13,7 @@ describe("mock data consistency", () => {
     expect(t.assets).toBe(5);
   });
   it("allocations sum to ~100%", () => {
-    const sum = portfolioRows(DEMO_PORTFOLIO).reduce((s, r) => s + r.allocationBps, 0);
+    const sum = portfolioRows(DEMO_PORTFOLIO).reduce((s, r) => s + r.allocationBps!, 0);
     expect(sum).toBeGreaterThanOrEqual(9_995);
     expect(sum).toBeLessThanOrEqual(10_000);
   });

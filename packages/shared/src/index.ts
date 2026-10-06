@@ -7,3 +7,8 @@ export * from "./demo/index";
 export * from "./discover";
 export * from "./launch";
 export * from "./auth/message";
+export * from "./chain/types";
+export * from "./chain/units";
+export * from "./chain/parse";
+export * from "./chain/classify";
+export * from "./chain/testing";

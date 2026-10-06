@@ -9,6 +9,7 @@ import { healthRoutes } from "./health";
 import { launchRoutes } from "./launches";
 import { portfolioRoutes } from "./portfolio";
 import { proofRoutes } from "./proof";
+import { syncRoutes } from "./sync";
 import { taxReserveRoutes } from "./taxReserve";
 import { taxRoutes } from "./tax";
 import { tokenRoutes } from "./tokens";
@@ -25,6 +26,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
   await app.register(healthRoutes, deps);
   await app.register(authRoutes, deps);
   await app.register(walletRoutes, deps);
+  await app.register(syncRoutes, deps);
   await app.register(portfolioRoutes, deps);
   await app.register(transactionRoutes, deps);
   await app.register(taxRoutes, deps);

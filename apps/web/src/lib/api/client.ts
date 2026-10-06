@@ -1,6 +1,6 @@
 import {
   CharityList, DEMO_CHARITIES, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
-  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
+  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
   buildTax, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
   targetFromRequest, type Charity, type LaunchConfig, type StoredTarget, type Wallet,
@@ -75,6 +75,21 @@ export function createApiClient(opts: ClientOptions = {}) {
       mode === "api"
         ? http(TransactionsResponse, `/api/transactions/${encodeURIComponent(walletId)}`, p)
         : need(buildTransactions(mockId(walletId), p.limit ?? 25, p.offset ?? 0), "Transactions"),
+
+    /** Read-only indexing status for a wallet. Mock mode: demo wallets are never indexed. */
+    getWalletSync: async (walletId: string): Promise<SyncStatusResponse> => {
+      if (mode === "api") return http(SyncStatusResponse, `/api/wallets/${encodeURIComponent(walletId)}/sync`);
+      return {
+        walletId: mockId(walletId), state: "unsupported_demo_wallet", configured: false, cluster: "mock", priceProvider: "none",
+        limits: { initialTransactionLimit: 0, maxTransactionsPerSync: 0, minSyncIntervalSeconds: 0 }, lastRun: null, lastSuccessAt: null, window: null, nextAllowedAt: null,
+      };
+    },
+
+    /** Starts a bounded, READ-ONLY sync (reads the chain; signs and sends nothing). */
+    startWalletSync: async (walletId: string): Promise<StartSyncResponse> => {
+      if (mode === "api") return send(StartSyncResponse, `/api/wallets/${encodeURIComponent(walletId)}/sync`);
+      throw new ApiClientError(409, "SYNC_UNSUPPORTED", "Demo wallets are not indexed. Demo data is fixture data.");
+    },
 
     getTokens: async (): Promise<TokenList> =>
       mode === "api" ? http(TokenList, "/api/tokens") : { tokens: DEMO_TOKENS.map(summarizeToken), dataSource: "demo", verifiedOnChain: false },
@@ -153,4 +168,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxReserve, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxReserve, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

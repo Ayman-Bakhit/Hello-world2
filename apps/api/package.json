@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "db:migrate": "tsx --env-file-if-exists=../../.env src/db/cli.ts migrate",
-    "db:seed-demo": "tsx --env-file-if-exists=../../.env src/db/cli.ts seed-demo"
+    "db:seed-demo": "tsx --env-file-if-exists=../../.env src/db/cli.ts seed-demo",
+    "fake:rpc": "tsx scripts/fake-rpc-server.ts",
+    "smoke:rpc": "tsx scripts/smoke-rpc.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

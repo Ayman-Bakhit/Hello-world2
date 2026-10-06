@@ -18,7 +18,8 @@ Phase 1 in progress. Nothing is deployed. No mainnet, no custody, no production 
 | API (Fastify + Zod + Postgres): 13 route groups, demo-backed, session boundary | Done (Slice 1). Not production-ready |
 | Solana wallet-signature sign-in, HttpOnly cookie sessions, logout, CSRF origin checks | Done (Slice 2) |
 | Frontend wired to the API: auth states, empty/loading/error/demo states, PREPARE LAUNCH, reserve target | Done (Slice 4) |
-| Indexer, price service, real data behind the endpoints | Not started |
+| Read-only Solana indexing: RPC abstraction, SOL + SPL balances, transactions with conservative classification, live Portfolio (SYNC WALLET), SOL price abstraction | Done (Slice 5), tested against a fake RPC only; NOT verified on a real network (see docs/INDEXING.md) |
+| Tax from live data, reserve/donation/launch on-chain flows, SPL prices | Not started |
 | Smart contracts | Not started (blocked on architecture review) |
 
 ## Layout

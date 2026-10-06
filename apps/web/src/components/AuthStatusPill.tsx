@@ -16,7 +16,7 @@ export function AuthStatusPill() {
   return (
     <span className="flex items-center gap-2">
       <Badge tone={s.tone}>{s.label}</Badge>
-      <span className="hidden sm:inline-flex"><Badge tone="neutral">CHAIN DATA · NOT CONNECTED</Badge></span>
+      <span className="hidden sm:inline-flex"><Badge tone="neutral">CHAIN ACCESS · READ-ONLY</Badge></span>
     </span>
   );
 }

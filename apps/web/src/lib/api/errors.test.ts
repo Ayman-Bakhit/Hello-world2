@@ -14,7 +14,7 @@ describe("describeApiError: one consistent mapping", () => {
   it("404 NO_LIVE_DATA is distinct from a plain 404", () => {
     const empty = describeApiError(e(404, NO_LIVE_DATA));
     expect(empty).toMatchObject({ kind: "no_live_data", title: "NO LIVE DATA YET" });
-    expect(empty.message).toBe("Your wallet is authenticated, but blockchain indexing has not been connected yet.");
+    expect(empty.message).toBe("Your wallet is authenticated, but no live data has been indexed for it yet. Use SYNC WALLET to read it from the blockchain.");
     expect(describeApiError(e(404, "NOT_FOUND")).kind).toBe("not_found");
   });
   it("400 keeps field messages for display", () => {
@@ -25,6 +25,11 @@ describe("describeApiError: one consistent mapping", () => {
   it("409 and 422 show our own (safe) message", () => {
     expect(describeApiError(e(409, "LIMIT_REACHED", "At most 50 launch configurations per account"))).toMatchObject({ kind: "conflict", message: "At most 50 launch configurations per account" });
     expect(describeApiError(e(422, "CHARITY_NOT_VERIFIED", "This charity is not verified"))).toMatchObject({ kind: "rejected" });
+  });
+  it("sync cooldown shows its own message; indexing-not-configured is explicit; neither leaks 5xx text", () => {
+    expect(describeApiError(e(429, "SYNC_COOLDOWN", "This wallet was synced very recently. Try again in 12s."))).toMatchObject({ kind: "rate_limited", message: "This wallet was synced very recently. Try again in 12s." });
+    expect(describeApiError(e(503, "INDEXING_UNAVAILABLE", "SOLANA_RPC_URL is not set"))).toMatchObject({ title: "INDEXING NOT CONFIGURED" });
+    expect(JSON.stringify(describeApiError(e(503, "INDEXING_UNAVAILABLE", "SOLANA_RPC_URL is not set")))).not.toContain("SOLANA_RPC_URL");
   });
   it("429 is retryable", () => expect(describeApiError(e(429, "RATE_LIMITED"))).toMatchObject({ kind: "rate_limited", retryable: true }));
   it("network failures are retryable and friendly", () => {

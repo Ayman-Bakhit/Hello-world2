@@ -18,8 +18,8 @@ export async function seedDemo(pool: Pool): Promise<void> {
       );
     }
     await c.query(
-      `INSERT INTO assets (id, chain, address, symbol, name, decimals) VALUES
-       ($1,'solana','DEMO-USDC','USDC','USD Coin (demo)',6), ($2,'solana','native','SOL','Solana',9) ON CONFLICT (id) DO NOTHING`,
+      `INSERT INTO assets (id, chain, address, symbol, name, decimals, kind, data_source) VALUES
+       ($1,'solana','DEMO-USDC','USDC','USD Coin (demo)',6,'spl','demo'), ($2,'solana','native','SOL','Solana',9,'native','chain') ON CONFLICT DO NOTHING`,
       [DEMO_IDS.assetUsdc, DEMO_IDS.assetSol],
     );
     for (const ch of DEMO_CHARITIES) {

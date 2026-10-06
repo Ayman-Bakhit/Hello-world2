@@ -12,13 +12,13 @@ Assets: user funds (never held), wallet-address-to-identity links, tax/portfolio
 | 6 | Rug via hidden authority | Display mint/freeze/update/upgrade authority read from chain; label derived from chain; Verified Transparency needs objective checks | Pending |
 | 7 | UI lies about immutability | Label computed from on-chain state; test that fails if label and chain disagree | Pending |
 | 8 | Fee split rounding or sum error | bps integers, sum==10000 enforced in shared TS, API (Zod uses shared validator), review step, and DB CHECK on launch configs; property tests; on-chain mirror tests | TS+API+DB done; on-chain pending |
-| 9 | Malicious/untrusted token metadata (XSS) | Escape everywhere, strict CSP, sanitize image URIs, never render HTML from chain | Pending |
-| 10 | Indexer poisoning / reorgs | Confirmed commitment only for tax data; raw payload retained; idempotent re-derivation | Pending |
+| 9 | Malicious/untrusted token metadata (XSS) | Escape everywhere, strict CSP, sanitize image URIs, never render HTML from chain | **Partial (Slice 5):** metadata bounded, control/bidi stripped, URI allowlisted and never fetched, rendered escaped and labeled UNVERIFIED; images not rendered at all; strict CSP still pending |
+| 10 | Indexer poisoning / reorgs | Finalized commitment by default; every RPC response size-capped and schema-validated; raw payload retained and immutable; idempotent re-derivation; bounded sync. A lying RPC provider is NOT defended against (`verifiedOnChain` stays false); `confirmed` reorgs not handled | **Partial (Slice 5)** |
 | 11 | Wrong tax numbers | Pure engine, extensive tests, assumptions snapshot stored, estimates labeled | Done for engine core |
 | 12 | Admin abuse | Named roles documented, every action logged with before/after + reason, no hidden super-admin, 2-person approval for verification and fee changes (target) | Schema done |
 | 13 | SQL injection | Parameterized queries only (all SQL in `db/repos.ts`), zod validation, strict objects | Done for API; keep reviewing new queries |
 | 14 | Rate abuse / DoS | Global + write rate limits, 64 KB body limit, per-account draft cap | Partial: in-memory limiter (single process), per-IP only, no per-wallet limit, no Redis |
-| 15 | RPC key leak | Keys server-side only, proxied calls | Pending |
+| 15 | RPC key leak | `SOLANA_RPC_URL` server-side only, https-only in production, sanitized errors, never in responses/logs (tested); browser never calls RPC | **Done (Slice 5)** |
 | 16 | Privacy leakage | Tax/portfolio data never public; public pages expose only disclosed creator info | Design |
 | 17 | Wallet clustering by analytics | Don't link wallets publicly; user opts into display name | Design |
 | 18 | Smart contract bugs | Established audited libs where possible; unit, invariant, fuzz, static analysis, independent audit before mainnet | Blocked on contract design |

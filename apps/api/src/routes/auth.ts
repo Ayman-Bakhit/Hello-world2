@@ -56,6 +56,10 @@ export const authRoutes: FastifyPluginAsync<Deps> = async (app, { config, pool }
     if (prev) await revokeSession(pool, prev.token);
     setSessionCookie(reply, config, result.session.token, result.session.expiresAt);
     const wallet = await getWalletById(pool, result.walletId);
+    // Best-effort, bounded, read-only background index of the wallet that just proved control. Failure never affects sign-in.
+    if (config.INDEXER_SYNC_ON_LOGIN && wallet && wallet.dataSource !== "demo") {
+      app.indexer.start(wallet, "login").catch((e: unknown) => req.log.warn({ err: { message: (e as Error).message } }, "login sync not started"));
+    }
     return respond(SessionResponse, {
       authenticated: true, user: { id: result.userId }, wallet,
       session: { expiresAt: result.session.expiresAt.toISOString(), authMethod: "wallet_signature" },

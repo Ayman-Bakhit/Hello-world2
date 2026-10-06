@@ -7,8 +7,9 @@ import { splitAmount } from "../feesplit";
 import { percentOfGains, estimateTax, reserveStatus } from "../tax/engine";
 import { percentToBps } from "../feesplit";
 import { centsToUsdString, parseUsdToCents } from "../money";
+import { formatUnits } from "../chain/units";
 import {
-  DEMO_ASSETS, DEMO_HOLDINGS, DEMO_RESERVE_CENTS, DEMO_TAX_ASSUMPTIONS, DEMO_TOKENS, DEMO_TRANSACTIONS,
+  DEMO_ASSETS, DEMO_HOLDINGS, DEMO_REFERENCE_TIME, DEMO_RESERVE_CENTS, DEMO_TAX_ASSUMPTIONS, DEMO_TOKENS, DEMO_TRANSACTIONS,
   DEMO_WALLETS, TRANSPARENCY_CHECK_KEYS, demoRealizedEvents, type DemoToken,
 } from "./fixtures";
 
@@ -50,14 +51,21 @@ export function buildPortfolio(walletId: string): PortfolioResponse | null {
   return {
     walletId,
     totalValueCents: str(total),
+    partialValueCents: str(total),
     costBasisCents: str(cost),
     realizedPnlCents: str(realized),
     unrealizedPnlCents: str(total - cost),
+    valuation: { status: "demo", pricedAssets: rows.length, unpricedAssets: 0 },
+    source: { kind: "demo", cluster: null, slot: null, observedAt: null, lastSyncedAt: null },
     assets: rows.map(({ h, a, value }) => ({
-      symbol: a.symbol, name: a.name, decimals: a.decimals, balance: str(h.balance), priceMicroUsd: str(a.priceMicro),
+      kind: a.symbol === "SOL" ? ("native" as const) : ("spl" as const), mint: null, symbol: a.symbol, name: a.name, decimals: a.decimals,
+      balance: str(h.balance), quantity: formatUnits(h.balance, a.decimals), tokenAccounts: 1, priceMicroUsd: str(a.priceMicro),
+      valuation: "priced" as const, price: { source: "demo-fixture", observedAt: DEMO_REFERENCE_TIME },
       valueCents: str(value), costBasisCents: str(h.costBasisCents), unrealizedPnlCents: str(value - h.costBasisCents),
       realizedPnlCents: str(h.realizedPnlCents), allocationBps: total === 0n ? 0 : Number((value * 10_000n) / total),
       isFictionalToken: a.fictional,
+      metadata: { status: "not_applicable" as const, name: null, symbol: null, uri: null, source: null, verified: false as const },
+      observedSlot: null, observedAt: null,
     })),
     ...DEMO_PROVENANCE,
   };
@@ -73,8 +81,10 @@ export function buildTransactions(walletId: string, limit: number, offset: numbe
       id: t.id, signature: t.signature, timestamp: t.occurredAt, type: t.type, asset: t.symbol,
       decimals: DEMO_ASSETS[t.symbol]!.decimals, amount: str(t.amount), usdValueCents: str(t.usdValueCents),
       taxTreatment: t.taxTreatment, source: "demo" as const, explorerUrl: null,
+      status: null, feeLamports: null, slot: null, classification: null, programIds: [], deltas: [],
     })),
     pagination: { limit, offset, total: all.length, nextOffset: offset + limit < all.length ? offset + limit : null },
+    window: null,
     ...DEMO_PROVENANCE,
   };
 }

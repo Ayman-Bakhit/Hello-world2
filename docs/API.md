@@ -32,8 +32,10 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 | `POST /api/auth/dev-session` | public, only when `AUTH_MODE=dev-insecure` | db (sessions) | **dev only**; absent and rejected in production |
 | `GET /api/wallets` | session | db (`demo` rows) | db-backed; demo seed data |
 | `GET /api/wallets/:id` | session + owner | db | db-backed |
-| `GET /api/portfolio/:walletId` | session + owner | demo | **demo** |
-| `GET /api/transactions/:walletId` | session + owner | demo | **demo** |
+| `GET /api/wallets/:id/sync` | session + owner | db (`wallet_sync_*`) | indexing status for the wallet |
+| `POST /api/wallets/:id/sync` | session + owner, rate limited, per-wallet cooldown | RPC read, db write | starts a bounded READ-ONLY sync (202); no signing, no sending |
+| `GET /api/portfolio/:walletId` | session + owner | demo wallets: demo; real wallets: **chain** (indexed) or 404 `NO_LIVE_DATA` | live for real wallets after sync |
+| `GET /api/transactions/:walletId` | session + owner | demo wallets: demo; real wallets: **chain** (indexed) or 404 `NO_LIVE_DATA` | live for real wallets after sync |
 | `GET /api/tax/:walletId` | session + owner | demo (shared tax engine) | **demo** (engine is real) |
 | `GET /api/tax-reserve/:walletId` | session + owner | target: db; balance/exposure: demo | mixed |
 | `POST /api/tax-reserve/:walletId/target` | session + owner | db | production-capable (config only, moves no funds) |
@@ -51,8 +53,8 @@ Common error body (all errors):
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "Request validation failed", "fields": { "feeSplit": ["fee split totals 10001 basis points; it must be exactly 10000"] } } }
 ```
-Codes: `NO_LIVE_DATA` 404 (see above), `VALIDATION_ERROR` 400, `BAD_REQUEST` 400/413, `UNAUTHENTICATED` 401 (with `WWW-Authenticate: Bearer`), `AUTH_FAILED` 401 (any sign-in failure; deliberately uniform), `ORIGIN_NOT_ALLOWED` 403, `NOT_FOUND` 404, `LIMIT_REACHED` 409, `DEMO_DATA_MISSING` 409, `CHARITY_NOT_VERIFIED` 422, `WALLET_NOT_OWNED` 422, `RATE_LIMITED` 429, `TOO_MANY_CHALLENGES` 429, `INTERNAL_ERROR` 500 (no internals leaked).
-A resource owned by another user is reported as `404`, not `403`, so existence is not revealed. Wallets created by real sign-in are `dataSource:"database"` and have **no** portfolio/transaction/tax data yet (those endpoints return 404 for them: no fabricated data); only the seeded demo user's wallets return demo fixtures.
+Codes: `NO_LIVE_DATA` 404 (see above), `SYNC_UNSUPPORTED` 409, `SYNC_COOLDOWN` 429, `INDEXING_UNAVAILABLE` 503, `INDEXER_BUSY` 503, `VALIDATION_ERROR` 400, `BAD_REQUEST` 400/413, `UNAUTHENTICATED` 401 (with `WWW-Authenticate: Bearer`), `AUTH_FAILED` 401 (any sign-in failure; deliberately uniform), `ORIGIN_NOT_ALLOWED` 403, `NOT_FOUND` 404, `LIMIT_REACHED` 409, `DEMO_DATA_MISSING` 409, `CHARITY_NOT_VERIFIED` 422, `WALLET_NOT_OWNED` 422, `RATE_LIMITED` 429, `TOO_MANY_CHALLENGES` 429, `INTERNAL_ERROR` 500 (no internals leaked).
+A resource owned by another user is reported as `404`, not `403`, so existence is not revealed. Wallets created by real sign-in are `dataSource:"database"`. Until synced, their portfolio/transactions return 404 `NO_LIVE_DATA`; after a successful sync they return indexed chain data. Tax and reserve return 404 `NO_LIVE_DATA` for them (no fabricated data). Only the seeded demo user's wallets return demo fixtures.
 
 ## Authentication
 Sign-in is Solana wallet-signature only (full design, message format and nonce lifecycle in `docs/SECURITY.md`).
@@ -96,11 +98,19 @@ Tax and reserve are **user-scoped**: `:walletId` identifies the owner, the figur
 `GET /api/wallets/:id` → one wallet. `400` bad uuid, `404` unknown or not yours.
 No field can hold a key, seed, or secret. `ownershipVerified` is `false` until signature verification exists.
 
-### Portfolio (demo)
+### Wallet sync (Slice 5, read-only)
+`GET /api/wallets/:id/sync` -> `{ walletId, state: unsupported_demo_wallet | indexing_unavailable | never_synced | syncing | synced | failed, configured, cluster, priceProvider, limits, lastRun, lastSuccessAt, window, nextAllowedAt }`. `lastRun` has `status` (`running|succeeded|partial|failed`), `counts`, and a safe `error {code,message}`. `window` says how much history is indexed (`historyComplete`, `hasGap`, `indexedCount`).
+`POST /api/wallets/:id/sync` (no body) -> `202 { run, alreadyRunning:false }`; `200 { alreadyRunning:true }` if one is in progress. Errors: `404` (not yours / unknown), `409 SYNC_UNSUPPORTED` (demo wallet), `429 SYNC_COOLDOWN` (with `Retry-After`) or `RATE_LIMITED`, `503 INDEXING_UNAVAILABLE` (no `SOLANA_RPC_URL`) or `INDEXER_BUSY`. Starting a sync only READS the chain. The RPC URL never appears in any response.
+
+### Portfolio (demo wallets and indexed real wallets)
+Real wallets (Slice 5): `GET /api/portfolio/:walletId` -> `{ walletId, totalValueCents|null, partialValueCents|null, costBasisCents:null, realizedPnlCents:null, unrealizedPnlCents:null, valuation:{status,pricedAssets,unpricedAssets}, source:{kind:"solana_rpc",cluster,slot,observedAt,lastSyncedAt}, assets:[{ kind:"native"|"spl", mint|null, symbol (SOL only), name, decimals, balance (raw), quantity (exact decimal), tokenAccounts, priceMicroUsd|null, valuation:"priced"|"stale_price"|"price_unavailable", price:{source,observedAt}|null, valueCents|null, allocationBps|null, metadata:{status,name,symbol,uri,source,verified:false}, observedSlot, observedAt }], dataSource:"chain", verifiedOnChain:false }`. `404 NO_LIVE_DATA` until a sync has succeeded. Zero-balance accounts are not listed. Tax, reserve and donation endpoints stay `NO_LIVE_DATA` for real wallets.
+Demo wallets:
 `GET /api/portfolio/:walletId` → `{ walletId, totalValueCents, costBasisCents, realizedPnlCents, unrealizedPnlCents, assets:[{ symbol, name, decimals, balance, priceMicroUsd, valueCents, costBasisCents, unrealizedPnlCents, realizedPnlCents, allocationBps, isFictionalToken }], dataSource:"demo", verifiedOnChain:false }`
 A non-demo wallet returns `404` (no fabricated balances).
 
-### Transactions (demo)
+### Transactions (demo wallets and indexed real wallets)
+Real wallets (Slice 5): same shape, newest first by slot, each record: real `signature`, `timestamp|null`, `type` (`transfer|token_receipt|token_send|swap|fee|unknown`), primary `asset`/`amount` (signed raw units) and the full `deltas[]`, `status` (`success|failed`), `feeLamports` (only when the wallet paid), `slot`, `classification {kind, reason, version}`, `programIds`, `usdValueCents:null`, `taxTreatment:"not_assessed"`, `explorerUrl`, `source:"chain"`. `window` reports the indexed range, `historyComplete`, `hasGap`. `404 NO_LIVE_DATA` until a sync has succeeded.
+Demo wallets:
 `GET /api/transactions/:walletId?limit=25&offset=0` (limit 1-100) → `{ walletId, transactions:[{ id, signature, timestamp, type, asset, decimals, amount, usdValueCents, taxTreatment, source:"demo", explorerUrl:null }], pagination:{ limit, offset, total, nextOffset }, dataSource, verifiedOnChain }`
 `signature` is a `DEMO-SIG-*` placeholder. Records with `source:"chain"` will exist only after the indexer.
 

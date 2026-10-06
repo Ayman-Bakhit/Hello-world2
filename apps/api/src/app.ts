@@ -7,9 +7,16 @@ import type { Config } from "./config";
 import type { Pool } from "./db/pool";
 import { csrfGuard } from "./auth/plugin";
 import { registerErrorHandling } from "./errors";
+import { IndexerService, createIndexerParts, type IndexerParts } from "./indexer/service";
 import { registerRoutes } from "./routes";
 
-export async function buildApp(deps: { config: Config; pool: Pool; logStream?: { write(msg: string): void } }): Promise<FastifyInstance> {
+declare module "fastify" {
+  interface FastifyInstance {
+    indexer: IndexerService;
+  }
+}
+
+export async function buildApp(deps: { config: Config; pool: Pool; logStream?: { write(msg: string): void }; /** test seam: replaces the RPC / metadata / price providers */ indexer?: IndexerParts }): Promise<FastifyInstance> {
   const { config } = deps;
   const app = Fastify({
     logger: {
@@ -38,6 +45,10 @@ export async function buildApp(deps: { config: Config; pool: Pool; logStream?: {
   await app.register(rateLimit, { global: true, max: config.RATE_LIMIT_MAX, timeWindow: config.RATE_LIMIT_WINDOW });
 
   app.decorateRequest("actor", null);
+  const indexer = new IndexerService(deps.pool, config, deps.indexer ?? createIndexerParts(config), app.log);
+  app.decorate("indexer", indexer);
+  await indexer.sweepStale();
+  app.addHook("onClose", async () => { await indexer.drain(); });
   await registerRoutes(app, deps);
   return app;
 }

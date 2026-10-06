@@ -50,8 +50,8 @@ describe("portfolio", () => {
     expect(p.dataSource).toBe("demo");
     expect(p.verifiedOnChain).toBe(false);
     expect(p.assets.map((a) => a.symbol)).toEqual(["SOL", "USDC", "BONK", "JUP"]);
-    expect(p.assets.reduce((s, a) => s + a.allocationBps, 0)).toBeLessThanOrEqual(10_000);
-    expect(BigInt(p.totalValueCents) - BigInt(p.costBasisCents)).toBe(BigInt(p.unrealizedPnlCents));
+    expect(p.assets.reduce((s, a) => s + a.allocationBps!, 0)).toBeLessThanOrEqual(10_000);
+    expect(BigInt(p.totalValueCents!) - BigInt(p.costBasisCents!)).toBe(BigInt(p.unrealizedPnlCents!));
   });
   it("fictional token is flagged", async () => {
     const p = PortfolioResponse.parse((await get(`/api/portfolio/${W.creator}`)).json());

@@ -50,51 +50,123 @@ export type Wallet = z.infer<typeof Wallet>;
 export const WalletList = z.object({ wallets: z.array(Wallet) });
 
 // ---------- portfolio ----------
+export const AssetMetadataView = z.object({
+  /** resolved = read from the token's own on-chain metadata account (UNTRUSTED text); unavailable = none found / not looked up */
+  status: z.enum(["resolved", "unavailable", "not_applicable"]),
+  name: z.string().nullable(),
+  symbol: z.string().nullable(),
+  uri: z.string().nullable(),
+  source: z.string().nullable(),
+  /** There is no objective verification source yet. Always false. */
+  verified: z.literal(false),
+});
 export const PortfolioAsset = z.object({
-  symbol: z.string(),
-  name: z.string(),
+  kind: z.enum(["native", "spl"]),
+  /** mint address for SPL tokens; null for native SOL and demo fixtures */
+  mint: z.string().nullable(),
+  /** Only native SOL and demo fixtures have a symbol here. A live SPL symbol is untrusted metadata and lives in `metadata`. */
+  symbol: z.string().nullable(),
+  name: z.string().nullable(),
   decimals: z.number().int(),
+  /** raw base units (the on-chain balance) */
   balance: z.string(),
-  priceMicroUsd: z.string(),
-  valueCents: Cents,
-  costBasisCents: Cents,
-  unrealizedPnlCents: Cents,
-  realizedPnlCents: Cents,
-  allocationBps: z.number().int(),
+  /** exact decimal rendering of `balance` */
+  quantity: z.string(),
+  tokenAccounts: z.number().int(),
+  priceMicroUsd: z.string().nullable(),
+  /** priced = fresh price; stale_price = last known price is older than the freshness window; price_unavailable = no price. Never "zero". */
+  valuation: z.enum(["priced", "stale_price", "price_unavailable"]),
+  price: z.object({ source: z.string(), observedAt: Iso }).nullable(),
+  valueCents: Cents.nullable(),
+  costBasisCents: Cents.nullable(),
+  unrealizedPnlCents: Cents.nullable(),
+  realizedPnlCents: Cents.nullable(),
+  allocationBps: z.number().int().nullable(),
   isFictionalToken: z.boolean(),
+  metadata: AssetMetadataView,
+  observedSlot: z.number().int().nullable(),
+  observedAt: Iso.nullable(),
+});
+export const PortfolioValuation = z.object({
+  /** complete = every asset has a fresh price; stale = all priced but some stale; partial = some assets unpriced; unavailable = none priced; demo = fixture */
+  status: z.enum(["complete", "stale", "partial", "unavailable", "demo"]),
+  pricedAssets: z.number().int(),
+  unpricedAssets: z.number().int(),
+});
+export const PortfolioSource = z.object({
+  kind: z.enum(["demo", "solana_rpc"]),
+  cluster: z.string().nullable(),
+  slot: z.number().int().nullable(),
+  observedAt: Iso.nullable(),
+  lastSyncedAt: Iso.nullable(),
 });
 export const PortfolioResponse = z.object({
   walletId: Uuid,
-  totalValueCents: Cents,
-  costBasisCents: Cents,
-  realizedPnlCents: Cents,
-  unrealizedPnlCents: Cents,
+  /** Only present when EVERY asset is priced. Otherwise null: a partial sum is never presented as the total. */
+  totalValueCents: Cents.nullable(),
+  /** Sum of the assets that have a price (may be incomplete). Label it as such. */
+  partialValueCents: Cents.nullable(),
+  /** Cost basis and P&L need classified transactions (future slice): null for live wallets. */
+  costBasisCents: Cents.nullable(),
+  realizedPnlCents: Cents.nullable(),
+  unrealizedPnlCents: Cents.nullable(),
+  valuation: PortfolioValuation,
+  source: PortfolioSource,
   assets: z.array(PortfolioAsset),
   ...provenance,
 });
 export type PortfolioResponse = z.infer<typeof PortfolioResponse>;
+export type PortfolioAsset = z.infer<typeof PortfolioAsset>;
 
 // ---------- transactions ----------
-export const TxType = z.enum(["swap", "transfer_in", "transfer_out", "donation", "fee_in"]);
+export const TxType = z.enum(["swap", "transfer_in", "transfer_out", "donation", "fee_in", "transfer", "token_receipt", "token_send", "fee", "unknown"]);
+export const TxDelta = z.object({
+  asset: z.string(),
+  mint: z.string().nullable(),
+  symbol: z.string().nullable(),
+  /** signed raw base units for this wallet; native SOL excludes the network fee (see feeLamports) */
+  amount: z.string(),
+  decimals: z.number().int(),
+});
 export const Transaction = z.object({
   id: z.string(),
-  /** Placeholder for demo records (never a real signature). */
+  /** Real transaction signature for live data; a DEMO-SIG-* placeholder for demo records. */
   signature: z.string(),
-  timestamp: Iso,
+  timestamp: Iso.nullable(),
   type: TxType,
+  /** Display convenience: the primary asset (symbol, or the mint address when no symbol is known). Full list in `deltas`. */
   asset: z.string(),
   decimals: z.number().int(),
+  /** signed raw base units of the primary asset (live); unsigned for demo records */
   amount: z.string(),
-  usdValueCents: Cents,
-  taxTreatment: z.enum(["disposal", "income", "none"]),
-  /** 'demo' = fixture. 'chain' = indexed from a real transaction (not available yet). */
+  usdValueCents: Cents.nullable(),
+  /** Live transactions are "not_assessed": tax treatment is a later slice and is never inferred from the type. */
+  taxTreatment: z.enum(["disposal", "income", "none", "not_assessed"]),
+  /** 'demo' = fixture. 'chain' = indexed from a real transaction. */
   source: DataSource,
   explorerUrl: z.string().nullable(),
+  status: z.enum(["success", "failed"]).nullable(),
+  feeLamports: z.string().nullable(),
+  slot: z.number().int().nullable(),
+  /** Why the type was chosen. Null for demo records. */
+  classification: z.object({ kind: z.string(), reason: z.string(), version: z.string() }).nullable(),
+  programIds: z.array(z.string()),
+  deltas: z.array(TxDelta),
+});
+export const TransactionsWindow = z.object({
+  newestSlot: z.number().int().nullable(),
+  oldestSlot: z.number().int().nullable(),
+  /** true only if the indexer reached the start of this wallet's history */
+  historyComplete: z.boolean(),
+  /** true if a sync could not reach the previous newest transaction: some in-between transactions may be missing */
+  hasGap: z.boolean(),
+  indexedCount: z.number().int(),
 });
 export const TransactionsResponse = z.object({
   walletId: Uuid,
   transactions: z.array(Transaction),
   pagination: z.object({ limit: z.number().int(), offset: z.number().int(), total: z.number().int(), nextOffset: z.number().int().nullable() }),
+  window: TransactionsWindow.nullable(),
   ...provenance,
 });
 export type TransactionsResponse = z.infer<typeof TransactionsResponse>;
@@ -103,6 +175,36 @@ export const TransactionsQuery = z.strictObject({
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
 });
+
+// ---------- wallet sync (read-only indexing) ----------
+export const SyncRun = z.object({
+  id: Uuid,
+  status: z.enum(["running", "succeeded", "partial", "failed"]),
+  trigger: z.enum(["login", "manual", "background"]),
+  startedAt: Iso,
+  finishedAt: Iso.nullable(),
+  slot: z.number().int().nullable(),
+  counts: z.record(z.string(), z.number()),
+  error: z.object({ code: z.string(), message: z.string() }).nullable(),
+});
+export type SyncRun = z.infer<typeof SyncRun>;
+export const SyncStatusResponse = z.object({
+  walletId: Uuid,
+  state: z.enum(["unsupported_demo_wallet", "indexing_unavailable", "never_synced", "syncing", "synced", "failed"]),
+  /** false when the server has no SOLANA_RPC_URL */
+  configured: z.boolean(),
+  cluster: z.string(),
+  priceProvider: z.string(),
+  limits: z.object({ initialTransactionLimit: z.number().int(), maxTransactionsPerSync: z.number().int(), minSyncIntervalSeconds: z.number().int() }),
+  lastRun: SyncRun.nullable(),
+  lastSuccessAt: Iso.nullable(),
+  window: TransactionsWindow.nullable(),
+  /** earliest time another sync will be accepted for this wallet */
+  nextAllowedAt: Iso.nullable(),
+});
+export type SyncStatusResponse = z.infer<typeof SyncStatusResponse>;
+export const StartSyncResponse = z.object({ run: SyncRun, alreadyRunning: z.boolean() });
+export type StartSyncResponse = z.infer<typeof StartSyncResponse>;
 
 // ---------- tax ----------
 export const TaxAssumptionsSchema = z.object({
