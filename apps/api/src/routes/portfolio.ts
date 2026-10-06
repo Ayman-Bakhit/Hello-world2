@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { PortfolioResponse, buildPortfolio } from "@project-name/shared";
 import { requireAuth } from "../auth/plugin";
-import { getSyncState, loadHoldings } from "../db/chainRepos";
+import { getSyncState, holdingsComplete, loadHoldings } from "../db/chainRepos";
 import { noLiveData } from "../errors";
 import { respond } from "../http/validate";
 import { buildLivePortfolio } from "../services/live";
@@ -23,7 +23,7 @@ export const portfolioRoutes: FastifyPluginAsync<Deps> = async (app, { pool, con
       PortfolioResponse,
       buildLivePortfolio({
         walletId: wallet.id, holdings, cluster: config.SOLANA_CLUSTER, lastSyncedAt: state?.lastSuccessAt ?? null, nowMs: Date.now(),
-        priceMaxAgeSeconds: config.PRICE_MAX_AGE_SECONDS, slot: state ? (holdings[0]?.slot ?? null) : null,
+        priceMaxAgeSeconds: config.PRICE_MAX_AGE_SECONDS, complete: await holdingsComplete(pool, wallet.id), slot: state ? (holdings[0]?.slot ?? null) : null,
       }),
     );
   });

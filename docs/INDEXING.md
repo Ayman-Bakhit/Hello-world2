@@ -64,3 +64,23 @@ Demo wallets (seeded) get fixtures labeled DEMO DATA and refuse sync. Real walle
 
 ## Testing
 See TESTING.md. A deterministic fake RPC (in-process and as an HTTP server, `pnpm --filter @project-name/api fake:rpc`) drives the unit/integration/browser tests. `pnpm --filter @project-name/api smoke:rpc` is a separate **manual** real-RPC check (not in CI, not run in the build sandbox, which blocks RPC egress).
+
+## Verification status (audit after Slice 5)
+**Real-network verification: NOT DONE.** This environment has no `SOLANA_RPC_URL`, and its egress proxy answers 403 to Solana RPC and CoinGecko hosts (checked with curl; not worked around). `pnpm --filter @project-name/api smoke:rpc` has therefore never been run against a real node.
+
+| Item | Status |
+|---|---|
+| Metaplex program id `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`, PDA seeds `["metadata", program id, mint]`, account field order (key, update_authority, mint, name, symbol, uri) and max lengths 32/10/200 | **Matches published documentation** (solana.com Metaplex page, via search results; page fetch was blocked). Byte-level parsing and the derived address are **UNVERIFIED against a real account** (no known test vector available offline) |
+| DEX ids: Raydium AMM v4, Raydium CLMM, Orca Whirlpools | **Matched against upstream sources** (search result / upstream repos) |
+| DEX ids: Jupiter v6, Jupiter v4, Meteora DLMM | **UNVERIFIED** (could not be confirmed from reachable sources). The list is a heuristic; a miss yields UNKNOWN, a false hit would yield SWAP |
+| Token-2022 | Accounts are queried and parsed like Token. Extensions (transfer fees, confidential transfers) are not modeled. Token-2022 metadata lives in the mint's metadata extension, not a Metaplex PDA, so those tokens show METADATA UNAVAILABLE. Real-node response shape UNVERIFIED |
+| jsonParsed response shapes (balance, token accounts, signatures, transactions, versioned transactions with address lookup tables) | Implemented from documented shapes; tested only against hand-built fixtures. UNVERIFIED on a real node |
+| Cluster/URL consistency | The indexer trusts `SOLANA_CLUSTER`. A mainnet URL with `SOLANA_CLUSTER=devnet` (or the reverse) is **not detected**: labels, explorer links and price eligibility would be wrong. Operators must keep them matched. A genesis-hash check would fix this; not added because the genesis hashes could not be verified here |
+| finalized vs confirmed | Verified by test: every read sends the configured commitment, never `processed`. Reorg handling for `confirmed` is not implemented |
+| Everything else in the audit list (pagination, duplicate prevention, raw/normalized persistence, failed transactions, classification, explorer URLs, metadata, null/partial valuation, ownership, cooldown/rate limits) | Verified by automated tests against the fake RPC and real Postgres |
+
+### Audit fixes
+1. `formatAmount` rendered negative amounts as garbage (e.g. `0.0-15`) and tiny non-zero amounts as `0`. Now signed, and `<0.0001` for sub-display amounts.
+2. Transactions whose token balances omit `owner` (older format) were classified `FEE` ("no movement") even when tokens moved. Now `UNKNOWN` with a reason.
+3. Hitting the token-account limit (or inconsistent decimals) still produced a complete-looking total when all shown assets were priced. Now `source.holdingsComplete=false`, total withheld, INCOMPLETE warning in the UI.
+4. `IndexerService.drain()` could return before an un-awaited login-triggered sync had registered its run (flaky test, and a graceful-shutdown hole). Starts are now tracked.

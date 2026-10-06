@@ -55,6 +55,12 @@ export function PortfolioView({ portfolio, extras }: { portfolio: PortfolioRespo
           Read from a Solana RPC node{portfolio.source.cluster ? ` (${portfolio.source.cluster})` : ""}{portfolio.source.slot !== null ? ` at slot ${portfolio.source.slot}` : ""}. Balances are on-chain; prices and values are separate and shown only when a price source has one. Not independently verified.
         </div>
       ) : null}
+      {live && !portfolio.source.holdingsComplete ? (
+        <div role="alert" className="mb-4 rounded-md border border-warn/30 bg-warn/[0.07] px-3 py-2 text-xs text-warn">
+          <span className="mr-2 font-bold tracking-wider">INCOMPLETE</span>
+          The last sync could not list every holding (or is still running), so the asset list may be missing tokens and no total is shown.
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label={live ? "Total portfolio value (USD)" : "Total portfolio value"} value={totalValue} sub={<><DataSourceBadge dataSource={portfolio.dataSource} verifiedOnChain={portfolio.verifiedOnChain} />{totalSub ? <span className="ml-2">{totalSub}</span> : null}</>} className="col-span-2" />
         <StatCard label="Cost basis" value={portfolio.costBasisCents === null ? dash : formatUsd(BigInt(portfolio.costBasisCents))} sub={portfolio.costBasisCents === null ? "Needs classified transactions" : undefined} />

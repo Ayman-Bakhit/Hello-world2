@@ -117,6 +117,24 @@ describe("JsonRpcSolanaProvider", () => {
   });
 });
 
+describe("commitment", () => {
+  it.each(["finalized", "confirmed"] as const)("every read sends commitment=%s and never 'processed'", async (commitment) => {
+    const seen: { method: string; params: unknown[] }[] = [];
+    const sig = fakeSignature("c");
+    const fetchImpl = (async (_u: string, init: RequestInit) => {
+      const r = JSON.parse(String(init.body)) as { id: number; method: string; params: unknown[] };
+      seen.push(r);
+      const result = r.method === "getSlot" ? 1 : r.method === "getSignaturesForAddress" || r.method === "getTokenAccountsByOwner" ? (r.method === "getSignaturesForAddress" ? [] : { context: { slot: 1 }, value: [] }) : r.method === "getTransaction" ? null : { context: { slot: 1 }, value: r.method === "getBalance" ? 1 : null };
+      return new Response(stringifyLossless({ jsonrpc: "2.0", id: r.id, result }));
+    }) as unknown as typeof fetch;
+    const p = new JsonRpcSolanaProvider({ url: "https://x.example", cluster: "devnet", commitment, timeoutMs: 500, fetchImpl });
+    await p.getSlot(); await p.getBalance(ADDR); await p.getTokenAccountsByOwner(ADDR); await p.getSignaturesForAddress(ADDR, { limit: 1 }); await p.getTransaction(sig); await p.getTokenMetadata(MINT_1);
+    expect(seen.map((s) => s.method)).toEqual(["getSlot", "getBalance", "getTokenAccountsByOwner", "getTokenAccountsByOwner", "getSignaturesForAddress", "getTransaction", "getAccountInfo"]);
+    for (const s of seen) expect(JSON.stringify(s.params), s.method).toContain(`"commitment":"${commitment}"`);
+    expect(JSON.stringify(seen)).not.toContain("processed");
+  });
+});
+
 describe("price providers", () => {
   it("decimalToMicroUsd is exact and strict", () => {
     expect(decimalToMicroUsd("150.123456")).toBe(150_123_456n);

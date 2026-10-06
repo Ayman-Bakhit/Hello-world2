@@ -144,6 +144,23 @@ describe("balances and portfolio", () => {
     const p = PortfolioResponse.parse((await get(u, `/api/portfolio/${u.walletId}`)).json());
     expect(p.assets.find((x) => x.mint === MINT_A)).toMatchObject({ decimals: 6, balance: "5" });
   });
+  it("token-account limit hit: holdings flagged incomplete and NO total is claimed even if everything shown is priced", async () => {
+    await boot({ SOLANA_CLUSTER: "mainnet", INDEXER_MAX_TOKEN_ACCOUNTS: "1" }, new FakePriceProvider({ native: 100_000_000n }));
+    const u = await liveUser(ctx, "limit");
+    rpc.addWallet(u.address, { lamports: SOL, tokens: [tokenAcct(u.address, fakeMint("lim-a"), 5n), tokenAcct(u.address, fakeMint("lim-b"), 5n)] });
+    await syncNow(u);
+    const p = PortfolioResponse.parse((await get(u, `/api/portfolio/${u.walletId}`)).json());
+    expect(p.source.holdingsComplete).toBe(false);
+    expect(p.totalValueCents).toBeNull();
+    expect(p.assets).toHaveLength(2); // SOL + 1 of 2 tokens
+    expect((await status(u)).lastRun).toMatchObject({ status: "partial", error: { code: "TOKEN_ACCOUNT_LIMIT" } });
+    // a later complete sync clears the flag
+    rpc.setTokens(u.address, []);
+    await syncNow(u);
+    const q = PortfolioResponse.parse((await get(u, `/api/portfolio/${u.walletId}`)).json());
+    expect(q.source.holdingsComplete).toBe(true);
+    expect(q.totalValueCents).not.toBeNull();
+  });
   it("holdings that disappear are removed on the next sync; observations are kept", async () => {
     const u = await liveUser(ctx, "gone");
     rpc.addWallet(u.address, { lamports: SOL, tokens: [tokenAcct(u.address, MINT_A, 5n)] });
@@ -481,6 +498,40 @@ describe("authorization, limits, concurrency", () => {
     const pb = PortfolioResponse.parse((await get(b, `/api/portfolio/${b.walletId}`)).json());
     expect(pb.assets.map((x) => x.balance)).toEqual([SOL.toString()]);
     expect((await get(b, `/api/portfolio/${a.walletId}`)).statusCode).toBe(404);
+  });
+});
+
+describe("audit regressions", () => {
+  beforeEach(() => boot());
+  it("drain() waits for a start() that has not registered its run yet", async () => {
+    const u = await liveUser(ctx, "drain");
+    rpc.addWallet(u.address, { lamports: SOL });
+    void ctx.app.indexer.start({ id: u.walletId, address: u.address }, "login"); // not awaited, like the login hook
+    await ctx.app.indexer.drain();
+    expect((await status(u)).lastRun?.status).toBe("succeeded");
+  });
+  it("u64-max token amounts and Token-2022 accounts survive end to end without precision loss", async () => {
+    const u = await liveUser(ctx, "u64");
+    const max = 18_446_744_073_709_551_615n;
+    const t22 = { ...tokenAcct(u.address, fakeMint("t22"), max, 9), programId: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" };
+    rpc.addWallet(u.address, { lamports: max, tokens: [t22] });
+    await syncNow(u);
+    const p = PortfolioResponse.parse((await get(u, `/api/portfolio/${u.walletId}`)).json());
+    expect(p.assets.map((a) => a.balance)).toEqual([max.toString(), max.toString()]);
+    expect(p.assets[1]!.quantity).toBe("18446744073.709551615");
+  });
+  it("a soft-deleted wallet cannot be synced or read", async () => {
+    const u = await liveUser(ctx, "removed");
+    await ctx.pool.query("UPDATE wallets SET removed_at = now() WHERE id = $1", [u.walletId]);
+    expect((await ctx.app.inject({ method: "POST", url: `/api/wallets/${u.walletId}/sync`, headers: bearer(u.token) })).statusCode).toBe(404);
+    expect((await get(u, `/api/portfolio/${u.walletId}`)).statusCode).toBe(404);
+  });
+  it("demo assets/transactions never leak into a real wallet even when demo rows share the database", async () => {
+    const u = await liveUser(ctx, "leak2");
+    rpc.addWallet(u.address, { lamports: SOL });
+    await syncNow(u);
+    const body = (await get(u, `/api/portfolio/${u.walletId}`)).body + (await get(u, `/api/transactions/${u.walletId}`)).body;
+    expect(body).not.toMatch(/DEMO|BONK|JUP|HRBR|USDC \(demo\)/);
   });
 });
 

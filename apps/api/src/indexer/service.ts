@@ -37,6 +37,7 @@ export type StartResult =
 export class IndexerService {
   private active = 0;
   private readonly inflight = new Set<Promise<void>>();
+  private readonly starting = new Set<Promise<unknown>>();
 
   constructor(private readonly pool: Pool, private readonly config: Config, private readonly parts: IndexerParts, private readonly log?: FastifyBaseLogger) {}
 
@@ -65,7 +66,16 @@ export class IndexerService {
     return t.getTime() > Date.now() ? t : null;
   }
 
-  async start(wallet: { id: string; address: string }, trigger: RunRow["trigger"]): Promise<StartResult> {
+  /** Tracked so drain() (tests, graceful shutdown) also waits for starts that have not registered their run yet. */
+  start(wallet: { id: string; address: string }, trigger: RunRow["trigger"]): Promise<StartResult> {
+    const p = this.startInner(wallet, trigger);
+    this.starting.add(p);
+    const done = () => { this.starting.delete(p); };
+    p.then(done, done);
+    return p;
+  }
+
+  private async startInner(wallet: { id: string; address: string }, trigger: RunRow["trigger"]): Promise<StartResult> {
     if (!this.parts.rpc) return { kind: "unavailable" };
     const running = await runningRun(this.pool, wallet.id);
     if (running) return { kind: "already_running", run: running };
@@ -87,6 +97,6 @@ export class IndexerService {
 
   /** Resolves when every in-flight sync has finished (tests, graceful shutdown). */
   async drain(): Promise<void> {
-    while (this.inflight.size > 0) await Promise.allSettled([...this.inflight]);
+    while (this.inflight.size > 0 || this.starting.size > 0) await Promise.allSettled([...this.starting, ...this.inflight]);
   }
 }

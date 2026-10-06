@@ -66,6 +66,7 @@ export async function runWalletSync(d: SyncDeps, wallet: { id: string; address: 
     if (accounts.length > limits.maxTokenAccounts) {
       accounts = accounts.slice(0, limits.maxTokenAccounts);
       incomplete = true;
+      counts.holdingsIncomplete = 1;
       firstError ??= { code: "TOKEN_ACCOUNT_LIMIT", message: `Wallet has more than ${limits.maxTokenAccounts} token accounts; only the first ${limits.maxTokenAccounts} are shown` };
     }
     counts.tokenAccounts = accounts.length;
@@ -73,14 +74,14 @@ export async function runWalletSync(d: SyncDeps, wallet: { id: string; address: 
     const accountRows: { tokenAccount: string; mint: string; amount: bigint; decimals: number }[] = [];
     for (const a of accounts) {
       const m = perMint.get(a.mint);
-      if (m && m.decimals !== a.decimals) { bump("transactionsSkipped"); incomplete = true; firstError ??= { code: "RPC_MALFORMED", message: "Inconsistent token decimals reported for one mint" }; continue; }
+      if (m && m.decimals !== a.decimals) { counts.holdingsIncomplete = 1; incomplete = true; firstError ??= { code: "RPC_MALFORMED", message: "Inconsistent token decimals reported for one mint" }; continue; }
       perMint.set(a.mint, { decimals: a.decimals, balance: (m?.balance ?? 0n) + a.amount, accounts: (m?.accounts ?? 0) + 1 });
       accountRows.push(a);
     }
     const assetIds = new Map<string, string>();
     for (const [mint, v] of perMint) {
       const asset = await upsertAsset(pool, { address: mint, decimals: v.decimals });
-      if (asset.decimals !== v.decimals) { incomplete = true; firstError ??= { code: "RPC_MALFORMED", message: "Token decimals differ from the stored mint decimals" }; continue; }
+      if (asset.decimals !== v.decimals) { counts.holdingsIncomplete = 1; incomplete = true; firstError ??= { code: "RPC_MALFORMED", message: "Token decimals differ from the stored mint decimals" }; continue; }
       assetIds.set(mint, asset.id);
       holdings.push({ assetId: asset.id, balance: v.balance, slot: tokens.slot, tokenAccounts: v.accounts });
     }

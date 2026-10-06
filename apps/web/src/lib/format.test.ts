@@ -38,6 +38,14 @@ describe("formatPrice / formatAmount", () => {
     expect(formatPrice(2_150n)).toBe("$0.00215");
     expect(formatPrice(850_000n)).toBe("$0.8500");
   });
+  it("formats negative (signed) amounts and never shows a non-zero amount as 0", () => {
+    expect(formatAmount(-1_500_000n, 9)).toBe("-0.0015");
+    expect(formatAmount(-2n * 10n ** 9n, 9)).toBe("-2");
+    expect(formatAmount(-123_456_789n, 6)).toBe("-123.4567");
+    expect(formatAmount(1n, 9)).toBe("<0.0001");
+    expect(formatAmount(-1n, 9)).toBe("-<0.0001");
+    expect(formatAmount(0n, 9)).toBe("0");
+  });
   it("formats token amounts from base units", () => {
     expect(formatAmount(130n * 10n ** 9n, 9)).toBe("130");
     expect(formatAmount(1_500_000n, 6)).toBe("1.5");

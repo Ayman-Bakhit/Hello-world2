@@ -178,6 +178,19 @@ export async function replaceHoldings(
   }
 }
 
+/**
+ * Were the current holdings written by a sync that listed everything? False if that sync hit the token-account limit or
+ * saw inconsistent data, or is still running (holdings are replaced before the run is closed). Used to withhold totals.
+ */
+export async function holdingsComplete(pool: Pool, walletId: string): Promise<boolean> {
+  const r = await pool.query(
+    `SELECT r.status, r.counts FROM token_holdings h JOIN wallet_sync_runs r ON r.id = h.last_sync_run_id
+     WHERE h.wallet_id = $1 ORDER BY r.started_at DESC LIMIT 1`, [walletId]);
+  const x = r.rows[0];
+  if (!x) return false;
+  return x.status !== "running" && Number((x.counts as Record<string, number>).holdingsIncomplete ?? 0) !== 1;
+}
+
 // ---------- transactions ----------
 export async function rawTransactionId(q: Q, signature: string): Promise<string | null> {
   const r = await q.query("SELECT id FROM raw_transactions WHERE chain = 'solana' AND signature = $1", [signature]);

@@ -17,6 +17,15 @@ const sig = () => fakeSignature(`t${n++}`);
 const classify = (spec: Omit<TxSpec, "signature" | "slot" | "blockTime">, wallet = W) =>
   classifyTransaction(wallet, normalizeRpcTransaction(buildRpcTransaction({ signature: sig(), slot: 100, blockTime: 1_700_000_000, ...spec })));
 
+describe("classification: token balances without an owner", () => {
+  it("is UNKNOWN, never 'fee only' (old transactions omit the owner field)", () => {
+    const raw = buildRpcTransaction({ signature: sig(), slot: 1, blockTime: 1, fee: 5000, accounts: [{ key: W, pre: SOL, post: SOL - 5000n }, { key: ATA, pre: 0, post: 0 }], tokens: [{ index: 1, mint: MINT, owner: null, pre: 0n, post: 5n, decimals: 6 }], programs: [SYSTEM_PROGRAM] });
+    const c = classifyTransaction(W, normalizeRpcTransaction(raw));
+    expect(c.kind).toBe("unknown");
+    expect(c.reason).toContain("no owner");
+  });
+});
+
 describe("classification: only labels what is unambiguous", () => {
   it("SOL sent (wallet pays the fee): transfer, fee excluded from the delta", () => {
     const c = classify({ accounts: [{ key: W, pre: 10n * SOL, post: 9n * SOL - 5000n }, { key: OTHER, pre: 0, post: SOL }], programs: [SYSTEM_PROGRAM] });
@@ -79,11 +88,11 @@ describe("classification: only labels what is unambiguous", () => {
       tokens: [{ index: 1, mint: MINT, owner: W, pre: 0n, post: 5n, decimals: 6 }], programs: [TOKEN_PROGRAM],
     }).kind).toBe("unknown");
     expect(classify({ accounts: [{ key: OTHER, pre: SOL, post: SOL }], programs: [SYSTEM_PROGRAM] }).kind).toBe("unknown");
-    // token balance without an owner cannot be attributed to the wallet
+    // token balance without an owner cannot be attributed to the wallet: must NOT claim "fee only" (audit fix)
     expect(classify({
       accounts: [{ key: W, pre: SOL, post: SOL - 5000n }, { key: ATA, pre: 1, post: 1 }],
       tokens: [{ index: 1, mint: MINT, owner: null, pre: 0n, post: 5n, decimals: 6 }], programs: [TOKEN_PROGRAM],
-    }).kind).toBe("fee");
+    }).kind).toBe("unknown");
     // two mints moving the same way is not labeled
     expect(classify({
       accounts: [{ key: W, pre: SOL, post: SOL - 5000n }, { key: ATA, pre: 1, post: 1 }, { key: fakeBase58("a3", 44), pre: 1, post: 1 }],

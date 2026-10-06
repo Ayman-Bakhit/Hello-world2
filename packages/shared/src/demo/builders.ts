@@ -56,7 +56,7 @@ export function buildPortfolio(walletId: string): PortfolioResponse | null {
     realizedPnlCents: str(realized),
     unrealizedPnlCents: str(total - cost),
     valuation: { status: "demo", pricedAssets: rows.length, unpricedAssets: 0 },
-    source: { kind: "demo", cluster: null, slot: null, observedAt: null, lastSyncedAt: null },
+    source: { kind: "demo", cluster: null, slot: null, observedAt: null, lastSyncedAt: null, holdingsComplete: true },
     assets: rows.map(({ h, a, value }) => ({
       kind: a.symbol === "SOL" ? ("native" as const) : ("spl" as const), mint: null, symbol: a.symbol, name: a.name, decimals: a.decimals,
       balance: str(h.balance), quantity: formatUnits(h.balance, a.decimals), tokenAccounts: 1, priceMicroUsd: str(a.priceMicro),

@@ -15,7 +15,7 @@ type Transaction = TransactionsResponse["transactions"][number];
  *  - SPL names/symbols are untrusted token-authority text, kept in `metadata`, never promoted to top-level fields
  */
 export function buildLivePortfolio(a: {
-  walletId: string; holdings: HoldingRow[]; cluster: string; lastSyncedAt: string | null; nowMs: number; priceMaxAgeSeconds: number; slot: number | null;
+  walletId: string; holdings: HoldingRow[]; cluster: string; lastSyncedAt: string | null; nowMs: number; priceMaxAgeSeconds: number; slot: number | null; complete: boolean;
 }): PortfolioResponse {
   const shown = a.holdings.filter((h) => h.balance > 0n);
   const staleBefore = a.nowMs - a.priceMaxAgeSeconds * 1000;
@@ -27,7 +27,8 @@ export function buildLivePortfolio(a: {
   });
   const pricedRows = rows.filter((r) => r.priced);
   const partial = pricedRows.length ? pricedRows.reduce((s, r) => s + r.value!, 0n) : null;
-  const allPriced = rows.length > 0 ? pricedRows.length === rows.length : true;
+  // A total is only claimed when the asset list itself is complete and every asset is priced.
+  const allPriced = a.complete && (rows.length > 0 ? pricedRows.length === rows.length : true);
   const total = allPriced ? (partial ?? 0n) : null;
 
   const assets: PortfolioAsset[] = rows.map(({ h, priced, stale, value }) => {
@@ -60,14 +61,14 @@ export function buildLivePortfolio(a: {
     };
   });
 
-  const status = rows.length === 0 ? "complete" : pricedRows.length === 0 ? "unavailable" : pricedRows.length < rows.length ? "partial" : rows.some((r) => r.stale) ? "stale" : "complete";
+  const status = rows.length === 0 ? (a.complete ? "complete" : "unavailable") : pricedRows.length === 0 ? "unavailable" : pricedRows.length < rows.length || !a.complete ? "partial" : rows.some((r) => r.stale) ? "stale" : "complete";
   return {
     walletId: a.walletId,
     totalValueCents: total === null ? null : total.toString(),
     partialValueCents: partial === null ? null : partial.toString(),
     costBasisCents: null, realizedPnlCents: null, unrealizedPnlCents: null,
     valuation: { status, pricedAssets: pricedRows.length, unpricedAssets: rows.length - pricedRows.length },
-    source: { kind: "solana_rpc", cluster: a.cluster, slot: a.slot, observedAt: a.holdings[0]?.observedAt ?? null, lastSyncedAt: a.lastSyncedAt },
+    source: { kind: "solana_rpc", cluster: a.cluster, slot: a.slot, observedAt: a.holdings[0]?.observedAt ?? null, lastSyncedAt: a.lastSyncedAt, holdingsComplete: a.complete },
     assets,
     dataSource: "chain",
     // Observed from an RPC node we do not independently verify; "verified" claims need an objective source.

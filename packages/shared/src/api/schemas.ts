@@ -99,6 +99,8 @@ export const PortfolioSource = z.object({
   slot: z.number().int().nullable(),
   observedAt: Iso.nullable(),
   lastSyncedAt: Iso.nullable(),
+  /** false when the last sync could not list every holding (token-account limit, inconsistent data). Totals are then withheld. */
+  holdingsComplete: z.boolean(),
 });
 export const PortfolioResponse = z.object({
   walletId: Uuid,

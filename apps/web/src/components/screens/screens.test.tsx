@@ -300,7 +300,7 @@ const MINT = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
 const livePortfolio = (over: Partial<PortfolioResponse> = {}, price: { micro: string; cents: string } | null = null): PortfolioResponse => ({
   walletId: DEMO_IDS.wallets.trading, totalValueCents: null, partialValueCents: null, costBasisCents: null, realizedPnlCents: null, unrealizedPnlCents: null,
   valuation: { status: "unavailable", pricedAssets: 0, unpricedAssets: 2 },
-  source: { kind: "solana_rpc", cluster: "devnet", slot: 123, observedAt: "2026-10-06T00:00:00.000Z", lastSyncedAt: "2026-10-06T00:00:00.000Z" },
+  source: { kind: "solana_rpc", cluster: "devnet", slot: 123, observedAt: "2026-10-06T00:00:00.000Z", lastSyncedAt: "2026-10-06T00:00:00.000Z", holdingsComplete: true },
   assets: [
     { kind: "native", mint: null, symbol: "SOL", name: "Solana", decimals: 9, balance: "2500000000", quantity: "2.5", tokenAccounts: 0,
       priceMicroUsd: price?.micro ?? null, valuation: price ? "priced" : "price_unavailable", price: price ? { source: "fake", observedAt: "2026-10-06T00:00:00.000Z" } : null,
@@ -343,6 +343,12 @@ describe("live portfolio view", () => {
     expect(out).toContain("Partial: $300.00 from 1 of 2 assets with a price");
     expect(out).toContain("PRICE DATA UNAVAILABLE"); // headline total
     expect(out).toContain("$150.00"); // the SOL price is shown
+  });
+  it("incomplete holdings: INCOMPLETE warning shown", () => {
+    const p = livePortfolio();
+    p.source.holdingsComplete = false;
+    expect(html(<PortfolioView portfolio={p} extras={noExtras} />)).toContain("INCOMPLETE");
+    expect(html(<PortfolioView portfolio={livePortfolio()} extras={noExtras} />)).not.toContain("INCOMPLETE");
   });
   it("empty live wallet", () => {
     const out = html(<PortfolioView portfolio={livePortfolio({ assets: [], totalValueCents: "0", valuation: { status: "complete", pricedAssets: 0, unpricedAssets: 0 } })} extras={noExtras} />);

@@ -49,6 +49,12 @@ export function classifyTransaction(wallet: string, tx: NormalizedTransaction): 
       : unknown("Transaction failed on-chain and the wallet did not pay its fee", [], fee, false);
   }
 
+  // Older transactions omit the token-balance `owner`. Without it we cannot say whose token accounts changed, and
+  // "no movement" would be a false statement. Refuse to label.
+  if ([...tx.preTokenBalances, ...tx.postTokenBalances].some((b) => b.owner === null)) {
+    return unknown("Token balances in this transaction have no owner field (older transaction format); token movement for this wallet cannot be determined", [], fee, paid);
+  }
+
   const deltas: AssetDelta[] = [];
   if (idx >= 0) {
     const raw = tx.postBalances[idx]! - tx.preBalances[idx]!;

@@ -50,12 +50,19 @@ export function formatPrice(priceMicro: bigint): string {
   return `$0.${frac}`;
 }
 
+/**
+ * Base units -> display string. Handles negatives (signed transaction deltas). A non-zero amount that would round
+ * away at `maxFrac` digits is shown as "<0.0001", never as "0".
+ */
 export function formatAmount(amount: bigint, decimals: number, maxFrac = 4): string {
+  const neg = amount < 0n;
+  const abs = neg ? -amount : amount;
   const base = 10n ** BigInt(decimals);
-  const whole = amount / base;
-  const fracFull = (amount % base).toString().padStart(decimals, "0");
+  const whole = abs / base;
+  const fracFull = (abs % base).toString().padStart(decimals, "0");
   const frac = fracFull.slice(0, maxFrac).replace(/0+$/, "");
-  return `${group(whole.toString())}${frac ? "." + frac : ""}`;
+  if (whole === 0n && !frac && abs > 0n) return `${neg ? "-" : ""}<0.${"0".repeat(Math.max(maxFrac - 1, 0))}1`;
+  return `${neg ? "-" : ""}${group(whole.toString())}${frac ? "." + frac : ""}`;
 }
 
 export function shortAddress(address: string): string {
