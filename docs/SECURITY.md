@@ -141,3 +141,13 @@ No idle timeout or sliding refresh; no "list/revoke my sessions" or revoke-all; 
 - **Data exposure**: Give responses are `no-store`, contain no session token, RPC URL or secret (tested).
 - **Rate limiting**: `plan` uses the write rate limit.
 - Residual: no admin mutation path exists, so verification data is seeded; the launch review still treats a fixture-VERIFIED demo charity as verified; the registry endpoints are public and unauthenticated by design (rate-limited like other public reads).
+
+## Slice 10: tax reserve foundation
+- **No money movement**: no deposit, withdraw, transfer, fund, escrow, sign or send route exists (route listing and probing tests); the reserve ledger table is write-locked by a database trigger; reserve writes create no transaction or donation row; responses contain no signature field.
+- **Estimate vs balance**: the balance is `UNAVAILABLE` for real wallets (never `$0`), a fixture balance is refused by the builder unless the tax estimate is itself a demo fixture, and the target is never read as a balance (a test sets a target equal to the recommendation and asserts coverage stays unavailable).
+- **Authorization**: requires a session (401); wallet ownership enforced (foreign and unknown are the same 404); the stored target is read by the session's user id only. A mutation that returned another user's row was initially NOT caught (the tests only covered the wallet-id gate); a user-scoped test was added and now fails the mutation.
+- **Input validation**: strict schema; explicit `confirmed: true`; digits-only amounts (NaN, Infinity, exponent, sign, separators, unicode digits, over 12 digits, over 2 decimals, zero and negatives rejected before any write); USDC only; the client cannot choose `SYSTEM_RECOMMENDED`. A rejected request writes no row and no history.
+- **Rates**: tax rates are never accepted in a URL (400); they travel in the POST body only.
+- **Provenance honesty**: `authoritative:false` and `verifiedOnChain:false` on every figure; nothing is called verified, guaranteed, authoritative, final or a liability; the language lint covers API responses, shared copy, web components and rendered scenarios (new banned phrases: guaranteed tax liability, guaranteed tax savings, tax-free, irs-approved reserve).
+- **Hygiene**: `no-store`; no session token, RPC URL or secret in reserve responses (tested). No free-text field was added, so there is no new XSS surface.
+- Residual: the tax calculation gate and rate limits are per process; fixture prices and unverified chain data still feed the estimate; user-provided cost basis is unverifiable; no jurisdiction rules; the reserve balance will need an independent ledger design before it can be shown for real wallets.

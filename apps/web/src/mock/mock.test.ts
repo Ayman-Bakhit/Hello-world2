@@ -86,7 +86,7 @@ describe("parity with the shared demo fixtures the API serves", () => {
       expect(t.lifetimeFeesCents).toBe(s.lifetimeFeesCents);
     }
     expect(buildTax(DEMO_IDS.wallets.trading).estimatedTaxExposureCents).toBe(E.exposureCents.toString());
-    expect(buildTaxReserve(DEMO_IDS.wallets.trading, null, "demo").currentReserveCents).toBe(DEMO_TAX_RESERVE.reserveCents.toString());
+    expect(buildTaxReserve(DEMO_IDS.wallets.trading, null, "demo").reserveBalance.cents).toBe(DEMO_TAX_RESERVE.reserveCents.toString());
   });
 });
 

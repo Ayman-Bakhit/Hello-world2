@@ -46,6 +46,23 @@ Solana first. `chain` enum in DB and a `ChainAdapter` boundary in the indexer ke
 ## Tax reserve (user)
 USDC only in V1. User-controlled vault; deposits explicitly signed. No auto-conversion. Platform has zero withdrawal power. Contract choice (SPL token account owned by user vs program vault) deferred to architecture review; simplest non-custodial option is a user-owned dedicated token account, tracked and labeled.
 
+### Tax reserve foundation (Slice 10): planning only, no money movement
+```
+tax calculation (existing engine, user-supplied rates in a POST body)
+  -> tax estimate        COMPLETE | PARTIAL | DATA_REQUIRED | UNAVAILABLE, never authoritative
+  -> recommendation      a policy over the estimate (today the identity, EXPOSURE_1X); an estimate
+  -> user target         USER_SET configuration (a number the user chose), persisted
+  -> reserve balance     UNAVAILABLE (NOT_CONNECTED) for real wallets; a labeled DEMO_FIXTURE for the demo wallet only
+  -> coverage, remaining balance / target; unavailable whenever either side is
+  -> future funding intent (not built)
+```
+- `packages/shared/src/reserve.ts` (`buildReserveState`) is a pure layer over the SAME tax result: no second tax engine and no rate of its own. API and mock mode share it.
+- The recommendation never upgrades certainty: exposure is shown only for COMPLETE or PARTIAL status and user-supplied rates; DATA_REQUIRED withholds the recommendation and lists what is missing; UNAVAILABLE and "no rates" show no number.
+- A fixture balance is refused by the builder unless the tax estimate itself is a demo fixture, so a real wallet cannot show one.
+- Only the target configuration (and an append-only history of changes) is stored. The recommendation, coverage and remaining amount are computed on demand and never persisted.
+- Interfaces for the future (NOT implemented): reserve account, explicit user signature, transaction, confirmation, reserve ledger, reconciliation. The future balance must come from independently verifiable transaction or ledger data. The target is never the balance and the recommendation is never a funded amount. `tax_reserve_transactions` (the future ledger) is write-locked by a trigger until a reviewed design exists.
+- Decisions deliberately NOT made (documented in docs/TAX_ENGINE.md): reserve custody, reserve wallet architecture, transfer mechanism, who owns the reserve, jurisdiction policies, legal treatment of reserves.
+
 ## Decisions log
 | # | Decision | Why |
 |---|---|---|

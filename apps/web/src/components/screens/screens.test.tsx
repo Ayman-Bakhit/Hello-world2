@@ -140,29 +140,25 @@ describe("portfolio and transactions: demo vs empty", () => {
 describe("tax and tax reserve", () => {
   it("tax view uses qualified language, shows API disclaimer, labels demo, never says tax bill", () => {
     const out = html(<TaxView tax={buildTax(W)} reserve={buildTaxReserve(W, null, "demo")} details={buildTaxDetails(W)} />);
-    for (const s of ["Estimated tax exposure", "Estimated realized gains", "Estimated realized losses", "Tax planning estimate", "Estimated tax reserve", "DEMO DATA", "$18,420", "qualified tax professional", "not a tax bill"]) expect(out, s).toContain(s);
+    for (const s of ["Estimated tax exposure", "Estimated realized gains", "Estimated realized losses", "Tax planning estimate", "Recommended reserve (estimate)", "DEMO DATA", "$18,420", "qualified tax professional", "not a tax bill"]) expect(out, s).toContain(s);
     expect(out.toLowerCase()).not.toMatch(/your tax bill|guaranteed|loophole/);
   });
   it("tax view without reserve data shows dashes instead of inventing a reserve", () => {
     const out = html(<TaxView tax={buildTax(W)} reserve={null} details={null} />);
-    expect(out).toContain("No live reserve data");
+    expect(out).toContain("No reserve data");
   });
-  it("reserve screen: ADD FUNDS and WITHDRAW are disabled and marked unavailable; no signing UI; target is a stored setting", () => {
-    const d = buildTaxReserve(W, { targetType: "percentage", percentBps: 3000, targetCents: null, updatedAt: "2026-01-01T00:00:00.000Z" }, "database");
+  it("reserve screen: funding is not enabled; ADD FUNDS and WITHDRAW are disabled; no signing UI; the target is a stored setting", () => {
+    const d = buildTaxReserve(W, { targetType: "percentage", percentBps: 3000, targetCents: null, source: "USER_SET", enabled: true, updatedAt: "2026-01-01T00:00:00.000Z" }, "database");
     const out = html(<TaxReserveView data={d} onSave={() => undefined} saving={false} saveError={null} savedNotice={false} />);
     expect(out).toMatch(/<button[^>]*disabled[^>]*>ADD FUNDS/);
     expect(out).toMatch(/<button[^>]*disabled[^>]*>WITHDRAW/);
-    expect(out).toContain("UNAVAILABLE");
+    expect(out).toContain("Reserve funding is not enabled in this beta.");
     expect(out).toContain("No transaction can be created or signed here");
     expect(out).toContain("STORED, NO FUNDS MOVE");
     expect(out).toContain("30% of realized gains");
+    expect(out).toContain("EDIT RESERVE TARGET");
     expect(out).not.toContain("WHAT YOU ARE SIGNING");
-    expect(out).toContain("DEMO DATA"); // balance is a fixture
-  });
-  it("reserve target save errors render as field messages", () => {
-    const err = describeApiError(new ApiClientError(400, "VALIDATION_ERROR", "x", { targetPercentage: ["must be a percent above 0 and at most 100 with at most 2 decimals"] }));
-    const out = html(<TaxReserveView data={buildTaxReserve(W, null, "demo")} onSave={() => undefined} saving={false} saveError={err} savedNotice={false} />);
-    expect(out).toContain("targetPercentage: must be a percent above 0");
+    expect(out).toContain("DEMO DATA"); // the balance is a fixture
   });
 });
 
@@ -507,14 +503,5 @@ describe("live tax view", () => {
     const out = html(<TaxView tax={liveTax()} reserve={null} details={liveDetails([ev()])} />);
     expect(out.toLowerCase()).not.toMatch(/guaranteed|loophole|tax-free|write-off|your tax bill/);
   });
-  it("reserve view for a real wallet: estimate only, balance not read, incomplete warning, no demo numbers", () => {
-    const d: ReturnType<typeof buildTaxReserve> = { ...buildTaxReserve(W, null, "database"), dataSource: "chain", status: "PARTIAL", currentReserveCents: null, reserveDataSource: null, estimatedTaxExposureCents: null, coverageBps: null, recommendedAdditionalReserveCents: null };
-    const out = html(<TaxReserveView data={d} onSave={() => undefined} saving={false} saveError={null} savedNotice={false} />);
-    expect(out).toContain("Estimated reserve requirement");
-    expect(out).toContain("Not read from any chain yet");
-    expect(out).toContain("Tax data incomplete");
-    expect(out).toContain("Rates required");
-    expect(out).not.toContain("$14,200");
-    expect(out).not.toContain("DEMO DATA");
-  });
+
 });

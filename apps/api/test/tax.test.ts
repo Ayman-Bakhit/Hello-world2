@@ -256,14 +256,20 @@ describe("tax reserve (estimate only, no money movement)", () => {
     const u = await user("t-res");
     rpc.addWallet(u.address, { lamports: SOL });
     await sync(u);
-    const post = await ctx.app.inject({ method: "POST", url: `/api/tax-reserve/${u.walletId}/target`, payload: { targetType: "percentage", targetPercentage: "30" }, headers: bearer(u.token) });
+    const post = await ctx.app.inject({ method: "POST", url: `/api/tax-reserve/${u.walletId}/target`, payload: { targetType: "percentage", targetPercentage: "30", confirmed: true }, headers: bearer(u.token) });
     expect(post.statusCode).toBe(200);
     const r = TaxReserveResponse.parse((await postTo(u, "/api/tax-reserve/:id/calculate", { taxYear: 2023, rates: { shortTermRateBps: 3000, longTermRateBps: 1500, stateRateBps: 0 } })).json());
-    expect(r).toMatchObject({ custody: "none", currentReserveCents: null, reserveDataSource: null, coverageBps: null, recommendedAdditionalReserveCents: null, estimatedTaxExposureCents: "0", resolvedTargetCents: "0", dataSource: "chain" });
-    expect(r.target).toMatchObject({ targetType: "percentage", targetPercentage: "30" });
-    expect(r.disclaimer.join(" ")).toMatch(/never moves funds/);
+    expect(r.funding).toEqual({ enabled: false, message: "Reserve funding is not enabled in this beta.", custody: "none", moneyMovement: "NOT_ENABLED" });
+    expect(r.reserveBalance).toMatchObject({ source: "UNAVAILABLE", status: "NOT_CONNECTED", cents: null, label: "RESERVE BALANCE UNAVAILABLE" });
+    expect(r.coverage).toMatchObject({ available: false, bps: null });
+    expect(r.remaining).toMatchObject({ available: false, cents: null });
+    expect(r.taxEstimate).toMatchObject({ source: "TAX_ENGINE", estimatedExposureCents: "0", ratesSupplied: true, authoritative: false, verifiedOnChain: false });
+    expect(r.userTarget).toMatchObject({ set: true, source: "USER_SET", enabled: true, targetType: "percentage", targetPercentage: "30", resolvedCents: "0", isMoney: false });
+    expect(r.dataSource).toBe("chain");
+    expect(r.disclaimer.join(" ")).toMatch(/not tax advice/);
     const noRates = TaxReserveResponse.parse((await get(u, `/api/tax-reserve/${u.walletId}`)).json());
-    expect(noRates.estimatedTaxExposureCents).toBeNull();
+    expect(noRates.taxEstimate.estimatedExposureCents).toBeNull();
+    expect(noRates.recommendation).toMatchObject({ status: "UNAVAILABLE", recommendedCents: null });
   });
   it("incomplete data is called out in the reserve disclaimer", async () => {
     await boot();
@@ -272,8 +278,10 @@ describe("tax reserve (estimate only, no money movement)", () => {
     rpc.addTx([u.address], solIn(u.address, 1));
     await sync(u);
     const r = TaxReserveResponse.parse((await get(u, `/api/tax-reserve/${u.walletId}`)).json());
-    expect(r.status).toBe("PARTIAL");
-    expect(r.disclaimer.join(" ")).toContain("TAX DATA INCOMPLETE");
+    expect(r.taxEstimate.status).toBe("PARTIAL");
+    expect(r.taxEstimate.incomplete).toBe(true);
+    expect(r.taxEstimate.missing.length).toBeGreaterThan(0);
+    expect(r.recommendation.recommendedCents).toBeNull(); // no rates supplied: nothing is invented
   });
   it("there is no route that moves funds (no transfer/deposit/withdraw/fund endpoints exist)", async () => {
     await boot();

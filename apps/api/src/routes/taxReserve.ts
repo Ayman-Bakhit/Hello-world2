@@ -8,9 +8,11 @@ import type { Deps } from "./index";
 import { ownedWalletFromParams } from "./walletScope";
 
 /**
- * GET: the stored target, plus the ESTIMATED requirement. Demo wallets: demo fixtures. Real wallets: derived from
- * indexed transactions (see tax routes); the reserve balance is not read from any chain, so coverage is null.
- * POST: stores the target configuration ONLY. No transfer, approval, or signing path exists here.
+ * GET: the stored target (user configuration) and the reserve state derived on demand from the tax calculation: tax estimate,
+ * recommendation, target, balance, coverage. Demo wallets: demo fixtures (with a labeled fixture balance). Real wallets: derived
+ * from indexed transactions; the reserve balance is UNAVAILABLE (no ledger exists), so coverage and remaining are unavailable.
+ * POST /target: stores the target configuration ONLY (explicit `confirmed: true` required). No transfer, deposit, withdrawal,
+ * approval or signing path exists here, and nothing derived is persisted.
  */
 export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
   const auth = requireAuth(pool, config);
@@ -22,13 +24,15 @@ export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, co
     return respond(TaxReserveResponse, taxReserveOf(wallet.id, run, t));
   };
 
-  app.get("/api/tax-reserve/:walletId", { preHandler: auth }, async (req) => {
+  app.get("/api/tax-reserve/:walletId", { preHandler: auth }, async (req, reply) => {
+    void reply.header("cache-control", "no-store");
     const wallet = await ownedWalletFromParams(pool, req);
     return view(actorOf(req).userId, wallet, parse(TaxQuery, req.query));
   });
 
   /** Same estimate with the tax rates in the body (never in a URL). */
-  app.post("/api/tax-reserve/:walletId/calculate", { preHandler: auth }, async (req) => {
+  app.post("/api/tax-reserve/:walletId/calculate", { preHandler: auth }, async (req, reply) => {
+    void reply.header("cache-control", "no-store");
     const wallet = await ownedWalletFromParams(pool, req);
     return view(actorOf(req).userId, wallet, parse(TaxCalculateRequest, req.body ?? {}));
   });
@@ -36,10 +40,11 @@ export const taxReserveRoutes: FastifyPluginAsync<Deps> = async (app, { pool, co
   app.post(
     "/api/tax-reserve/:walletId/target",
     { preHandler: auth, config: { rateLimit: { max: config.RATE_LIMIT_WRITE_MAX, timeWindow: config.RATE_LIMIT_WINDOW } } },
-    async (req) => {
+    async (req, reply) => {
+      void reply.header("cache-control", "no-store");
       const wallet = await ownedWalletFromParams(pool, req);
       const body = parse(SetTaxReserveTargetRequest, req.body);
-      await upsertTaxReserveTarget(pool, actorOf(req).userId, targetFromRequest(body));
+      await upsertTaxReserveTarget(pool, actorOf(req).userId, targetFromRequest(body), actorOf(req).authMethod);
       return view(actorOf(req).userId, wallet, parse(TaxQuery, {}));
     },
   );

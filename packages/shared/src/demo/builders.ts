@@ -4,7 +4,8 @@ import type {
 } from "../api/schemas";
 import { SORT_RULES, allChecksReported, charityGeneratedCents, checksReported, discoverTokens } from "../discover";
 import { splitAmount } from "../feesplit";
-import { percentOfGains, estimateTax, reserveStatus } from "../tax/engine";
+import { estimateTax } from "../tax/engine";
+import { buildReserveState, type ReserveTargetSource } from "../reserve";
 import { percentToBps } from "../feesplit";
 import { centsToUsdString, parseUsdToCents } from "../money";
 import { formatUnits } from "../chain/units";
@@ -150,57 +151,34 @@ export function buildDemoTaxReport(walletId: string, generatedAt: string): TaxRe
   };
 }
 
+/** The stored reserve TARGET configuration (user configuration, never money). */
 export interface StoredTarget {
   targetType: "percentage" | "amount";
   percentBps: number | null;
   targetCents: bigint | null;
+  source: ReserveTargetSource;
+  enabled: boolean;
   updatedAt: string;
 }
 
-export function resolveTargetCents(t: StoredTarget | null, netGainsCents: bigint): bigint | null {
-  if (!t) return null;
-  return t.targetType === "percentage" ? percentOfGains(netGainsCents, t.percentBps ?? 0) : t.targetCents;
-}
-
+/** Demo reserve: the fixture tax estimate plus a labeled fixture balance. Only demo wallets ever get a balance. */
 export function buildTaxReserve(walletId: string, target: StoredTarget | null, targetDataSource: "demo" | "database"): TaxReserveResponse {
-  const exposure = demoTaxEstimate().estimatedExposureCents;
-  const s = reserveStatus(DEMO_RESERVE_CENTS, exposure);
-  const resolved = resolveTargetCents(target, demoNetGainsCents());
-  return {
-    walletId,
-    scope: "user",
-    currency: "USDC",
-    currentReserveCents: str(DEMO_RESERVE_CENTS),
-    reserveDataSource: "demo",
-    status: "COMPLETE",
-    estimatedTaxExposureCents: str(exposure),
-    coverageBps: s.coverageBps,
-    recommendedAdditionalReserveCents: str(s.recommendedAdditionalCents),
-    target: target
-      ? {
-          targetType: target.targetType,
-          targetPercentage: target.targetType === "percentage" ? centsToPercentString(target.percentBps ?? 0) : null,
-          targetAmount: target.targetType === "amount" && target.targetCents !== null ? centsToUsdString(target.targetCents) : null,
-          currency: "USDC",
-          updatedAt: target.updatedAt,
-        }
-      : null,
-    resolvedTargetCents: resolved === null ? null : str(resolved),
-    targetDataSource,
-    custody: "none",
-    disclaimer: ["Estimated tax reserve: a voluntary planning target. This API never moves funds.", ...TAX_DISCLAIMER],
-    ...DEMO_PROVENANCE,
-  };
+  return buildReserveState({
+    walletId, taxSource: "DEMO_FIXTURE", taxStatus: "COMPLETE", exposureCents: demoTaxEstimate().estimatedExposureCents,
+    netGainsCents: demoNetGainsCents(), ratesSupplied: true,
+    requirements: [{ kind: "DEMO", severity: "info", count: 1, message: "DEMO DATA: fictional fixture figures. Nothing was read from a blockchain." }],
+    target: target ? { ...target, dataSource: targetDataSource } : null,
+    balance: { source: "DEMO_FIXTURE", cents: DEMO_RESERVE_CENTS },
+  });
 }
 
-const centsToPercentString = (bps: number) => `${Math.floor(bps / 100)}${bps % 100 ? "." + String(bps % 100).padStart(2, "0").replace(/0$/, "") : ""}`;
-
-/** Parse validated target request fields into the stored representation. */
-export function targetFromRequest(r: { targetType: "percentage"; targetPercentage: string } | { targetType: "amount"; targetAmount: string }): Omit<StoredTarget, "updatedAt"> {
-  if (r.targetType === "percentage") return { targetType: "percentage", percentBps: percentToBps(r.targetPercentage), targetCents: null };
+/** Parse validated target request fields into the stored representation. The source is always USER_SET here. */
+export function targetFromRequest(r: { targetType: "percentage"; targetPercentage: string; enabled?: boolean } | { targetType: "amount"; targetAmount: string; enabled?: boolean }): Omit<StoredTarget, "updatedAt"> {
+  const enabled = r.enabled ?? true;
+  if (r.targetType === "percentage") return { targetType: "percentage", percentBps: percentToBps(r.targetPercentage), targetCents: null, source: "USER_SET", enabled };
   const cents = parseUsdToCents(r.targetAmount);
   if (cents === null) throw new Error("invalid amount");
-  return { targetType: "amount", percentBps: null, targetCents: cents };
+  return { targetType: "amount", percentBps: null, targetCents: cents, source: "USER_SET", enabled };
 }
 
 const PROOF_NOTICE = "DEMO DATA. This is a fictional token. Nothing here is verified on-chain and no contract exists.";

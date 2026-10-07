@@ -100,11 +100,12 @@ describe("mock mode: stored-data stand-ins behave like the API", () => {
   });
   it("saving a reserve target validates like the API (400 with fields) and then persists in memory", async () => {
     const c = createApiClient({ mode: "mock" });
-    await expect(c.setTaxReserveTarget(W, { targetType: "percentage", targetPercentage: "101" })).rejects.toMatchObject({ status: 400, code: "VALIDATION_ERROR" });
-    const r = await c.setTaxReserveTarget(W, { targetType: "amount", targetAmount: "10000.00" });
-    expect(r.target?.targetAmount).toBe("10000.00");
-    expect((await c.getTaxReserve(W)).target?.targetAmount).toBe("10000.00");
-    expect(r.custody).toBe("none");
+    await expect(c.setTaxReserveTarget(W, { targetType: "percentage", targetPercentage: "101", confirmed: true })).rejects.toMatchObject({ status: 400, code: "VALIDATION_ERROR" });
+    await expect(c.setTaxReserveTarget(W, { targetType: "amount", targetAmount: "10000.00" })).rejects.toMatchObject({ status: 400, code: "VALIDATION_ERROR" }); // no explicit confirmation
+    const r = await c.setTaxReserveTarget(W, { targetType: "amount", targetAmount: "10000.00", confirmed: true });
+    expect(r.userTarget.targetAmountCents).toBe("1000000");
+    expect((await c.getTaxReserve(W)).userTarget.targetAmountCents).toBe("1000000");
+    expect(r.funding.custody).toBe("none");
   });
   it("launch configurations: invalid fee split rejected, valid saved and reviewed, never deployable", async () => {
     const c = createApiClient({ mode: "mock" });
@@ -137,13 +138,13 @@ describe("api mode: new endpoints and status handling", () => {
   const mock = createApiClient({ mode: "mock" });
 
   it("POST target: method, body, credentials, and 200 response", async () => {
-    const body = await mock.setTaxReserveTarget(DEMO_IDS.wallets.trading, { targetType: "percentage", targetPercentage: "25" });
+    const body = await mock.setTaxReserveTarget(DEMO_IDS.wallets.trading, { targetType: "percentage", targetPercentage: "25", confirmed: true });
     const f = vi.fn(async (..._a: Parameters<typeof fetch>) => res(body, 200));
     const c = createApiClient({ mode: "api", baseUrl: "http://api.test", fetchImpl: f as unknown as typeof fetch, getToken: () => null });
-    await c.setTaxReserveTarget("W", { targetType: "percentage", targetPercentage: "25" });
+    await c.setTaxReserveTarget("W", { targetType: "percentage", targetPercentage: "25", confirmed: true });
     const [url, init] = f.mock.calls[0]!;
     expect(String(url)).toBe("http://api.test/api/tax-reserve/W/target");
-    expect(init).toMatchObject({ method: "POST", credentials: "include", body: JSON.stringify({ targetType: "percentage", targetPercentage: "25" }) });
+    expect(init).toMatchObject({ method: "POST", credentials: "include", body: JSON.stringify({ targetType: "percentage", targetPercentage: "25", confirmed: true }) });
   });
   it("POST /api/launches handles 201 Created", async () => {
     const created = await mock.createLaunch({

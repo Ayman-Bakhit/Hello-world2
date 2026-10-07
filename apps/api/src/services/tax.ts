@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import {
-  TAX_DATA_VERSION, TAX_DISCLAIMER, buildTaxReport, canonicalReport, type TaxReport, centsToUsdString, resolveTargetCents, type StoredTarget, type TaxReserveResponse, TAX_ENGINE_VERSION, TAX_LIMITATIONS, computeTax, type CostBasisMethod, type SwapTreatment, type TaxCalcResult, type TaxDetailsResponse,
+  TAX_DATA_VERSION, TAX_DISCLAIMER, buildReserveState, buildTaxReport, canonicalReport, type TaxReport, type StoredTarget, type TaxReserveResponse, TAX_ENGINE_VERSION, TAX_LIMITATIONS, computeTax, type CostBasisMethod, type SwapTreatment, type TaxCalcResult, type TaxDetailsResponse,
   type ManualBasisReview, type TaxCalculateRequest, type TaxEvent, type TaxResponse,
 } from "@project-name/shared";
 import { loadManualForTax } from "../db/manualBasisRepos";
@@ -113,35 +113,19 @@ export function taxDetailsOf(walletId: string, run: TaxRun): TaxDetailsResponse 
 }
 
 
-const pctString = (bps: number) => `${Math.floor(bps / 100)}${bps % 100 ? "." + String(bps % 100).padStart(2, "0").replace(/0$/, "") : ""}`;
 
 /**
- * Reserve view for a real wallet. It exposes only the ESTIMATED requirement and the user's stored target. The reserve
- * balance is not read from any chain yet, so coverage and any "additional amount" are null, not guessed. No money moves.
+ * The reserve view is a pure layer over the SAME calculation (buildReserveState): no second engine, no rates of its own (the
+ * exposure exists only when the caller supplied rates in a POST body), and the reserve balance is UNAVAILABLE for real wallets
+ * because no ledger or funding integration exists. No money moves.
  */
 export function taxReserveOf(walletId: string, run: TaxRun, target: (StoredTarget & { dataSource: "demo" | "database" }) | null): TaxReserveResponse {
   const est = run.result.estimate;
-  const netGains = est ? est.totalRealizedGainsCents - est.totalRealizedLossesCents : 0n;
-  const resolved = target && est ? resolveTargetCents(target, netGains) : null;
-  return {
-    walletId, scope: "user", currency: "USDC", currentReserveCents: null, reserveDataSource: null, status: run.result.status,
-    estimatedTaxExposureCents: str(run.result.exposureCents), coverageBps: null, recommendedAdditionalReserveCents: null,
-    target: target
-      ? {
-          targetType: target.targetType,
-          targetPercentage: target.targetType === "percentage" ? pctString(target.percentBps ?? 0) : null,
-          targetAmount: target.targetType === "amount" && target.targetCents !== null ? centsToUsdString(target.targetCents) : null,
-          currency: "USDC", updatedAt: target.updatedAt,
-        }
-      : null,
-    resolvedTargetCents: str(resolved), targetDataSource: target?.dataSource ?? "database", custody: "none",
-    disclaimer: [
-      "Estimated tax reserve: a voluntary planning target based on the data available. This API never moves funds, and the reserve balance is not read from any chain.",
-      ...(run.result.status === "COMPLETE" ? [] : ["TAX DATA INCOMPLETE: the estimate may be missing prices, cost basis or transactions. Do not rely on it as a requirement."]),
-      ...TAX_DISCLAIMER,
-    ],
-    dataSource: "chain", verifiedOnChain: false,
-  };
+  return buildReserveState({
+    walletId, taxSource: "TAX_ENGINE", taxStatus: run.result.status, exposureCents: run.result.exposureCents,
+    netGainsCents: est ? est.totalRealizedGainsCents - est.totalRealizedLossesCents : null,
+    ratesSupplied: run.rates !== null, requirements: run.result.requirements, target, balance: null,
+  });
 }
 
 

@@ -17,7 +17,7 @@ import { PageHeader } from "../PageHeader";
 import { AuthRequired, LoadingState, NoLiveData, ResourceView } from "../states";
 import { StatCard } from "../StatCard";
 import { RealizedTable, TaxEventsTable, TaxInputsForm, TaxStatusPanel } from "../TaxParts";
-import { TaxReserveCard } from "../TaxReserveCard";
+import { ReserveSummary } from "../TaxReservePanels";
 import { WalletPicker } from "./WalletPicker";
 
 const money = (v: string | null, opts?: { negate?: boolean }) => (v === null ? null : formatUsd(opts?.negate ? -BigInt(v) : BigInt(v)));
@@ -34,7 +34,7 @@ export function TaxView({ tax, reserve, details }: { tax: TaxResponse; reserve: 
   const exposure = tax.estimatedTaxExposureCents === null ? null : BigInt(tax.estimatedTaxExposureCents);
   const why = tax.status === "UNAVAILABLE" ? "Unavailable" : "Tax data incomplete";
   const sub = incomplete ? why : undefined;
-  const reserveCents = reserve && reserve.currentReserveCents !== null ? BigInt(reserve.currentReserveCents) : null;
+  const recommended = reserve && reserve.recommendation.recommendedCents !== null ? BigInt(reserve.recommendation.recommendedCents) : null;
   return (
     <>
       <DemoDataNotice dataSource={tax.dataSource} message="Estimated from fictional demo events with example tax rates. This is not your tax situation and nothing was read from a blockchain." />
@@ -48,13 +48,13 @@ export function TaxView({ tax, reserve, details }: { tax: TaxResponse; reserve: 
           value={exposure === null ? dash : formatUsd(exposure)}
           sub={exposure === null ? (tax.status === "UNAVAILABLE" ? "Unavailable" : "Rates required: enter your own rates below") : incomplete ? `${COPY.taxPlanning}. ${why}` : COPY.taxPlanning}
         />
-        <StatCard label="Estimated tax reserve" value={reserveCents === null ? dash : formatUsd(reserveCents)} sub={reserve ? (reserveCents === null ? "Reserve balance not read from any chain" : undefined) : "No live reserve data"} />
-        <StatCard label="Reserve coverage" value={reserve?.coverageBps == null ? dash : formatPercentBps(reserve.coverageBps)} />
+        <StatCard label="Recommended reserve (estimate)" value={recommended === null ? dash : formatUsd(recommended)} sub={reserve ? reserve.recommendation.label : "No reserve data"} />
+        <StatCard label="Reserve balance" value={reserve ? (reserve.reserveBalance.cents !== null ? formatUsd(BigInt(reserve.reserveBalance.cents)) : "UNAVAILABLE") : dash} sub={reserve ? reserve.reserveBalance.label : "No reserve data"} />
       </div>
 
-      {reserve && reserveCents !== null && exposure !== null ? (
+      {reserve ? (
         <div className="mt-6">
-          <TaxReserveCard reserveCents={reserveCents} exposureCents={exposure} actions={<ButtonLink href="/tax-reserve" variant="secondary">MANAGE RESERVE TARGET</ButtonLink>} />
+          <ReserveSummary data={reserve} action={<ButtonLink href="/tax-reserve" variant="secondary">MANAGE RESERVE TARGET</ButtonLink>} />
         </div>
       ) : null}
 

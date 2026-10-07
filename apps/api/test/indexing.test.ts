@@ -62,7 +62,8 @@ describe("before any sync", () => {
       expect(r.json().error.code).toBe("NO_LIVE_DATA");
     }
     for (const url of [`/api/tax/${u.walletId}`, `/api/tax-reserve/${u.walletId}`]) {
-      expect((await get(u, url)).json().status, url).toBe("UNAVAILABLE");
+      const b = (await get(u, url)).json();
+      expect(url.includes("tax-reserve") ? b.taxEstimate.status : b.status, url).toBe("UNAVAILABLE");
     }
     const s = await status(u);
     expect(s).toMatchObject({ state: "never_synced", configured: true, lastRun: null, window: null });

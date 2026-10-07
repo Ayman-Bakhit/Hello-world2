@@ -54,7 +54,7 @@ export function createApiClient(opts: ClientOptions = {}) {
   }
 
   // ---- mock mode: in-memory stand-ins for the API's stored data (never persisted, never sent anywhere) ----
-  let mockTarget: StoredTarget = { targetType: "percentage", percentBps: 3000, targetCents: null, updatedAt: "2026-01-01T00:00:00.000Z" };
+  let mockTarget: StoredTarget = { targetType: "percentage", percentBps: 3000, targetCents: null, source: "USER_SET", enabled: true, updatedAt: "2026-01-01T00:00:00.000Z" };
   const mockLaunches: Launch[] = [];
   const mockWallets = (): Wallet[] => DEMO_WALLETS.map((w) => ({ id: w.id, chain: "solana" as const, address: w.address, label: w.label, ownershipVerified: false, dataSource: "demo" as const, createdAt: "2026-01-01T00:00:00.000Z" }));
   const mockReview = (config: LaunchConfig) => {

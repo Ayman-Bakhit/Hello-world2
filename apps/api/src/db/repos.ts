@@ -202,7 +202,7 @@ export async function getOwnedReceiptForDonation(pool: Pool, userId: string, don
   return r.rows[0] ? receiptOf(r.rows[0]) : null;
 }
 
-// ---------- tax reserve target ----------
+// ---------- tax reserve target (USER CONFIGURATION only: no tax figure, no balance, no funds) ----------
 export async function getTaxReserveTarget(pool: Pool, userId: string): Promise<(StoredTarget & { dataSource: "demo" | "database" }) | null> {
   const r = await pool.query("SELECT t.*, u.is_demo FROM tax_reserves t JOIN users u ON u.id = t.user_id WHERE t.user_id = $1", [userId]);
   const row = r.rows[0];
@@ -211,18 +211,40 @@ export async function getTaxReserveTarget(pool: Pool, userId: string): Promise<(
     targetType: row.rule === "FIXED_PERCENT" ? "percentage" : "amount",
     percentBps: row.percent_bps as number | null,
     targetCents: row.target_cents === null ? null : BigInt(row.target_cents as string),
+    source: row.target_source as StoredTarget["source"],
+    enabled: row.enabled as boolean,
     updatedAt: iso(row.updated_at as Date),
     dataSource: row.is_demo ? "demo" : "database",
   };
 }
 
-/** Stores the user's reserve TARGET configuration only. Moves no funds; there is no fund-movement code path. */
-export async function upsertTaxReserveTarget(pool: Pool, userId: string, t: Omit<StoredTarget, "updatedAt">): Promise<void> {
-  await pool.query(
-    `INSERT INTO tax_reserves (user_id, rule, percent_bps, target_cents) VALUES ($1,$2,$3,$4)
-     ON CONFLICT (user_id) DO UPDATE SET rule = EXCLUDED.rule, percent_bps = EXCLUDED.percent_bps, target_cents = EXCLUDED.target_cents, updated_at = now()`,
-    [userId, t.targetType === "percentage" ? "FIXED_PERCENT" : "MANUAL_TARGET", t.percentBps, t.targetCents === null ? null : t.targetCents.toString()],
-  );
+/**
+ * Stores the user's reserve TARGET configuration and appends one history row (same transaction). Moves no funds; there is no
+ * fund-movement code path. Derived values (recommendation, coverage, remaining) are never stored.
+ */
+export async function upsertTaxReserveTarget(pool: Pool, userId: string, t: Omit<StoredTarget, "updatedAt">, authMethod: string): Promise<void> {
+  const rule = t.targetType === "percentage" ? "FIXED_PERCENT" : "MANUAL_TARGET";
+  const cents = t.targetCents === null ? null : t.targetCents.toString();
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    await c.query(
+      `INSERT INTO tax_reserves (user_id, rule, percent_bps, target_cents, target_source, enabled) VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (user_id) DO UPDATE SET rule = EXCLUDED.rule, percent_bps = EXCLUDED.percent_bps, target_cents = EXCLUDED.target_cents,
+         target_source = EXCLUDED.target_source, enabled = EXCLUDED.enabled, updated_at = now()`,
+      [userId, rule, t.percentBps, cents, t.source, t.enabled],
+    );
+    await c.query(
+      "INSERT INTO tax_reserve_target_events (user_id, rule, percent_bps, target_cents, target_source, enabled, created_auth_method) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+      [userId, rule, t.percentBps, cents, t.source, t.enabled, authMethod],
+    );
+    await c.query("COMMIT");
+  } catch (e) {
+    await c.query("ROLLBACK");
+    throw e;
+  } finally {
+    c.release();
+  }
 }
 
 // ---------- launches ----------

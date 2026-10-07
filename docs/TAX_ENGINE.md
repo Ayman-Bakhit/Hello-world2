@@ -117,3 +117,30 @@ Rows are sorted; JSON is key-sorted; equal inputs give byte-identical CSV and eq
 
 ### Fixture / live-data limitations
 Everything here is verified only against fixtures and a fake RPC. Real wallets have no real prices in this environment, so real reports are `DATA_REQUIRED` until a real historical price source exists; chain data is unverified.
+
+## Slice 10: tax reserve foundation (estimate -> recommendation -> target -> balance -> coverage)
+The reserve layer consumes the existing tax result. It is not a second engine and holds no tax rate.
+
+**Five figures, never conflated**
+| Figure | Source | Status labels |
+|---|---|---|
+| Tax estimate | tax engine (`TAX_ENGINE`) or demo fixture | `ESTIMATE`, with the tax status (COMPLETE, PARTIAL, DATA_REQUIRED, UNAVAILABLE); `authoritative:false`, `verifiedOnChain:false` |
+| Recommendation | `SYSTEM_RECOMMENDATION`, policy `EXPOSURE_1X` (the estimated exposure, unchanged) | `ESTIMATED RESERVE TARGET`, `ESTIMATED RESERVE — TAX DATA INCOMPLETE`, `TAX DATA REQUIRED — NO RESERVE RECOMMENDATION`, `NO TAX RESERVE ESTIMATE AVAILABLE`, `RATES REQUIRED FOR A RESERVE ESTIMATE` |
+| User target | `USER_SET` configuration | `USER TARGET`, `No reserve target set.` |
+| Reserve balance | `UNAVAILABLE` / `NOT_CONNECTED` for real wallets; `DEMO_FIXTURE` only for the demo wallet | `RESERVE BALANCE UNAVAILABLE`, `DEMO RESERVE BALANCE` |
+| Coverage / remaining | balance / target; unavailable if either side is | `80% of target`, `UNAVAILABLE` |
+
+**Status rules (the layer never upgrades tax certainty)**
+- COMPLETE: recommendation = estimated exposure, labeled an estimate.
+- PARTIAL: same number, labeled `ESTIMATED RESERVE — TAX DATA INCOMPLETE`, with what is missing.
+- DATA_REQUIRED: no recommendation and no exposure figure (they are not a total); the missing data is listed.
+- UNAVAILABLE: nothing.
+- No tax rates supplied: no exposure, so no recommendation. Rates stay user-supplied POST-body data (`POST /api/tax-reserve/:walletId/calculate`); a GET with rates in the URL is a 400. No rate or percentage is hardcoded anywhere in the layer.
+
+**Coverage wording**: `balance / target` reads "80% of target", never "80% of your tax liability". A separate `targetVsExposure` field says "Target is 80.45% of the estimated exposure (an estimate)." and is unavailable when the exposure is. Neither measures funding on its own.
+
+**Extensibility**: `RESERVE_POLICIES` is the only place a policy can be added (buffer, user-selected percentage, jurisdiction-specific). Only the identity policy exists; no policy is invented.
+
+**Not decided (stopped, not invented)**: reserve custody; reserve wallet architecture; smart contract architecture; the USDC transfer mechanism; jurisdiction rules; the legal treatment of reserves; whether a reserve belongs to the user, the platform or a charity; whether "adopt the recommendation" stores a snapshot or tracks it live.
+
+**Caveats that still apply**: real Solana RPC has not been validated from this environment; real historical prices are not connected (fixture prices only); results are not jurisdiction-complete; user-provided cost basis is not independently verified; fixture data (including the demo reserve balance) is not real-world verification; charity verification from Slice 9 is fixture/admin data; no real money movement. This is a planning tool, not tax advice.

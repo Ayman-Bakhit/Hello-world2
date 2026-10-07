@@ -38,7 +38,7 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 | `GET /api/transactions/:walletId` | session + owner | demo wallets: demo; real wallets: **chain** (indexed) or 404 `NO_LIVE_DATA` | live for real wallets after sync |
 | `GET /api/tax/:walletId` | session + owner | demo wallets: demo fixture. Real wallets: derived on demand from indexed transactions + stored prices | status `COMPLETE|PARTIAL|DATA_REQUIRED|UNAVAILABLE`; estimate only |
 | `GET /api/tax/:walletId/details` | session + owner | same | realized slices, every tax event with status/reason/missing data |
-| `GET /api/tax-reserve/:walletId` | session + owner | target: db; balance/exposure: demo | mixed |
+| `GET /api/tax-reserve/:walletId` | session + owner | target: db; estimate: tax engine (real) or fixture (demo); balance: UNAVAILABLE (real) or labeled fixture (demo) | derived on demand; `no-store` |
 | `POST /api/tax-reserve/:walletId/target` | session + owner | db | production-capable (config only, moves no funds) |
 | `POST /api/tax/:walletId/calculate`, `POST /api/tax-reserve/:walletId/calculate` | session + owner | derived | same results as the GET routes, with year/method/swap treatment/**tax rates in the body** |
 | `GET /api/tax/:walletId/report` | session + owner | derived | estimated tax report (JSON) for a year/method/swap treatment |
@@ -130,14 +130,31 @@ Demo wallets:
 `GET /api/tax/:walletId` → `{ scope:"user", taxYear, costBasisMethod, estimatedRealizedGainsCents, estimatedRealizedLossesCents, estimatedShortTermNetCents, estimatedLongTermNetCents, estimatedTaxableEvents, estimatedTaxExposureCents, assumptions, methodology:{ name, version, limitations[] }, disclaimer[], dataSource:"demo", verifiedOnChain:false }`
 Computed by the shared tax engine from synthetic events. Disclaimer: "Estimated tax exposure is a tax planning estimate, not a tax bill or tax advice."
 
-### Tax reserve
-`GET /api/tax-reserve/:walletId` → `{ scope:"user", currency:"USDC", currentReserveCents, reserveDataSource:"demo", estimatedTaxExposureCents, coverageBps, recommendedAdditionalReserveCents, target:{ targetType, targetPercentage, targetAmount, currency, updatedAt }|null, resolvedTargetCents, targetDataSource, custody:"none", disclaimer[], dataSource, verifiedOnChain }`
-`POST /api/tax-reserve/:walletId/target` body, one of:
-```json
-{ "targetType": "percentage", "targetPercentage": "30", "currency": "USDC" }
-{ "targetType": "amount", "targetAmount": "10000.00", "currency": "USDC" }
+### Tax reserve (Slice 10)
+`GET /api/tax-reserve/:walletId?taxYear=&method=&swapTreatment=` and `POST /api/tax-reserve/:walletId/calculate` (rates in the BODY, never a URL; a GET with rate parameters is `400`) return the same shape:
 ```
-Percent: above 0, at most 100, at most 2 decimals. Amount: at most 2 decimals, above 0. Unknown fields rejected. Writes one row in `tax_reserves`; **moves no money** (tests assert no other table changes). Returns the same body as GET.
+{ walletId, scope:"user", currency:"USDC",
+  taxEstimate:    { source:"TAX_ENGINE|DEMO_FIXTURE", status, label:"ESTIMATE", estimatedExposureCents|null, withheldReason, ratesSupplied, incomplete, missing:[{kind,severity,count,message}], authoritative:false, verifiedOnChain:false },
+  recommendation: { source:"SYSTEM_RECOMMENDATION", policy:"EXPOSURE_1X", status:"ESTIMATE|ESTIMATE_INCOMPLETE|WITHHELD|UNAVAILABLE", label, recommendedCents|null, reason, authoritative:false },
+  userTarget:     { set, source:"USER_SET|SYSTEM_RECOMMENDED|null", enabled, targetType, targetPercentage, targetAmountCents, resolvedCents, effectiveCents, resolutionNote, updatedAt, dataSource, label, isMoney:false },
+  targetVsExposure: { available, bps, wording, reason },
+  reserveBalance: { source:"UNAVAILABLE|DEMO_FIXTURE", status:"NOT_CONNECTED|DEMO", cents|null, label, note },
+  coverage:       { available, bps, label, reason },     remaining: { available, cents, reason },
+  funding:        { enabled:false, message:"Reserve funding is not enabled in this beta.", custody:"none", moneyMovement:"NOT_ENABLED" },
+  disclaimer, dataSource, verifiedOnChain:false }
+```
+- Real wallets: `reserveBalance` is `UNAVAILABLE` / `NOT_CONNECTED` (not zero), so `coverage` and `remaining` are unavailable. Demo wallet: a labeled fixture balance, `dataSource:"demo"`.
+- Status rules: exposure and recommendation exist only for COMPLETE or PARTIAL status with user-supplied rates; DATA_REQUIRED withholds both and lists what is missing; UNAVAILABLE shows nothing.
+`POST /api/tax-reserve/:walletId/target` body, one of (strict, unknown fields rejected):
+```json
+{ "targetType": "amount", "targetAmount": "10000.00", "currency": "USDC", "enabled": true, "confirmed": true }
+{ "targetType": "percentage", "targetPercentage": "30", "currency": "USDC", "enabled": true, "confirmed": true }
+```
+- `confirmed: true` is required (explicit confirmation); `source` cannot be supplied (always `USER_SET`). `enabled` defaults to true.
+- Amount: digits only, at most 12 whole digits and 2 decimals, above 0 (no NaN, Infinity, exponent, sign, separators or unicode digits); USDC only. Percent: above 0, at most 100, at most 2 decimals.
+- Writes `tax_reserves` plus one append-only `tax_reserve_target_events` row in one transaction; **moves no money**; nothing derived is stored. Returns the same body as GET (without rates, so the recommendation is unavailable until the caller recalculates with rates).
+- All three routes require a session and wallet ownership (foreign and unknown wallet ids are the same 404), and respond `cache-control: no-store`.
+- There is no deposit, withdraw, transfer, fund, escrow, sign or send route (tested by route listing and by probing).
 
 ### Charities (db, demo rows) - Slice 9
 `GET /api/charities?verified=true|false` -> `{ charities:[Charity] }`, `GET /api/charities/:id` -> `Charity`:

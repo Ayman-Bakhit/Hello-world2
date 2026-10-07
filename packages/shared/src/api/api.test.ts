@@ -39,17 +39,33 @@ describe("FeeSplitSchema uses the shared validator", () => {
 });
 
 describe("tax reserve target request", () => {
+  const C = { confirmed: true };
   it("accepts percentage and amount, rejects mixed/invalid", () => {
-    expect(SetTaxReserveTargetRequest.safeParse({ targetType: "percentage", targetPercentage: "30" }).success).toBe(true);
-    expect(SetTaxReserveTargetRequest.safeParse({ targetType: "amount", targetAmount: "10000.00" }).success).toBe(true);
+    expect(SetTaxReserveTargetRequest.safeParse({ targetType: "percentage", targetPercentage: "30", ...C }).success).toBe(true);
+    expect(SetTaxReserveTargetRequest.safeParse({ targetType: "amount", targetAmount: "10000.00", ...C }).success).toBe(true);
     for (const bad of [
       { targetType: "percentage", targetPercentage: "0" }, { targetType: "percentage", targetPercentage: "100.01" },
       { targetType: "percentage", targetPercentage: "abc" }, { targetType: "amount", targetAmount: "-5" },
       { targetType: "amount", targetAmount: "1.234" }, { targetType: "amount", targetAmount: "0" },
       { targetType: "percentage", targetPercentage: "30", targetAmount: "5" }, { targetType: "amount", targetAmount: "5", currency: "ETH" },
-    ]) expect(SetTaxReserveTargetRequest.safeParse(bad).success).toBe(false);
+    ]) expect(SetTaxReserveTargetRequest.safeParse({ ...bad, ...C }).success).toBe(false);
+  });
+  it("requires explicit confirmation and never accepts a client-chosen source", () => {
+    const ok = { targetType: "amount", targetAmount: "10.00" };
+    expect(SetTaxReserveTargetRequest.safeParse(ok).success).toBe(false);
+    expect(SetTaxReserveTargetRequest.safeParse({ ...ok, confirmed: false }).success).toBe(false);
+    expect(SetTaxReserveTargetRequest.safeParse({ ...ok, confirmed: "true" }).success).toBe(false);
+    expect(SetTaxReserveTargetRequest.safeParse({ ...ok, ...C, source: "SYSTEM_RECOMMENDED" }).success).toBe(false);
+  });
+  it("rejects every unsafe numeric spelling", () => {
+    for (const a of ["NaN", "Infinity", "-Infinity", "1e5", "1E3", "+5", "-0.01", " 5", "5 ", "5.", ".5", "0x10", "1,000", "٣", "9".repeat(13), "0", "0.00", "", "1.001"]) {
+      expect(SetTaxReserveTargetRequest.safeParse({ targetType: "amount", targetAmount: a, ...C }).success, JSON.stringify(a)).toBe(false);
+    }
+    for (const a of [1, 5.5, null, undefined, {}, [], true]) expect(SetTaxReserveTargetRequest.safeParse({ targetType: "amount", targetAmount: a, ...C }).success).toBe(false);
+    expect(SetTaxReserveTargetRequest.safeParse({ targetType: "amount", targetAmount: "999999999999.99", ...C }).success).toBe(true);
   });
 });
+
 
 describe("demo builders", () => {
   it("portfolio totals across the three wallets match the frontend demo ($42,810)", () => {
@@ -74,13 +90,14 @@ describe("demo builders", () => {
     expect(text).not.toContain("taxbill");
     for (const p of BANNED_PHRASES.filter((p) => p !== "your tax bill")) expect(text).not.toContain(p);
   });
-  it("reserve coverage 77.09%, $4,220 more; percentage target resolves from net gains", () => {
-    const r = buildTaxReserve(W.trading, { targetType: "percentage", percentBps: 3000, targetCents: null, updatedAt: "x" }, "database");
-    expect(r.coverageBps).toBe(7709);
-    expect(r.recommendedAdditionalReserveCents).toBe("422000");
-    expect(r.resolvedTargetCents).toBe("1743000"); // 30% of $58,100
-    expect(r.target?.targetPercentage).toBe("30");
-    expect(r.custody).toBe("none");
+  it("demo reserve: a percentage target resolves from net gains; coverage is balance over TARGET", () => {
+    const r = buildTaxReserve(W.trading, { targetType: "percentage", percentBps: 3000, targetCents: null, source: "USER_SET", enabled: true, updatedAt: "x" }, "database");
+    expect(r.userTarget.resolvedCents).toBe("1743000"); // 30% of $58,100
+    expect(r.reserveBalance).toMatchObject({ source: "DEMO_FIXTURE", status: "DEMO", cents: "1420000" });
+    expect(r.coverage).toMatchObject({ available: true, bps: 8146 });
+    expect(r.remaining.cents).toBe("323000");
+    expect(r.funding).toMatchObject({ enabled: false, custody: "none", moneyMovement: "NOT_ENABLED" });
+    expect(r.dataSource).toBe("demo");
   });
   it("transactions paginate and never carry explorer links", () => {
     const a = buildTransactions(W.trading, 3, 0)!;

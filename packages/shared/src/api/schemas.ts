@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { CHARITY_VERIFICATION_STATES, DONATION_PROVENANCES, DONATION_STATUSES, EVIDENCE_SOURCE_TYPES, EVIDENCE_STATUSES, RECEIPT_VERIFICATION_STATES, USD_REFERENCE_SOURCES, safeHttpUrl } from "../give";
 import { validateFeeSplit, percentToBps } from "../feesplit";
+import { parseUsdToCents } from "../money";
+import { RESERVE_BALANCE_SOURCES, RESERVE_RECOMMENDATION_STATUSES, RESERVE_TARGET_SOURCES, RESERVE_TAX_SOURCES } from "../reserve";
 
 /**
  * API contract. Single source of truth for the Fastify API (request validation) and the
@@ -509,38 +511,80 @@ export const TaxReportExportRequest = z.strictObject({
 });
 export type TaxReportExportRequest = z.infer<typeof TaxReportExportRequest>;
 
-// ---------- tax reserve ----------
-export const TaxReserveTarget = z.object({
-  targetType: z.enum(["percentage", "amount"]),
-  /** percent of realized net gains, e.g. "30" or "12.5" */
-  targetPercentage: z.string().nullable(),
-  /** USD, e.g. "10000.00" */
-  targetAmount: z.string().nullable(),
-  currency: z.literal("USDC"),
-  updatedAt: Iso,
-});
+// ---------- tax reserve (Slice 10: estimate, recommendation, user target, balance and coverage are separate figures) ----------
+export const ReserveRequirement = z.object({ kind: z.string(), severity: z.string(), count: z.number().int(), message: z.string() });
 export const TaxReserveResponse = z.object({
   walletId: Uuid,
   scope: z.literal("user"),
   currency: z.literal("USDC"),
-  /** Balance of the user-controlled reserve. Demo value until chain reads exist. */
-  currentReserveCents: Cents.nullable(),
-  /** null = the reserve balance is not read from any chain yet */
-  reserveDataSource: DataSource.nullable(),
-  /** Status of the underlying tax estimate. The reserve numbers are only as complete as this. */
-  status: TaxStatusEnum,
-  estimatedTaxExposureCents: Cents.nullable(),
-  coverageBps: z.number().int().nullable(),
-  recommendedAdditionalReserveCents: Cents.nullable(),
-  target: TaxReserveTarget.nullable(),
-  resolvedTargetCents: Cents.nullable(),
-  targetDataSource: DataSource,
-  custody: z.literal("none"),
+  /** What the tax engine produced. Never authoritative; exposure exists only for COMPLETE or PARTIAL status and user-supplied rates. */
+  taxEstimate: z.object({
+    source: z.enum(RESERVE_TAX_SOURCES),
+    status: TaxStatusEnum,
+    label: z.literal("ESTIMATE"),
+    estimatedExposureCents: Cents.nullable(),
+    withheldReason: z.string().nullable(),
+    ratesSupplied: z.boolean(),
+    incomplete: z.boolean(),
+    missing: z.array(ReserveRequirement),
+    authoritative: z.literal(false),
+    verifiedOnChain: z.literal(false),
+  }),
+  /** A policy applied to the estimate. Not the user's target and not a funded amount. */
+  recommendation: z.object({
+    source: z.literal("SYSTEM_RECOMMENDATION"),
+    policy: z.literal("EXPOSURE_1X"),
+    status: z.enum(RESERVE_RECOMMENDATION_STATUSES),
+    label: z.string(),
+    recommendedCents: Cents.nullable(),
+    reason: z.string(),
+    authoritative: z.literal(false),
+  }),
+  /** User configuration. A number the user chose; never money. */
+  userTarget: z.object({
+    set: z.boolean(),
+    source: z.enum(RESERVE_TARGET_SOURCES).nullable(),
+    enabled: z.boolean().nullable(),
+    targetType: z.enum(["percentage", "amount"]).nullable(),
+    /** percent of realized net gains, e.g. "30" or "12.5" */
+    targetPercentage: z.string().nullable(),
+    targetAmountCents: Cents.nullable(),
+    /** the configured target in cents; for a percentage target it needs an available estimate of realized gains */
+    resolvedCents: Cents.nullable(),
+    /** resolvedCents when the target is enabled, else null */
+    effectiveCents: Cents.nullable(),
+    resolutionNote: z.string().nullable(),
+    updatedAt: Iso.nullable(),
+    dataSource: z.enum(["demo", "database"]).nullable(),
+    label: z.string(),
+    isMoney: z.literal(false),
+  }),
+  /** The target relative to the estimated exposure. Not a measure of funding. */
+  targetVsExposure: z.object({ available: z.boolean(), bps: z.number().int().nullable(), wording: z.string().nullable(), reason: z.string().nullable() }),
+  /** Funds actually held. UNAVAILABLE (NOT_CONNECTED) until a verifiable ledger exists: this is not zero. */
+  reserveBalance: z.object({
+    source: z.enum(RESERVE_BALANCE_SOURCES),
+    status: z.enum(["NOT_CONNECTED", "DEMO"]),
+    cents: Cents.nullable(),
+    label: z.string(),
+    note: z.string(),
+  }),
+  /** balance / target. Unavailable whenever either side is unavailable. */
+  coverage: z.object({ available: z.boolean(), bps: z.number().int().nullable(), label: z.string(), reason: z.string().nullable() }),
+  remaining: z.object({ available: z.boolean(), cents: Cents.nullable(), reason: z.string().nullable() }),
+  funding: z.object({ enabled: z.literal(false), message: z.string(), custody: z.literal("none"), moneyMovement: z.literal("NOT_ENABLED") }),
   disclaimer: z.array(z.string()),
   ...provenance,
 });
 export type TaxReserveResponse = z.infer<typeof TaxReserveResponse>;
 
+/** One-per-user USD amount in USDC with at most 2 decimals. Exact digits only: no NaN, Infinity, exponent, sign, separators or unicode digits. */
+const reserveAmount = z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, "USD amount with at most 2 decimals").refine((s) => parseUsdToCents(s) !== null, "must be above 0");
+
+/**
+ * Saves the reserve TARGET configuration. `confirmed: true` is required: the UI asks for explicit confirmation and the API
+ * refuses a save that did not get one. The source is always USER_SET here (a client cannot claim SYSTEM_RECOMMENDED).
+ */
 export const SetTaxReserveTargetRequest = z.discriminatedUnion("targetType", [
   z.strictObject({
     targetType: z.literal("percentage"),
@@ -548,11 +592,15 @@ export const SetTaxReserveTargetRequest = z.discriminatedUnion("targetType", [
       try { const b = percentToBps(s); return b > 0 && b <= 10_000; } catch { return false; }
     }, "must be a percent above 0 and at most 100 with at most 2 decimals"),
     currency: z.literal("USDC").default("USDC"),
+    enabled: z.boolean().default(true),
+    confirmed: z.literal(true, { error: "explicit confirmation is required" }),
   }),
   z.strictObject({
     targetType: z.literal("amount"),
-    targetAmount: z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, "USD amount with at most 2 decimals").refine((s) => Number(s) > 0, "must be above 0"),
+    targetAmount: reserveAmount,
     currency: z.literal("USDC").default("USDC"),
+    enabled: z.boolean().default(true),
+    confirmed: z.literal(true, { error: "explicit confirmation is required" }),
   }),
 ]);
 export type SetTaxReserveTargetRequest = z.infer<typeof SetTaxReserveTargetRequest>;
