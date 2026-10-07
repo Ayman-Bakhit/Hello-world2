@@ -40,9 +40,14 @@ describe("deployment readiness view", () => {
   });
   it("lists the decision records with status, version, provenance and what is missing", () => {
     const o = out(); const t = text(o);
-    expect(t).toContain("8 DECIDED"); expect(t).toContain("9 PENDING");
+    expect(t).toContain("9 DECIDED"); expect(t).toContain("12 PENDING"); expect(t).toContain("21 WITHOUT PRODUCT APPROVAL");
     for (const d of decisions.decisions) expect(o).toContain(`data-decision="${d.id}" data-status="${d.status}"`);
     expect(t).toContain("Missing:"); expect(t).toMatch(/changing it invalidates readiness: yes/);
+    expect(t).toContain("approver: none recorded"); expect(t).toContain("approved at: not approved"); expect(t).toContain("Depends on:"); expect(t).toContain("Must be pinned down:"); expect(t).toContain("BLOCKING");
+    expect(o).toContain('data-decision="FEE_ROUTING_MECHANISM" data-status="PENDING" data-approval="PENDING_PRODUCT_APPROVAL" data-blocking="yes"');
+    expect(t).toContain("Nothing on this page can approve a decision");
+    for (const m of decisions.milestones) expect(o).toContain(`data-milestone="${m.id}" data-unblocked="no"`);
+    expect(t).toContain("WHAT EACH DECISION BLOCKS");
   });
   it("has no control that can sign, send, approve or enable execution: one disabled button, no forms", () => {
     const o = out(); const b = o.match(/<button[^>]*>[^<]*<\/button>/g) ?? [];
@@ -71,7 +76,7 @@ describe("client: readiness, decisions, attempts", () => {
     const f = vi.fn(); const mc = createApiClient({ mode: "mock", fetchImpl: f as unknown as typeof fetch });
     const d = ExecutionReadinessResponse.parse(await mc.getExecutionReadiness(DEMO_IDS.launch));
     expect(d.readiness).toMatchObject({ overall: "BLOCKED", executionPermitted: false }); expect(d.dataSource).toBe("demo");
-    expect(DeploymentDecisionSummary.parse(await mc.getDeploymentDecisionSummary(DEMO_IDS.launch)).counts).toEqual({ decided: 8, pending: 9 });
+    expect(DeploymentDecisionSummary.parse(await mc.getDeploymentDecisionSummary(DEMO_IDS.launch)).counts).toEqual({ decided: 9, pending: 12, unapproved: 21 });
     expect(DeploymentAttemptList.parse(await mc.getDeploymentAttempts(DEMO_IDS.launch)).attempts).toEqual([]);
     await expect(mc.getExecutionReadiness(crypto.randomUUID())).rejects.toMatchObject({ status: 404 });
     expect(f).not.toHaveBeenCalled();

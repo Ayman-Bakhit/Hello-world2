@@ -78,3 +78,11 @@ Out of scope for v0: nation-state attackers, compromised user device.
 | 58 | Rendering untrusted strings (charity/token text from the API) | React escapes all text; no `dangerouslySetInnerHTML`; links limited to fixed IRS URLs and wallet install pages | Done; strict CSP still pending (Slice 11) |
 | 59 | Client-side ranking manipulation | Discover sorts/filters only via API parameters; client never re-orders; ranking rule shown from the API | Done |
 | 60 | A real wallet cannot use reserve target / donations | Known limitation: those endpoints are demo-only for now (NO_LIVE_DATA), so real users see empty states | Accepted until real data exists |
+
+## Product decisions and deployment readiness (Slices 14 to the product decision record)
+- **Threat: a decision treated as a fact.** An engineering default shown as approved, or an approved decision shown as implemented. Mitigation: separate decision status, approval and implementation; approval needs a named approver, date, reference and version; readiness blocks on all three independently; fixtures cannot supply a real value.
+- **Threat: a client approves or edits a decision.** Mitigation: no write route; query flags ignored; approval lives in code under review.
+- **Threat: silent economics.** An undefined supply remainder, fee scope or protocol destination quietly filled in. Mitigation: each is an explicit PENDING decision with what is required; the allocation validator requires exactly 10000 bps; no remainder is allowed.
+- **Threat: claiming enforcement.** The fee split described as enforced or verifiable without a mechanism. Mitigation: `FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED` blocks, wording lint, and the option analysis in docs/PRODUCT_DECISIONS.md.
+- **Threat: protocol or charity custody creep.** Mitigation: the protocol destination and charity governance are pending decisions with custody questions listed; nothing routes or holds funds.
+- Canonical record: docs/PRODUCT_DECISIONS.md.

@@ -18,3 +18,6 @@ Token program decision: SPL Token (classic); Token-2022 not implemented. Metadat
 
 ## Slice 14
 No program is deployed and no program id is invented. Token program: SPL Token (decided). Fee routing and liquidity remain undecided; if either needs a custom program, `SMART_CONTRACT_REVIEW` applies and is PENDING. See docs/DEPLOYMENT_DECISIONS.md.
+
+## Product decision record
+Whether a custom on-chain program is needed depends on two undecided items: the fee routing mechanism and the liquidity venue. The options, what each can and cannot enforce, and the order in which to decide them are in docs/PRODUCT_DECISIONS.md (section 3). No program is chosen, written or deployed, and the smart-contract review stays PENDING.

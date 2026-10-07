@@ -16,7 +16,12 @@ import { base58Encode } from "./deployment";
 
 /** TEST-ONLY: every decision filled with an obviously fake value so the machinery can be exercised end to end. Never used outside tests. */
 const TEST_REVIEW = { evidenceRef: "TEST-ONLY-NOT-A-REAL-REVIEW", completedOn: "2000-01-01" };
-const FULL: DeploymentPolicy = withDecisions(DEPLOYMENT_POLICY, {
+/** TEST-ONLY: records an approval for every decided item (a fake approver and reference), at the item's current version. */
+const approveAll = (p: DeploymentPolicy): DeploymentPolicy => ({ version: p.version, decisions: p.decisions.map((d) => (d.status === "DECIDED" ? { ...d, approval: { status: "APPROVED" as const, approver: "TEST-ONLY", approvedAt: "2000-01-01", reference: "TEST-ONLY", approvedVersion: d.version } } : d)) });
+const FULL: DeploymentPolicy = approveAll(withDecisions(DEPLOYMENT_POLICY, {
+  ALLOCATION_LOCKS_AND_VESTING: { status: "DECIDED", value: { creator: "TRANSFERABLE_NOW", locks: "NONE" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
+  CHARITY_VERIFICATION_GOVERNANCE: { status: "DECIDED", value: { verifier: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
+  TAX_RESERVE_FUNDING: { status: "DECIDED", value: { asset: "TEST_ONLY", funding: "DESIGNATED_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   METADATA_HOSTING: { status: "DECIDED", value: { uri: "https://example.invalid/test.json", contentAddressed: false }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   SUPPLY_ALLOCATION_MODEL: { status: "DECIDED", value: { version: 1, charityBps: 1000, taxReserveBps: 1000, protocolBps: 1200, burnBps: 2000 } satisfies SupplyAllocationModel, missing: null, provenance: "ENGINEERING_DEFAULT" },
   FEE_SPLIT_SCOPE: { status: "DECIDED", value: { stream: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
@@ -26,7 +31,7 @@ const FULL: DeploymentPolicy = withDecisions(DEPLOYMENT_POLICY, {
   SECURITY_REVIEW: { status: "DECIDED", value: TEST_REVIEW, missing: null, provenance: "ENGINEERING_DEFAULT" },
   SMART_CONTRACT_REVIEW: { status: "DECIDED", value: TEST_REVIEW, missing: null, provenance: "ENGINEERING_DEFAULT" },
   LEGAL_REVIEW: { status: "DECIDED", value: TEST_REVIEW, missing: null, provenance: "ENGINEERING_DEFAULT" },
-});
+}));
 const ps = { recorded: true, supersededPlans: 0 };
 const base = (over: Partial<ReadinessInput> = {}): ReadinessInput => ({ launch: fixtureReadyLaunch(), charity: FIXTURE_CHARITY, planState: ps, ...over });
 const gateOf = (r: ReturnType<typeof evaluateExecutionReadiness>, id: GateId) => r.gates.find((g) => g.id === id)!;
@@ -42,10 +47,10 @@ describe("the policy in force", () => {
     }
   });
   it("decided: token program, mint key, fee/compute, metadata format, fee split, charity model, tax reserve model, environments", () => {
-    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "DECIDED").map((d) => d.id).sort()).toEqual(["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_SPLIT", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"]);
+    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "DECIDED").map((d) => d.id).sort()).toEqual(["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_SPLIT", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "SUPPLY_SEMANTICS", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"]);
   });
   it("pending (never guessed): metadata hosting, supply allocation, fee scope, fee routing, protocol destination, liquidity, and all three reviews", () => {
-    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "PENDING").map((d) => d.id).sort()).toEqual(["FEE_ROUTING_MECHANISM", "FEE_SPLIT_SCOPE", "LEGAL_REVIEW", "LIQUIDITY_STRATEGY", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "SUPPLY_ALLOCATION_MODEL"]);
+    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "PENDING").map((d) => d.id).sort()).toEqual(["ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "FEE_ROUTING_MECHANISM", "FEE_SPLIT_SCOPE", "LEGAL_REVIEW", "LIQUIDITY_STRATEGY", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "SUPPLY_ALLOCATION_MODEL", "TAX_RESERVE_FUNDING"]);
     for (const r of ["SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "LEGAL_REVIEW"] as const) expect(decisionOf(DEPLOYMENT_POLICY, r).status).toBe("PENDING"); // no audit or legal approval is claimed
   });
   it("the decided token program is classic SPL Token and records why Token-2022 is not used", () => {
@@ -112,7 +117,7 @@ describe("execution readiness: invariants", () => {
     expect(gateOf(r, "ALLOCATIONS_SUM_10000_BPS").status).toBe("PASS");
   });
   it("making any one required decision PENDING again blocks readiness (one at a time)", () => {
-    const required: DecisionId[] = ["TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW", "LEGAL_REVIEW"];
+    const required: DecisionId[] = ["TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW", "LEGAL_REVIEW"];
     for (const id of required) {
       const p = withDecisions(FULL, { [id]: { status: "PENDING", value: null, provenance: "NONE", missing: "x" } });
       const r = evaluateExecutionReadiness(base({ policy: p }));
@@ -213,7 +218,7 @@ describe("execution readiness: invariants", () => {
   it("the decision summary reports counts and which decisions block this launch", () => {
     const l = base().launch; const r = evaluateExecutionReadiness(base());
     const s = DeploymentDecisionSummary.parse(buildDecisionSummary(l, r));
-    expect(s.counts).toEqual({ decided: 8, pending: 9 }); expect(s.execution.enabled).toBe(false);
+    expect(s.counts).toEqual({ decided: 9, pending: 12, unapproved: 21 }); expect(s.execution.enabled).toBe(false);
     expect(s.blockingForThisLaunch).toEqual(expect.arrayContaining(["SUPPLY_ALLOCATION_MODEL", "PROTOCOL_DESTINATION", "LIQUIDITY_STRATEGY", "FEE_ROUTING_MECHANISM", "METADATA_HOSTING", "LEGAL_REVIEW", "SECURITY_REVIEW"]));
   });
 });

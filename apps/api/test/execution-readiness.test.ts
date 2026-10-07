@@ -138,10 +138,34 @@ describe("decision summary", () => {
     const r = await call("GET", `/api/launches/${l.id}/deployment-decision-summary`, live.token);
     expect(r.statusCode).toBe(200); expect(r.headers["cache-control"]).toBe("no-store");
     const d = DeploymentDecisionSummary.parse(r.json());
-    expect(d.counts).toEqual({ decided: 8, pending: 9 }); expect(d.execution.enabled).toBe(false); expect(d.policyHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(d.counts).toEqual({ decided: 9, pending: 12, unapproved: 21 }); expect(d.execution.enabled).toBe(false); expect(d.policyHash).toMatch(/^[0-9a-f]{64}$/);
     expect(d.decisions.find((x) => x.id === "PROTOCOL_DESTINATION")).toMatchObject({ status: "PENDING", value: null });
     expect(d.decisions.find((x) => x.id === "TOKEN_PROGRAM")).toMatchObject({ status: "DECIDED", value: { name: "SPL_TOKEN" } });
     expect(d.blockingForThisLaunch).toEqual(expect.arrayContaining(["SUPPLY_ALLOCATION_MODEL", "PROTOCOL_DESTINATION", "LEGAL_REVIEW"]));
+    // Slice 15 (decisions): approval, dependencies, what is required, blocking, and the milestones
+    expect(d.decisions.every((x) => x.approval.status === "PENDING_PRODUCT_APPROVAL" && x.approval.approver === null && x.approval.approvedAt === null && x.blocking)).toBe(true);
+    expect(d.decisions.find((x) => x.id === "FEE_ROUTING_MECHANISM")).toMatchObject({ dependsOn: expect.arrayContaining(["FEE_SPLIT_SCOPE", "LIQUIDITY_STRATEGY"]), requires: expect.any(Array) });
+    expect(d.milestones.map((m) => m.id)).toEqual(["PLAN_EXECUTABLE", "SIGNING", "MINT_CREATION", "LIQUIDITY_CREATION", "FEE_ROUTING", "PROOF_VERIFIED", "MAINNET"]);
+    expect(d.milestones.every((m) => !m.unblocked)).toBe(true);
+  });
+  it("no client can approve or change a decision: no write route exists, flags on the query are ignored, and a decision is never taken from a request", async () => {
+    const l = await ready();
+    const a = await call("GET", `/api/launches/${l.id}/deployment-decision-summary`, live.token);
+    const b = await call("GET", `/api/launches/${l.id}/deployment-decision-summary?approved=true&status=APPROVED&approver=me&decided=true`, live.token);
+    expect(b.statusCode).toBe(200); expect(b.json()).toEqual(a.json());
+    for (const seg of ["deployment-decision-summary", "deployment-decisions", "decisions", "product-decisions", "approve", "approval", "approvals"]) {
+      for (const m of ["POST", "PUT", "PATCH", "DELETE"] as const) expect([404, 405], `${m} ${seg}`).toContain((await call(m, `/api/launches/${l.id}/${seg}`, live.token, { status: "APPROVED", approved: true, approver: "me", approvedAt: "2026-01-01" })).statusCode);
+    }
+    for (const p of ["/api/decisions", "/api/product-decisions", "/api/policy", "/api/deployment-policy"]) for (const m of ["GET", "POST", "PUT"] as const) expect([404, 405], `${m} ${p}`).toContain((await call(m, p, live.token, m === "GET" ? undefined : { approved: true })).statusCode);
+    const again = await call("GET", `/api/launches/${l.id}/deployment-decision-summary`, live.token);
+    expect(DeploymentDecisionSummary.parse(again.json()).counts.unapproved).toBe(21);
+  });
+  it("a decision record never carries an address, a URI, a signature or an observation (so none can reach the browser)", async () => {
+    const l = await ready();
+    const text = (await call("GET", `/api/launches/${l.id}/deployment-decision-summary`, live.token)).body;
+    const values = JSON.stringify(DeploymentDecisionSummary.parse(JSON.parse(text)).decisions.map((x) => x.value));
+    expect(values).not.toMatch(/https?:\/\//); expect(values).not.toMatch(/"(mintAddress|poolAddress|signature|transactionSignature|observed\w*|confirmation)"/i);
+    expect(values).not.toContain(live.address); expect(values).not.toContain(live.reserve);
   });
 });
 
@@ -270,6 +294,6 @@ describe("deployment attempts (foundation; privileged writers, tests only)", () 
   it("there is no column that could hold a private key, seed phrase or signature outside the always-empty array", async () => {
     const cols = (await ctx.pool.query("SELECT column_name FROM information_schema.columns WHERE table_name IN ('deployment_attempts','deployment_attempt_events','deployment_plans')")).rows.map((r) => r.column_name as string);
     expect(cols.filter((c) => /private|secret|seed|mnemonic|keypair/i.test(c))).toEqual([]);
-    expect(DEPLOYMENT_POLICY.decisions.length).toBe(17);
+    expect(DEPLOYMENT_POLICY.decisions.length).toBe(21);
   });
 });

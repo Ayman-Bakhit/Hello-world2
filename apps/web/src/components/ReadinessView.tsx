@@ -11,9 +11,9 @@ const GATE_TONE: Record<string, Tone> = { PASS: "good", BLOCKED: "bad", PENDING:
 const CATEGORY_LABEL: Record<string, string> = { PRODUCT: "PRODUCT DECISION", TECHNICAL: "TECHNICAL", SECURITY: "SECURITY", LEGAL: "LEGAL" };
 const GROUPS: Array<{ title: string; ids: string[] }> = [
   { title: "Launch and plan", ids: ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT"] },
-  { title: "Token and economics", ids: ["TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "METADATA_STRATEGY_DEFINED", "LIQUIDITY_STRATEGY_DEFINED"] },
-  { title: "Fees and destinations", ids: ["FEE_SPLIT_VALID", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "PROTOCOL_DESTINATION_VALID", "CHARITY_DESTINATIONS_VERIFIED", "TAX_RESERVE_DESTINATION_VALID"] },
-  { title: "Keys, costs and environment", ids: ["MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID"] },
+  { title: "Token and economics", ids: ["TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "ALLOCATION_LOCKS_DEFINED", "METADATA_STRATEGY_DEFINED", "LIQUIDITY_STRATEGY_DEFINED"] },
+  { title: "Fees and destinations", ids: ["FEE_SPLIT_VALID", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "PROTOCOL_DESTINATION_VALID", "CHARITY_DESTINATIONS_VERIFIED", "CHARITY_GOVERNANCE_DEFINED", "TAX_RESERVE_DESTINATION_VALID", "TAX_RESERVE_FUNDING_DEFINED"] },
+  { title: "Keys, costs, environment and approval", ids: ["MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID", "PRODUCT_APPROVAL_COMPLETE"] },
   { title: "Reviews and the execution gate", ids: ["SECURITY_REVIEW_COMPLETE", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE", "REAL_EXECUTION_ENABLED"] },
 ];
 
@@ -62,19 +62,38 @@ export function ReadinessView({ data, decisions }: { data: ExecutionReadinessRes
       ))}
 
       {decisions ? (
-        <section className="rounded-lg border border-line bg-surface" aria-label="Decisions">
-          <div className="border-b border-line px-4 py-3"><h2 className="eyebrow !text-muted">DECISION RECORDS · {decisions.counts.decided} DECIDED · {decisions.counts.pending} PENDING</h2></div>
-          <ul className="divide-y divide-line">
-            {decisions.decisions.map((d) => (
-              <li key={d.id} className="p-4 text-xs" data-decision={d.id} data-status={d.status}>
-                <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-medium">{d.title}</span><span className="flex gap-1.5"><Badge tone="neutral">{CATEGORY_LABEL[d.category] ?? d.category}</Badge><Badge tone={d.status === "DECIDED" ? "good" : "demo"}>{d.status}</Badge><Badge tone="neutral">v{d.version}</Badge></span></div>
-                <p className="mt-1 text-muted">{d.summary}</p>
-                {d.missing ? <p className="mt-1"><span className="font-semibold">Missing:</span> {d.missing}</p> : null}
-                <p className="mt-1 text-faint">Provenance: {d.provenance.replaceAll("_", " ")} · applies to {d.environments.join(", ")} · changing it invalidates readiness: {d.invalidatesReadiness ? "yes" : "no"}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <>
+          <section className="rounded-lg border border-line bg-surface" aria-label="Decisions">
+            <div className="border-b border-line px-4 py-3"><h2 className="eyebrow !text-muted">DECISION RECORDS · {decisions.counts.decided} DECIDED · {decisions.counts.pending} PENDING · {decisions.counts.unapproved} WITHOUT PRODUCT APPROVAL</h2></div>
+            <ul className="divide-y divide-line">
+              {decisions.decisions.map((d) => (
+                <li key={d.id} className="p-4 text-xs" data-decision={d.id} data-status={d.status} data-approval={d.approval.status} data-blocking={d.blocking ? "yes" : "no"}>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-medium">{d.title}</span><span className="flex flex-wrap gap-1.5"><Badge tone="neutral">{CATEGORY_LABEL[d.category] ?? d.category}</Badge><Badge tone={d.status === "DECIDED" ? "good" : "demo"}>{d.status}</Badge><Badge tone={d.approval.status === "APPROVED" ? "good" : d.approval.status === "REJECTED" ? "bad" : "demo"}>{d.approval.status.replaceAll("_", " ")}</Badge><Badge tone="neutral">v{d.version}</Badge>{d.blocking ? <Badge tone="bad">BLOCKING</Badge> : <Badge tone="good">NOT BLOCKING</Badge>}</span></div>
+                  <p className="mt-1 text-muted">{d.summary}</p>
+                  <p className="mt-1"><span className="font-semibold">Value:</span> {d.value ? <code className="num break-all">{JSON.stringify(d.value)}</code> : <span className="text-faint">none: not decided</span>}</p>
+                  {d.missing ? <p className="mt-1"><span className="font-semibold">Missing:</span> {d.missing}</p> : null}
+                  {d.requires.length > 0 ? <ul className="mt-1 list-disc pl-5"><li className="list-none -ml-5 font-semibold">Must be pinned down:</li>{d.requires.map((r) => <li key={r}>{r}</li>)}</ul> : null}
+                  <p className="mt-1 text-faint">Source: {d.provenance.replaceAll("_", " ")} · approver: {d.approval.approver ?? "none recorded"} · approved at: {d.approval.approvedAt ?? "not approved"}{d.approval.reference ? ` · reference: ${d.approval.reference}` : ""}</p>
+                  <p className="mt-1 text-faint">Depends on: {d.dependsOn.length ? d.dependsOn.join(", ") : "nothing"} · applies to {d.environments.join(", ")} · changing it invalidates readiness: {d.invalidatesReadiness ? "yes" : "no"}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="border-t border-line px-4 py-3 text-xs text-faint">Approval is recorded only by a reviewed change in the codebase. Nothing on this page can approve a decision, and an approval is not an on-chain implementation.</p>
+          </section>
+          <section className="rounded-lg border border-line bg-surface" aria-label="Milestones">
+            <div className="border-b border-line px-4 py-3"><h2 className="eyebrow !text-muted">WHAT EACH DECISION BLOCKS</h2></div>
+            <ul className="divide-y divide-line">
+              {decisions.milestones.map((m) => (
+                <li key={m.id} className="p-4 text-xs" data-milestone={m.id} data-unblocked={m.unblocked ? "yes" : "no"}>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-medium">{m.title}</span><Badge tone={m.unblocked ? "good" : "bad"}>{m.unblocked ? "DECISIONS SETTLED" : "BLOCKED"}</Badge></div>
+                  {m.blockedBy.length > 0 ? <p className="mt-1">Waiting on decisions: {m.blockedBy.join(", ")}</p> : null}
+                  {m.blockedByMilestones.length > 0 ? <p className="mt-1">Waiting on earlier milestones: {m.blockedByMilestones.join(", ")}</p> : null}
+                  <p className="mt-1 text-faint">Also needs engineering: {m.engineeringPrerequisites.join("; ")}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
       ) : null}
 
       <section className="rounded-lg border border-line bg-surface p-4 text-xs text-muted" aria-label="Disclosure">

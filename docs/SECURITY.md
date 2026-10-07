@@ -191,3 +191,9 @@ No idle timeout or sliding refresh; no "list/revoke my sessions" or revoke-all; 
 - **Honesty**: the fee split is never called enforced; the three reviews are PENDING and a review needs an evidence reference and date; PASS never comes from a flag.
 - Mutation checks (by hand, then reverted): pending decision treated as pass, execution gate passing, overall always EXECUTION_DISABLED, attempt states all recordable, secret-key shape check removed, allocation sum check removed, fee routing always enforceable, policy hash dropped from the plan hash, non-canonical split accepted (initially survived; a test was added), stale plan ignored, unverified charity accepted, mainnet review gate removed, config accepting REAL_EXECUTION_ENABLED=true. All caught.
 - Residual: engineering defaults await product approval; nothing is verified against a real network.
+
+## Product decisions (canonical record: docs/PRODUCT_DECISIONS.md)
+- **No client can approve a decision.** Approval is a field of the policy in code (approver, date, reference, version), changed only by a reviewed code change; no route accepts or applies one (probed on every write method) and query flags are ignored. An approval applies to one version, so changing a decision invalidates it, and the policy hash (and so the plan hash) changes.
+- **Pending stays blocking; approval is not implementation.** `PRODUCT_APPROVAL_COMPLETE` blocks while any decided item lacks approval; an approved fee routing or liquidity decision still blocks until its mechanism exists.
+- **Decision records cannot carry chain facts**: a test scans every decision value for addresses (other than public program ids), URIs, signatures, pools, mints and observations. A document-sync test fails if docs/PRODUCT_DECISIONS.md disagrees with the code (status, approval, dependencies, blocked milestones).
+- Mutation audit of the decision logic is recorded in docs/TESTING.md.

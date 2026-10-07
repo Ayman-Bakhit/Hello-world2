@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { Launch } from "./api/schemas";
 import { buildDeploymentPlan, factsFromPolicy, type PlanCharity } from "./deployment";
 import {
-  DEPLOYMENT_POLICY, EXECUTION_DISABLED_MESSAGE, REAL_EXECUTION_ENABLED, decisionOf, environmentFor, isCompleteReview, resolveSupplyAllocation, type Decision, type DecisionCategory,
+  DECISION_IDS, DEPLOYMENT_POLICY, EXECUTION_DISABLED_MESSAGE, MILESTONES, isApproved, milestoneStatus, REAL_EXECUTION_ENABLED, decisionOf, environmentFor, isCompleteReview, resolveSupplyAllocation, type Decision, type DecisionCategory,
   type DecisionId, type DeploymentPolicy, type SupplyAllocationModel,
 } from "./deploymentPolicy";
 import { CANONICAL_FEE_SPLIT, FEE_BUCKETS, TOTAL_BPS, validateFeeSplit } from "./feesplit";
@@ -17,9 +17,10 @@ import { launchFingerprint } from "./launchModel";
 import { isValidSolanaAddress } from "./solanaAddress";
 
 export const GATE_IDS = [
-  "LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS",
-  "METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "CHARITY_DESTINATIONS_VERIFIED", "TAX_RESERVE_DESTINATION_VALID", "LIQUIDITY_STRATEGY_DEFINED", "FEE_SPLIT_VALID",
-  "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID",
+  "LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "ALLOCATION_LOCKS_DEFINED",
+  "METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "CHARITY_DESTINATIONS_VERIFIED", "CHARITY_GOVERNANCE_DEFINED", "TAX_RESERVE_DESTINATION_VALID", "TAX_RESERVE_FUNDING_DEFINED",
+  "LIQUIDITY_STRATEGY_DEFINED", "FEE_SPLIT_VALID",
+  "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID", "PRODUCT_APPROVAL_COMPLETE",
   "SECURITY_REVIEW_COMPLETE", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE", "REAL_EXECUTION_ENABLED",
 ] as const;
 export type GateId = (typeof GATE_IDS)[number];
@@ -97,6 +98,8 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
       : gate("ALLOCATIONS_SUM_10000_BPS", "Allocations sum to 10000 bps", "PRODUCT", "BLOCKED", r.errors.join("; "), "supply allocation model + launch configuration", "Correct the allocation model.", "SUPPLY_ALLOCATION_MODEL"));
   }
 
+  g.push(viaDecision(policy, "ALLOCATION_LOCKS_AND_VESTING", "ALLOCATION_LOCKS_DEFINED", "Locks, vesting and burns defined", () => ({ ok: true, reason: "Transferability, locks, vesting and burns are decided for every supply share." })));
+
   const doc = decisionOf(policy, "METADATA_DOCUMENT"), host = decisionOf(policy, "METADATA_HOSTING");
   g.push(doc.status === "DECIDED" && host.status === "DECIDED"
     ? gate("METADATA_STRATEGY_DEFINED", "Metadata strategy defined", "PRODUCT", "PASS", "The metadata document format and its hosting are decided.", "decisions METADATA_DOCUMENT, METADATA_HOSTING")
@@ -116,12 +119,15 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
     : cw === null ? gate("CHARITY_DESTINATIONS_VERIFIED", "Charity destination verified", "PRODUCT", "BLOCKED", "The registry does not have exactly one verified, well-formed payout wallet for this charity.", "charity registry", "Resolve exactly one verified payout wallet for the charity.", "CHARITY_PAYOUT_MODEL")
     : gate("CHARITY_DESTINATIONS_VERIFIED", "Charity destination verified", "PRODUCT", "PASS", "The charity is VERIFIED and has exactly one verified payout wallet, which is part of the plan.", "charity registry", null, "CHARITY_PAYOUT_MODEL"));
 
+  g.push(viaDecision(policy, "CHARITY_VERIFICATION_GOVERNANCE", "CHARITY_GOVERNANCE_DEFINED", "Charity verification governance defined", () => ({ ok: true, reason: "Who verifies charities, with what evidence, and the wallet-change and suspension rules are decided." })));
+
   const tr = decisionOf(policy, "TAX_RESERVE_MODEL");
   g.push(tr.status !== "DECIDED" ? gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "PENDING", tr.summary, "decision TAX_RESERVE_MODEL: PENDING", tr.missing, "TAX_RESERVE_MODEL")
     : isValidSolanaAddress(c.taxReserveConfiguration.destinationAddress)
       ? gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "PASS", "A valid creator-controlled address is configured. It is separate from the personal Tax Reserve.", "launch configuration", null, "TAX_RESERVE_MODEL")
       : gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "BLOCKED", "The configured destination is not a valid Solana address.", "launch configuration", "Configure a valid address.", "TAX_RESERVE_MODEL"));
 
+  g.push(viaDecision(policy, "TAX_RESERVE_FUNDING", "TAX_RESERVE_FUNDING_DEFINED", "Launch tax reserve funding defined", () => ({ ok: true, reason: "The asset and whether the allocation is funded or only designated are decided." })));
   g.push(viaDecision(policy, "LIQUIDITY_STRATEGY", "LIQUIDITY_STRATEGY_DEFINED", "Liquidity strategy defined", (d) => {
     const v = d.value as { builderImplemented?: unknown };
     return { ok: v.builderImplemented === true, reason: v.builderImplemented === true ? "A liquidity venue is selected and its builder is implemented." : "LIQUIDITY_BUILD_NOT_IMPLEMENTED: a venue is named but no instruction builder exists.", required: "Implement the selected venue's instruction builder." };
@@ -151,6 +157,11 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
     : !env || !env.launchAllowed ? gate("CLUSTER_VALID", "Cluster is valid for a launch", "SECURITY", "BLOCKED", `The cluster "${c.network}" cannot host a launch.`, "decision ENVIRONMENT_POLICY", "Use devnet or mainnet-beta.", "ENVIRONMENT_POLICY")
     : c.network === "mainnet-beta" && !reviewsDone ? gate("CLUSTER_VALID", "Cluster is valid for a launch", "SECURITY", "BLOCKED", "mainnet-beta requires completed security, smart-contract and legal reviews. They are not complete.", "decision ENVIRONMENT_POLICY", "Complete the reviews, or use devnet.", "ENVIRONMENT_POLICY")
     : gate("CLUSTER_VALID", "Cluster is valid for a launch", "SECURITY", "PASS", `${c.network} is a separate cluster; a plan built for it is refused on any other.`, "decision ENVIRONMENT_POLICY", null, "ENVIRONMENT_POLICY"));
+
+  const unapproved = policy.decisions.filter((d) => d.status === "DECIDED" && !isApproved(d));
+  g.push(unapproved.length === 0
+    ? gate("PRODUCT_APPROVAL_COMPLETE", "Every decided item has product approval", "PRODUCT", "PASS", "Every decided item is approved by a named approver, with a date and a reference, at its current version.", "decision approvals")
+    : gate("PRODUCT_APPROVAL_COMPLETE", "Every decided item has product approval", "PRODUCT", "PENDING", `${unapproved.length} decided item${unapproved.length === 1 ? " is" : "s are"} an engineering default or proposal without product approval: ${unapproved.map((d) => d.id).join(", ")}. A default is not a product decision, and approval is not on-chain implementation.`, "decision approvals", "The product owner records an approver, date and reference for each, or rejects it."));
 
   const review = (id: DecisionId, gid: GateId, title: string, applicable: boolean): ReadinessGate => {
     const d = decisionOf(policy, id);
@@ -195,13 +206,18 @@ export const ExecutionReadinessResponse = z.object({
 });
 export type ExecutionReadinessResponse = z.infer<typeof ExecutionReadinessResponse>;
 const DecisionSchema = z.object({
-  id: z.enum(["TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "LEGAL_REVIEW"]),
+  id: z.enum(DECISION_IDS),
   title: z.string(), category: z.enum(["PRODUCT", "TECHNICAL", "SECURITY", "LEGAL"]), status: z.enum(["DECIDED", "PENDING"]), value: z.record(z.string(), z.unknown()).nullable(),
   version: z.number().int(), provenance: z.enum(["EXISTING_CONFIGURATION", "ENGINEERING_DEFAULT", "NONE"]), environments: z.array(z.string()), invalidatesReadiness: z.boolean(), summary: z.string(), missing: z.string().nullable(),
+  approval: z.object({ status: z.enum(["APPROVED", "PENDING_PRODUCT_APPROVAL", "REJECTED"]), approver: z.string().nullable(), approvedAt: z.string().nullable(), reference: z.string().nullable(), approvedVersion: z.number().int().nullable() }),
+  dependsOn: z.array(z.string()), requires: z.array(z.string()),
+  /** true while the decision is pending, unapproved, or approved for an older version */
+  blocking: z.boolean(),
 });
+const MilestoneSchema = z.object({ id: z.string(), title: z.string(), after: z.array(z.string()), decisions: z.array(z.string()), blockedBy: z.array(z.string()), blockedByMilestones: z.array(z.string()), engineeringPrerequisites: z.array(z.string()), unblocked: z.boolean() });
 export const DeploymentDecisionSummary = z.object({
   launchId: z.string().uuid(), policyVersion: z.number().int(), policyHash: z.string(), decisions: z.array(DecisionSchema),
-  counts: z.object({ decided: z.number().int(), pending: z.number().int() }), blockingForThisLaunch: z.array(z.string()),
+  counts: z.object({ decided: z.number().int(), pending: z.number().int(), unapproved: z.number().int() }), blockingForThisLaunch: z.array(z.string()), milestones: z.array(MilestoneSchema),
   execution: z.object({ enabled: z.literal(false) }), dataSource: z.enum(["demo", "database", "chain"]),
 });
 export type DeploymentDecisionSummary = z.infer<typeof DeploymentDecisionSummary>;
@@ -209,8 +225,9 @@ export type DeploymentDecisionSummary = z.infer<typeof DeploymentDecisionSummary
 export function buildDecisionSummary(launch: Launch, readiness: ExecutionReadiness, policy: DeploymentPolicy = DEPLOYMENT_POLICY): DeploymentDecisionSummary {
   const blocked = new Set(readiness.gates.filter((x) => x.blocking && x.decisionId).map((x) => x.decisionId as string));
   return DeploymentDecisionSummary.parse({
-    launchId: launch.id, policyVersion: policy.version, policyHash: policyHashOf(policy), decisions: policy.decisions,
-    counts: { decided: policy.decisions.filter((d) => d.status === "DECIDED").length, pending: policy.decisions.filter((d) => d.status === "PENDING").length },
+    launchId: launch.id, policyVersion: policy.version, policyHash: policyHashOf(policy), decisions: policy.decisions.map((d) => ({ ...d, blocking: !isApproved(d) })),
+    counts: { decided: policy.decisions.filter((d) => d.status === "DECIDED").length, pending: policy.decisions.filter((d) => d.status === "PENDING").length, unapproved: policy.decisions.filter((d) => !isApproved(d)).length },
+    milestones: MILESTONES.map((m) => { const st = milestoneStatus(policy, m.id); return { id: m.id, title: m.title, after: m.after, decisions: m.decisions, blockedBy: st.blockedByDecisions, blockedByMilestones: st.blockedByMilestones, engineeringPrerequisites: m.engineering, unblocked: st.unblocked }; }),
     blockingForThisLaunch: policy.decisions.filter((d) => blocked.has(d.id)).map((d) => d.id), execution: { enabled: false }, dataSource: launch.dataSource,
   });
 }

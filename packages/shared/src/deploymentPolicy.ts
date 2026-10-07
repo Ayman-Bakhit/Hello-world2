@@ -55,6 +55,7 @@ export function assertPlanCluster(plan: { environment: { cluster: string } }, ex
 
 // ---------- decision records ----------
 export const DECISION_IDS = [
+  "SUPPLY_SEMANTICS", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING",
   "TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "FEE_SPLIT", "FEE_SPLIT_SCOPE",
   "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY",
   "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "LEGAL_REVIEW",
@@ -63,7 +64,19 @@ export type DecisionId = (typeof DECISION_IDS)[number];
 export type DecisionStatus = "DECIDED" | "PENDING";
 export type DecisionCategory = "PRODUCT" | "TECHNICAL" | "SECURITY" | "LEGAL";
 export type Provenance = "EXISTING_CONFIGURATION" | "ENGINEERING_DEFAULT" | "NONE";
+/**
+ * Product approval is separate from a decision's value. An engineering default is a proposal until a named approver records it, and
+ * an approval applies to ONE version of ONE decision (changing the decision invalidates it). There is no API that can set one: an
+ * approval is a reviewed code change carrying the approver, the date and a reference. Approval is not on-chain implementation.
+ */
+export type ApprovalStatus = "APPROVED" | "PENDING_PRODUCT_APPROVAL" | "REJECTED";
+export interface Approval { status: ApprovalStatus; approver: string | null; approvedAt: string | null; reference: string | null; approvedVersion: number | null }
 export interface Decision {
+  approval: Approval;
+  /** decisions that must be settled first, because they change what this one can mean */
+  dependsOn: readonly DecisionId[];
+  /** the exact items a decision must pin down (shown while PENDING) */
+  requires: readonly string[];
   id: DecisionId; title: string; category: DecisionCategory; status: DecisionStatus;
   /** the decided value; null while PENDING */
   value: Record<string, unknown> | null;
@@ -77,6 +90,13 @@ export interface Decision {
   missing: string | null;
 }
 export interface DeploymentPolicy { version: number; decisions: readonly Decision[] }
+type DecisionBase = Omit<Decision, "approval" | "dependsOn" | "requires">;
+
+/** A decision counts as approved only with a named approver, a date, a reference, and the SAME version that was approved. */
+export function isApproved(d: Decision): boolean {
+  const a = d.approval;
+  return d.status === "DECIDED" && a.status === "APPROVED" && !!a.approver?.trim() && !!a.reference?.trim() && /^\d{4}-\d{2}-\d{2}$/.test(a.approvedAt ?? "") && a.approvedVersion === d.version;
+}
 
 export function decisionOf(p: DeploymentPolicy, id: DecisionId): Decision {
   const d = p.decisions.find((x) => x.id === id);
@@ -121,12 +141,48 @@ export function isCompleteReview(v: Record<string, unknown> | null): boolean {
 
 // ---------- the policy in force ----------
 const ALL: readonly Cluster[] = ["devnet", "mainnet-beta"];
-const pending = (id: DecisionId, title: string, category: DecisionCategory, summary: string, missing: string): Decision =>
+const pending = (id: DecisionId, title: string, category: DecisionCategory, summary: string, missing: string): DecisionBase =>
   ({ id, title, category, status: "PENDING", value: null, version: 1, provenance: "NONE", environments: ALL, invalidatesReadiness: true, summary, missing });
 
+const NO_APPROVAL: Approval = { status: "PENDING_PRODUCT_APPROVAL", approver: null, approvedAt: null, reference: null, approvedVersion: null };
+/** Dependencies and the exact items each decision must pin down. docs/PRODUCT_DECISIONS.md explains each. */
+const ANNOTATIONS: Record<DecisionId, { dependsOn: DecisionId[]; requires: string[] }> = {
+  SUPPLY_SEMANTICS: { dependsOn: [], requires: [] },
+  SUPPLY_ALLOCATION_MODEL: { dependsOn: ["SUPPLY_SEMANTICS", "FEE_SPLIT_SCOPE"], requires: ["whether charity, tax reserve and protocol receive any token supply at all", "basis points for each role summing with creator and liquidity to 10000", "who controls each destination", "whether any share is intentionally burned"] },
+  ALLOCATION_LOCKS_AND_VESTING: { dependsOn: ["SUPPLY_ALLOCATION_MODEL"], requires: ["whether the creator share is immediately transferable", "any lock, vesting or burn per role, with duration and who can release it", "how a lock would be observable for Token Proof"] },
+  FEE_SPLIT: { dependsOn: [], requires: [] },
+  FEE_SPLIT_SCOPE: { dependsOn: [], requires: ["the exact revenue or fee source being split", "when the split occurs and how often", "who pays it and who receives each share", "whether it applies to volume or to actual fees", "what happens if the venue cannot support the split"] },
+  FEE_ROUTING_MECHANISM: { dependsOn: ["FEE_SPLIT_SCOPE", "LIQUIDITY_STRATEGY", "TOKEN_PROGRAM"], requires: ["one selected mechanism (application routing, venue or router support, fee vault, or custom program)", "what it enforces and what it cannot", "custody and admin or upgrade authority", "user signing steps", "how the split is objectively verified on-chain"] },
+  PROTOCOL_DESTINATION: { dependsOn: ["FEE_ROUTING_MECHANISM", "SUPPLY_ALLOCATION_MODEL"], requires: ["destination type (treasury, operational revenue or program-controlled)", "the approved address, per cluster", "who controls it (multisig, single signer or program)", "whether and how it can change and who approves a change", "how users independently verify it"] },
+  CHARITY_PAYOUT_MODEL: { dependsOn: [], requires: [] },
+  CHARITY_VERIFICATION_GOVERNANCE: { dependsOn: ["CHARITY_PAYOUT_MODEL"], requires: ["who verifies a charity and who controls verification", "evidence required for a real (non-fixture) verification", "what happens when a payout wallet changes", "what happens when a charity is suspended after launch", "whether charity funds ever touch platform custody", "how payouts are independently verified"] },
+  TAX_RESERVE_MODEL: { dependsOn: [], requires: [] },
+  TAX_RESERVE_FUNDING: { dependsOn: ["TAX_RESERVE_MODEL", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM"], requires: ["the asset the allocation is paid in", "whether it is funded automatically or merely designated", "withdrawal rules and who can change the destination", "how it is verified and shown in Token Proof"] },
+  LIQUIDITY_STRATEGY: { dependsOn: ["SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING"], requires: ["the approved venue and pool type", "the pair and quote asset", "the initial amount model and who provides it", "who owns the LP position and whether it is locked, for how long, and who can unlock or remove it", "how ownership is observable and how Token Proof verifies it", "what happens if liquidity creation fails, and whether it shares a transaction group with minting"] },
+  METADATA_DOCUMENT: { dependsOn: [], requires: [] },
+  METADATA_HOSTING: { dependsOn: [], requires: ["hosting strategy and who operates it", "URI format", "whether content is immutable or content-addressed", "whether image assets are supported", "whether the server hosts anything", "whether and how creators can update metadata after launch", "whether an update changes proof status"] },
+  TOKEN_PROGRAM: { dependsOn: [], requires: [] },
+  MINT_KEY_STRATEGY: { dependsOn: ["TOKEN_PROGRAM"], requires: [] },
+  FEE_COMPUTE_POLICY: { dependsOn: [], requires: [] },
+  ENVIRONMENT_POLICY: { dependsOn: [], requires: [] },
+  SECURITY_REVIEW: { dependsOn: ["FEE_ROUTING_MECHANISM", "LIQUIDITY_STRATEGY", "MINT_KEY_STRATEGY"], requires: ["a completed independent review with an evidence reference and date"] },
+  SMART_CONTRACT_REVIEW: { dependsOn: ["FEE_ROUTING_MECHANISM", "LIQUIDITY_STRATEGY"], requires: ["a completed review of any custom program, with evidence and date (not applicable if none is chosen)"] },
+  LEGAL_REVIEW: { dependsOn: ["FEE_SPLIT_SCOPE", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING"], requires: ["a completed legal review with an evidence reference and date"] },
+};
+const annotate = (xs: DecisionBase[]): Decision[] => xs.map((d) => ({ ...d, approval: NO_APPROVAL, dependsOn: ANNOTATIONS[d.id].dependsOn, requires: ANNOTATIONS[d.id].requires }));
+
 export const DEPLOYMENT_POLICY: DeploymentPolicy = Object.freeze({
-  version: 1,
-  decisions: Object.freeze([
+  version: 2,
+  decisions: Object.freeze(annotate([
+    {
+      id: "SUPPLY_SEMANTICS", title: "What the initial supply represents", category: "PRODUCT", status: "DECIDED", version: 1, provenance: "ENGINEERING_DEFAULT", environments: ALL, invalidatesReadiness: true,
+      value: { supply: "FIXED_AT_LAUNCH_IN_BASE_UNITS", shares: "BASIS_POINTS_OF_TOTAL_SUPPLY", allocation: "EVERY_UNIT_ASSIGNED_TO_EXACTLY_ONE_ROLE", unassignedRemainder: "NOT_ALLOWED", burn: "EXPLICIT_ROLE", relationToFeeSplit: "NONE" },
+      missing: null,
+      summary: "Total supply is fixed at launch in base units. Allocation shares are basis points of that total and must sum to 10000, with every unit assigned to exactly one role; there is no silent remainder (a burned share is an explicit role). Initial token supply allocation is a different economic concept from the 60/15/15/10 fee split and neither is derived from the other.",
+    },
+    pending("ALLOCATION_LOCKS_AND_VESTING", "Locks, vesting and burns of supply shares", "PRODUCT", "Whether the creator share is immediately transferable and whether any share is locked, vested or burned.", "For each role: transferable now, locked or vested (duration and who releases it) or burned, and how a lock is observable. No lock or vesting mechanism exists in the product today."),
+    pending("CHARITY_VERIFICATION_GOVERNANCE", "Charity verification governance", "LEGAL", "Who verifies a charity, with what evidence, and what happens when a wallet changes or a charity is suspended after launch. Current verification is fixture or admin data only.", "The verifier and who controls verification, real evidence requirements, wallet-change and post-launch suspension rules, whether charity funds ever touch platform custody, and how payouts are independently verified."),
+    pending("TAX_RESERVE_FUNDING", "Launch tax reserve funding semantics", "PRODUCT", "Whether the launch tax reserve allocation is funded by a mechanism or is only a designated address, and in what asset.", "The asset, mechanism-funded versus designated-only, withdrawal rules, who may change the destination, and how it is verified and shown in Token Proof."),
     {
       id: "TOKEN_PROGRAM", title: "Token program", category: "TECHNICAL", status: "DECIDED", version: 1, provenance: "ENGINEERING_DEFAULT", environments: ALL, invalidatesReadiness: true,
       value: { name: "SPL_TOKEN", programId: TOKEN_PROGRAM, token2022: "NOT_USED" }, missing: null,
@@ -197,8 +253,36 @@ export const DEPLOYMENT_POLICY: DeploymentPolicy = Object.freeze({
     pending("SECURITY_REVIEW", "Security review", "SECURITY", "An independent security review of the signing and deployment path.", "A completed review with an evidence reference and completion date. None exists."),
     pending("SMART_CONTRACT_REVIEW", "Smart contract review", "SECURITY", "A review of any custom on-chain program the fee routing or liquidity design requires.", "A completed review with evidence, if a custom program is selected. No program exists."),
     pending("LEGAL_REVIEW", "Legal review", "LEGAL", "Legal review (money transmission, securities, charitable solicitation, tax reporting, sanctions).", "A completed review with an evidence reference and completion date. None exists; nothing here is legal approval."),
-  ] as Decision[]),
+  ] as DecisionBase[])),
 });
+
+// ---------- engineering milestones and what each depends on ----------
+export const MILESTONE_IDS = ["PLAN_EXECUTABLE", "SIGNING", "MINT_CREATION", "LIQUIDITY_CREATION", "FEE_ROUTING", "PROOF_VERIFIED", "MAINNET"] as const;
+export type MilestoneId = (typeof MILESTONE_IDS)[number];
+export interface Milestone { id: MilestoneId; title: string; decisions: readonly DecisionId[]; after: readonly MilestoneId[]; engineering: readonly string[] }
+const NON_REVIEW: DecisionId[] = DECISION_IDS.filter((d) => !["SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "LEGAL_REVIEW"].includes(d));
+export const MILESTONES: readonly Milestone[] = Object.freeze([
+  { id: "PLAN_EXECUTABLE", title: "A deployment plan can become executable", decisions: NON_REVIEW, after: [], engineering: ["instruction builders for every decided design", "a plan that has no BLOCKED instruction"] },
+  { id: "SIGNING", title: "Wallet signing can be implemented", decisions: ["TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW"], after: ["PLAN_EXECUTABLE"], engineering: ["serialization with a client-reported mint public key and a recent blockhash", "client signing UI", "REAL_EXECUTION_ENABLED review and a new migration widening attempt states"] },
+  { id: "MINT_CREATION", title: "Mint creation can be implemented", decisions: ["SUPPLY_SEMANTICS", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "METADATA_DOCUMENT", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL"], after: ["SIGNING"], engineering: ["submission, confirmation and reconciliation paths"] },
+  { id: "LIQUIDITY_CREATION", title: "Liquidity creation can be implemented", decisions: ["LIQUIDITY_STRATEGY", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "SMART_CONTRACT_REVIEW", "SECURITY_REVIEW"], after: ["MINT_CREATION"], engineering: ["the selected venue's instruction builder", "pool and LP observation"] },
+  { id: "FEE_ROUTING", title: "Fee routing can be implemented", decisions: ["FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_MODEL", "TAX_RESERVE_FUNDING", "SMART_CONTRACT_REVIEW", "SECURITY_REVIEW", "LEGAL_REVIEW"], after: ["LIQUIDITY_CREATION"], engineering: ["the selected mechanism", "on-chain observation of the routing"] },
+  { id: "PROOF_VERIFIED", title: "Token Proof can reach VERIFIED for a real token", decisions: ["LIQUIDITY_STRATEGY", "FEE_ROUTING_MECHANISM", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_FUNDING"], after: ["MINT_CREATION", "LIQUIDITY_CREATION", "FEE_ROUTING"], engineering: ["a privileged chain observer that records RPC observations", "fee-routing and liquidity observations"] },
+  { id: "MAINNET", title: "A mainnet launch can be permitted", decisions: [...DECISION_IDS], after: ["PROOF_VERIFIED"], engineering: ["independent audits and legal clearance recorded as evidence", "a release decision by the product owner"] },
+] as Milestone[]);
+
+/** Decisions a milestone still waits on: not DECIDED, or DECIDED but not approved at its current version. Reviews that do not apply are not exempted here. */
+export function milestoneBlockers(p: DeploymentPolicy, id: MilestoneId): DecisionId[] {
+  const m = MILESTONES.find((x) => x.id === id)!;
+  return m.decisions.filter((d) => !isApproved(decisionOf(p, d)));
+}
+/** A milestone is unblocked only when its own decisions are approved AND every milestone it comes after is unblocked. Decisions are necessary, never sufficient: engineering prerequisites remain. */
+export function milestoneStatus(p: DeploymentPolicy, id: MilestoneId): { blockedByDecisions: DecisionId[]; blockedByMilestones: MilestoneId[]; unblocked: boolean } {
+  const m = MILESTONES.find((x) => x.id === id)!;
+  const blockedByDecisions = milestoneBlockers(p, id);
+  const blockedByMilestones = m.after.filter((a) => !milestoneStatus(p, a).unblocked);
+  return { blockedByDecisions, blockedByMilestones, unblocked: blockedByDecisions.length === 0 && blockedByMilestones.length === 0 };
+}
 
 /** A copy of the policy with some decisions replaced (tests and what-if analysis). It never mutates the policy in force. */
 export function withDecisions(base: DeploymentPolicy, over: Partial<Record<DecisionId, Partial<Decision>>>): DeploymentPolicy {
