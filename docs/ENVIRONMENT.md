@@ -39,4 +39,10 @@ Optional dev-only session for the demo user (`AUTH_MODE=dev-insecure`): `curl -X
 
 Browser end-to-end check of the sign-in flow (starts nothing; needs API :4000 and web :3000 built with the api-mode env above):
 `pnpm --filter @project-name/web e2e:api` (alias `e2e:auth`). The database must also be seeded (`pnpm db:seed-demo`) so the demo charities exist.
+API e2e harness requirements (all four are needed; otherwise the run fails for reasons unrelated to the code):
+- `INDEXER_SYNC_ON_LOGIN=false` on the API, so the wallet has no indexed data after sign-in and the empty states can be asserted.
+- `INDEXER_MIN_SYNC_INTERVAL_SECONDS=2` on the API. The suite waits 2.5 s between syncs and also asserts the cooldown 429. This is a test-harness setting only, NOT a production recommendation; keep the default in real deployments.
+- A fresh `pn_e2e` database every run (drop, create, `pnpm db:migrate`, `pnpm db:seed-demo`). Leftover wallets and transactions break the "no data yet" checks.
+- A freshly started local fake RPC (`apps/api/scripts/fake-rpc-server.ts`, port 8899). It keeps state (the `new-tx` control endpoint adds a transaction), so a reused process breaks the "3 indexed, then 4" checks.
+Also raise `RATE_LIMIT_MAX`, `RATE_LIMIT_WRITE_MAX` and set `INDEXER_SYNC_RATE_LIMIT_MAX=100` (the maximum the config accepts). The fake RPC is local; no real Solana RPC or price provider is used.
 Mock-mode smoke (web built without the api env, any port): `E2E_WEB_URL=http://localhost:3112 pnpm --filter @project-name/web e2e:mock`
