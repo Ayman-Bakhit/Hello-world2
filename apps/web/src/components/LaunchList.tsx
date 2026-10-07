@@ -25,6 +25,7 @@ function Detail({ id }: { id: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" onClick={() => setShowHistory((v) => !v)}>{showHistory ? "HIDE HISTORY" : "HISTORY"}</Button>
         <Link className="text-xs text-accent underline underline-offset-2" href={`/launch/proof?id=${encodeURIComponent(id)}`}>TOKEN PROOF</Link>
+        <Link className="text-xs text-accent underline underline-offset-2" href={`/launch/deployment?id=${encodeURIComponent(id)}`}>DEPLOYMENT PLAN</Link>
       </div>
       {showHistory ? <ResourceView resource={hist} loadingLabel="Loading history">{(h) => <HistoryList history={h} />}</ResourceView> : null}
     </div>

@@ -6,7 +6,8 @@ import Fastify, { type FastifyInstance } from "fastify";
 import type { Config } from "./config";
 import type { Pool } from "./db/pool";
 import { csrfGuard } from "./auth/plugin";
-import { registerErrorHandling } from "./errors";
+import { ApiError, registerErrorHandling } from "./errors";
+import { findSecretFields } from "@project-name/shared";
 import { ObservationHistoricalPriceProvider, type HistoricalPriceProvider } from "./prices/historical";
 import { TaxGate } from "./services/taxGate";
 import { IndexerService, createIndexerParts, type IndexerParts } from "./indexer/service";
@@ -47,6 +48,11 @@ export async function buildApp(deps: { config: Config; pool: Pool; logStream?: {
   });
   await app.register(cookie);
   app.addHook("onRequest", csrfGuard(config));
+  // No endpoint ever accepts key material. Refused before validation or any handler; only property NAMES are inspected and never echoed or logged.
+  app.addHook("preValidation", async (req) => {
+    const found = [...findSecretFields(req.body), ...findSecretFields(req.query)];
+    if (found.length > 0) throw new ApiError(400, "SECRET_MATERIAL_REJECTED", "This API never accepts private keys, seed phrases or other key material. Remove it and never share it.");
+  });
   // In-memory limiter: fine for one process. Use a shared store (Redis) before running multiple instances.
   await app.register(rateLimit, { global: true, max: config.RATE_LIMIT_MAX, timeWindow: config.RATE_LIMIT_WINDOW });
 

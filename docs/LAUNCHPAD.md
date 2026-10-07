@@ -50,3 +50,6 @@ Real Solana RPC has not been validated from this environment; real historical pr
 
 ## Token proof (Slice 12)
 A READY launch has a read-only proof view (`GET /api/launches/:id/proof`, `GET /api/public/launches/:id/proof`). Without a deployment record it is NOT DEPLOYED; nothing in this repo records a deployment or an observation in production, so no real launch can be VERIFIED. The fingerprint stored at READY stays the anchor a deployment is compared against (`CONFIGURATION_FINGERPRINT_MATCH`). See docs/TOKEN_PROOF.md.
+
+## Deployment plan (Slice 13)
+A READY launch has an owner-only, read-only deployment PLAN and review (`docs/DEPLOYMENT_PLAN.md`). It is BLOCKED today: the supply allocation model, metadata URI, protocol destination, liquidity venue and fee routing are undecided and nothing is invented. BUILD and REVIEW exist; SIGN, SEND, CONFIRM, RECONCILE are not implemented. The plan hash derives from the configuration fingerprint, so editing a launch makes its earlier plan stale.

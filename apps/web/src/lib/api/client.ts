@@ -1,6 +1,6 @@
 import {
   CharityEvidenceResponse, CharityList, LaunchHistory, PublicLaunch, PublicLaunchList, buildDemoPublicLaunch, planLaunchAction, launchFingerprint, revisionRowHash, toPublicLaunch, STATUS_MEANING, type LaunchAction, type LaunchActionName, DEMO_CHARITIES, DonationDetail, DonationPlanResponse, Receipt, buildCharityEvidence, buildDonationDetail, buildDonationPlan, buildReceipt, parseUsdToCents, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
-  LaunchList, LaunchProof, PROOF_SCENARIOS, buildLaunchProof, buildProofFixture, DEMO_IDS as PROOF_DEMO_IDS, type ProofScenario, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
+  DeploymentPlanResponse, DeploymentReviewResponse, buildDeploymentPlan, buildDeploymentReview, buildDemoDeploymentPlan, LaunchList, LaunchProof, PROOF_SCENARIOS, buildLaunchProof, buildProofFixture, DEMO_IDS as PROOF_DEMO_IDS, type ProofScenario, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
   type CreateManualBasisRequest, type ReviseManualBasisRequest, type VoidManualBasisRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
   buildTax, buildTaxDetails, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
@@ -79,6 +79,20 @@ export function createApiClient(opts: ClientOptions = {}) {
     const createdAt = new Date().toISOString();
     const row = { seq: rows.length + 1, action, statusAfter: l.status, fingerprint: l.fingerprint, reason, createdAt, prevHash: prev, rowHash: revisionRowHash({ launchId: l.id, seq: rows.length + 1, action, statusAfter: l.status, fingerprint: l.fingerprint, createdBy: "demo", reason, prevHash: prev, createdAt }) };
     mockHistory.set(l.id, [...rows, row]);
+  };
+  /** Mock mode: the same pure builder the API uses, over the in-memory launch. Failures carry the API's status and code. */
+  const mockPlan = (id: string): DeploymentPlanResponse => {
+    if (id === PROOF_DEMO_IDS.launch) { const plan = buildDemoDeploymentPlan(); return { plan, review: buildDeploymentReview(plan), recorded: false, supersededPlans: 0 }; }
+    const l = need(mockLaunches.find((x) => x.id === id) ?? null, "Launch");
+    const c = mockCharity(l.config.charityConfiguration.charityId);
+    const r = buildDeploymentPlan({ launch: l, charity: c ? { id: c.id, verificationState: c.verificationState, walletAddress: null } : null });
+    if (!r.ok) {
+      const f: Record<string, string[]> = {};
+      for (const e of r.errors) (f[e.field] ??= []).push(`${e.code}: ${e.message}`);
+      const first = r.errors[0]!;
+      throw new ApiClientError(first.code === "LAUNCH_NOT_READY" || first.code === "STALE_REVIEW" ? 409 : 422, first.code, first.message, f);
+    }
+    return { plan: r.plan, review: buildDeploymentReview(r.plan), recorded: false, supersededPlans: 0 };
   };
   const mockProof = (l: Launch, audience: "owner" | "public"): LaunchProof => {
     const c = mockCharity(l.config.charityConfiguration.charityId);
@@ -196,6 +210,13 @@ export function createApiClient(opts: ClientOptions = {}) {
       const own = mockLaunches.filter((l) => l.status === "READY" && l.publicVisible).map((l) => toPublicLaunch(l, publicCharity(l)));
       const all = [...own, buildDemoPublicLaunch()];
       return { launches: all.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 25)), pagination: { limit: params.limit ?? 25, offset: params.offset ?? 0, total: all.length } };
+    },
+    /** Owner-only deployment PLAN (read-only; nothing is signed, sent or deployed). Mock mode builds it in memory; the demo launch serves a labeled fixture. */
+    getDeploymentPlan: async (id: string): Promise<DeploymentPlanResponse> => (mode === "api" ? http(DeploymentPlanResponse, `/api/launches/${encodeURIComponent(id)}/deployment-plan`) : mockPlan(id)),
+    getDeploymentReview: async (id: string): Promise<DeploymentReviewResponse> => {
+      if (mode === "api") return http(DeploymentReviewResponse, `/api/launches/${encodeURIComponent(id)}/deployment-review`);
+      const d = mockPlan(id);
+      return { review: d.review, planId: d.plan.identity.planId };
     },
     /** Owner-only token proof for a launch. Mock mode: a saved launch is never deployed, so its proof is always NOT DEPLOYED. */
     getLaunchProof: async (id: string): Promise<LaunchProof> => {
@@ -347,4 +368,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, updateLaunch, configureLaunch, reviewLaunch, readyLaunch, cancelLaunch, getLaunchHistory, getPublicLaunches, getPublicLaunch, getLaunchProof, getPublicLaunchProof, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, updateLaunch, configureLaunch, reviewLaunch, readyLaunch, cancelLaunch, getLaunchHistory, getPublicLaunches, getPublicLaunch, getLaunchProof, getPublicLaunchProof, getDeploymentPlan, getDeploymentReview, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

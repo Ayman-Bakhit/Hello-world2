@@ -11,7 +11,7 @@ const check = (name, ok, extra = "") => { results.push(ok); console.log(`${ok ? 
 const errors = [];
 
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
-const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/launches", "/launches/view?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801&scenario=SUPPLY_MISMATCH", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
+const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/launches", "/launches/view?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801&scenario=SUPPLY_MISMATCH", "/launch/deployment?id=00000000-0000-4000-8000-000000000801", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
 
 for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile", { width: 390, height: 844 }]]) {
   const ctx = await browser.newContext({ viewport: vp });
@@ -147,6 +147,11 @@ for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile",
   check(`${label} demo token proof: a supply mismatch shows VERIFICATION FAILED with configured vs observed values`, t.includes("VERIFICATION FAILED") && t.includes("1,000,000,000,000,000") && t.includes("1000000000000001"));
   const noScroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   check(`${label} token proof: no horizontal overflow`, noScroll);
+  await go("/launch/deployment?id=00000000-0000-4000-8000-000000000801");
+  await page.getByText("1 · TOKEN").first().waitFor({ timeout: 8000 });
+  t = await main();
+  check(`${label} demo deployment plan: PLAN BLOCKED, DEMO · FIXTURE, NOT DEPLOYED / NOT SIGNED / NO FUNDS MOVED, disabled execution, no deploy control`, ["PLAN BLOCKED", "DEMO · FIXTURE", "NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED", "EXECUTION NOT ENABLED IN THIS BETA", "DECISIONS REQUIRED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED", "9 · WHAT THE WALLET WILL NEED TO SIGN"].every((x) => t.includes(x)) && !/DEPLOY NOW|SIGN NOW|DEPLOYED SUCCESSFULLY|READY FOR USER REVIEW/.test(t) && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute/i }).count()) === 0, t.slice(0, 700));
+  check(`${label} deployment plan: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await ctx.close();
 }
 await browser.close();

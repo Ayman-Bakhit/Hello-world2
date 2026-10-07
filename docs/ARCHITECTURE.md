@@ -138,3 +138,9 @@ launch configuration (READY) + deployment record (none today) + observation hist
 - The frontend never decides verification; the server derives `verifiedOnChain` / `verifiedTransparency` from check state; no client field or endpoint can set them.
 - A FIXTURE observation can never pass `OBSERVATION_FROM_CHAIN`, so it can never yield VERIFIED. Observations are append-only and hash-chained (tamper-evident auditability, not a blockchain proof).
 - `TokenSummary` / `TokenProof` carry a server-computed `verifiedTransparency` (false for demo tokens); the old frontend-decided badge is gone. Details: docs/TOKEN_PROOF.md.
+
+## Deployment plan (Slice 13): build and review only
+```
+READY launch (server) -> buildDeploymentPlan (pure, deterministic) -> plan + hash -> review (same plan) -> [Slice 14: sign, send, confirm] -> reconcile -> Token Proof
+```
+BUILD != SIGN != SEND != CONFIRM != RECONCILE != VERIFY. Only BUILD and REVIEW exist. The plan's expected state is the bridge to Slice 12's observed-state proof. See docs/DEPLOYMENT_PLAN.md.

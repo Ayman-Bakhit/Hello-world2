@@ -461,6 +461,20 @@ t = await text();
 check("token proof page (public): plain-words answers, NOT DEPLOYED, no scenario picker against a real API, no wallet address", ["What was promised?", "What was observed?", "Do they match?", "What could not be verified?", "NOT DEPLOYED"].every((x) => t.includes(x)) && !t.includes("FIXTURE SCENARIO") && !t.includes(ADDRESS), t.slice(0, 900));
 await shot("9b-token-proof");
 
+// deployment plan: read-only; never executable; nothing invented
+const dpRes = await apiGet(`/api/launches/${LAUNCH_ID}/deployment-plan`);
+const dp = await dpRes.json();
+check("deployment plan API: BLOCKED, not executable, no mint, unresolved charity wallet is a blocker, nothing signed", dpRes.status() === 200 && dp.plan.status === "BLOCKED" && dp.plan.executionEnabled === false && dp.plan.mint.address === null && dp.plan.signingBoundary.serverSigns === false && dp.plan.blockers.some((b) => b.code === "CHARITY_DESTINATION_UNRESOLVED") && dp.plan.blockers.some((b) => b.code === "ALLOCATION_MODEL_UNDEFINED") && dp.plan.labels.join("|") === "NOT DEPLOYED|NOT SIGNED|NO FUNDS MOVED", JSON.stringify(dp).slice(0, 400));
+const dpUnauth = await fetch(`${API}/api/launches/${LAUNCH_ID}/deployment-plan`);
+const dpSecret = await context.request.post(`${API}/api/launches/${LAUNCH_ID}/deployment-plan`, { headers: { origin: WEB }, data: { privateKey: "x" } });
+const dpSign = await Promise.all(["sign", "send", "submit", "deploy", "execute"].map((p) => context.request.post(`${API}/api/launches/${LAUNCH_ID}/${p}`, { headers: { origin: WEB }, data: {} })));
+check("deployment plan API: needs a session, refuses key material, has no sign/send/submit/deploy/execute endpoint, unknown id is 404", dpUnauth.status === 401 && dpSecret.status() === 400 && (await dpSecret.json()).error.code === "SECRET_MATERIAL_REJECTED" && dpSign.every((r) => r.status() === 404) && (await apiGet("/api/launches/00000000-0000-4000-8000-0000000fffff/deployment-plan")).status() === 404);
+await go(`/launch/deployment?id=${LAUNCH_ID}`);
+await page.getByText("1 · TOKEN").first().waitFor({ timeout: 8000 });
+t = await text();
+check("deployment plan page: PLAN BLOCKED, NOT DEPLOYED / NOT SIGNED / NO FUNDS MOVED, nine sections, disabled execution, no deploy control", t.includes("PLAN BLOCKED") && ["NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED", "EXECUTION NOT ENABLED IN THIS BETA", "1 · TOKEN", "2 · AUTHORITIES", "3 · METADATA", "4 · ALLOCATIONS", "5 · DESTINATIONS", "6 · FUTURE LIQUIDITY", "7 · FUTURE FEE ROUTING", "8 · EXPECTED POST-DEPLOYMENT STATE", "9 · WHAT THE WALLET WILL NEED TO SIGN"].every((x) => t.includes(x)) && !/DEPLOY NOW|SIGN NOW|DEPLOYED SUCCESSFULLY/.test(t) && !t.includes("DEMO · FIXTURE") && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute/i }).count()) === 0, t.slice(0, 700));
+await shot("9c-deployment-plan");
+
 // editing returns the launch to DRAFT, un-publishes it, changes the fingerprint and is recorded
 const edited = await put({ ...cfg0, description: "edited by e2e" });
 const editedBody = await edited.json();

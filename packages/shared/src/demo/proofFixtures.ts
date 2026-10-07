@@ -5,6 +5,7 @@
  */
 import { LaunchConfigSchema, type LaunchConfig } from "../api/schemas";
 import { fakeBase58, fakeMint, fakeSignature } from "../chain/testing";
+import { fixtureAddress } from "../deployment";
 import { launchFingerprint } from "../launchModel";
 import { buildLaunchProof, type ChainObservation, type DeploymentRecord, type LaunchProof, type Observed, type ProofSubject } from "../proof";
 import { DEMO_IDS } from "./fixtures";
@@ -18,7 +19,7 @@ export const PROOF_SCENARIO_LETTER: Record<ProofScenario, string> = Object.fromE
 
 export const FIXTURE_OBSERVED_AT = "2026-01-02T00:00:00.000Z";
 export const FIXTURE_WALLETS = {
-  creator: fakeBase58("fixture:creator", 44), reserve: fakeBase58("fixture:reserve", 44), charity: fakeBase58("fixture:charity", 44), other: fakeBase58("fixture:other", 44),
+  creator: fixtureAddress("creator"), reserve: fixtureAddress("reserve"), charity: fixtureAddress("charity"), other: fixtureAddress("other"),
 };
 export const FIXTURE_MINT = fakeMint("fixture-proof");
 export const FIXTURE_SIGNATURE = fakeSignature("fixture-proof");

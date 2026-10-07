@@ -18,9 +18,16 @@ describe("copy lint over API + shared sources", () => {
     }
   });
   it("never stores or accepts key material: no such field names in schemas or SQL", () => {
-    for (const f of files) {
+    // deployment.ts is the one file that must NAME key material, because it holds the guard that refuses it (and prose saying none is collected)
+    const guard = files.filter((f) => f.endsWith("packages/shared/src/deployment.ts"));
+    expect(guard).toHaveLength(1);
+    for (const f of files.filter((x) => !guard.includes(x))) {
       const t = readFileSync(f, "utf8");
       expect(t, f).not.toMatch(/private_?key|seed_?phrase|mnemonic|secret_?key/i);
     }
+    // inside the guard file, key material may appear only as refusal logic or "never collected" prose, never as a field of a schema
+    const g = readFileSync(guard[0]!, "utf8");
+    expect(g).not.toMatch(/z\.(string|object)\(.*(privateKey|secretKey|seedPhrase|mnemonic)/i);
+    expect(g).not.toMatch(/\b(privateKey|secretKey|seedPhrase|mnemonic)\s*:/);
   });
 });

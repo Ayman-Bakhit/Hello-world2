@@ -67,3 +67,6 @@ Minting, real deployment, liquidity creation or migration, fee routing, payouts,
 
 ## Caveats
 Real Solana RPC is not validated from this environment; no real token or verification exists; charity wallets and verification are fixture/admin driven; user-provided metadata is unverified.
+
+## Expected state from the deployment plan (Slice 13)
+`DeploymentPlan.expectedState` (and `expectedStateForProof`) restate what a deployment is expected to produce, in the proof's terms (network, decimals, supply in base units, final authorities, name and symbol, configured fee bps, configuration fingerprint, plan hash). A test shows it agrees with `evaluateProof`'s expectations for the same configuration. It is EXPECTED, not observed, and verifies nothing; VERIFIED still needs a real on-chain observation. See docs/DEPLOYMENT_PLAN.md.

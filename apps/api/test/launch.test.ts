@@ -271,7 +271,9 @@ describe("no deployment, mint, liquidity, distribution, payout, donation or tran
   it("route listing and probes", async () => {
     const routes = ctx.app.printRoutes({ commonPrefix: false });
     expect(routes).toMatch(/launches/);
-    expect(routes).not.toMatch(/deploy|\/mint|liquidity|distribut|payout|\/donate|\/transfer|\/sign|\/send|\/swap|\/claim|\/fund/i);
+    // the ONLY deployment-named routes are the read-only plan/review ones (Slice 13); everything else about deploying must not exist
+    expect(routes.match(/deployment[^\s]*/g)?.map((x) => x.replace(/[^a-z-].*$/, "")).filter((v, i, a) => a.indexOf(v) === i).sort()).toEqual(["deployment-plan", "deployment-review"]);
+    expect(routes.replace(/deployment-(plan|review)/g, "")).not.toMatch(/deploy|\/mint|liquidity|distribut|payout|\/donate|\/transfer|\/sign|\/send|\/swap|\/claim|\/fund/i);
     const l = await mk();
     for (const p of ["deploy", "mint", "liquidity", "distribute", "payout", "donate", "transfer", "publish", "launch", "sign", "verify", "claim"]) {
       for (const m of ["POST", "PUT"] as const) expect((await send(m, `/api/launches/${l.id}/${p}`, {})).statusCode, `${m} ${p}`).toBe(404);

@@ -20,6 +20,7 @@ Phase 1 in progress. Nothing is deployed. No mainnet, no custody, no production 
 | Frontend wired to the API: auth states, empty/loading/error/demo states, PREPARE LAUNCH, reserve target | Done (Slice 4) |
 | Read-only Solana indexing: RPC abstraction, SOL + SPL balances, transactions with conservative classification, live Portfolio (SYNC WALLET), SOL price abstraction | Done (Slice 5), tested against a fake RPC only; NOT verified on a real network (see docs/INDEXING.md) |
 | Token proof foundation (read-only): configured vs observed checks, one server-side verification rule, fixtures never verify, public and owner proof views | Done (Slice 12). No deployment and no observer exist, so no real launch is verified (see docs/TOKEN_PROOF.md) |
+| Deployment plan (read-only): deterministic plan, review and expected state for a READY launch; BLOCKED on named open decisions; no signing, sending or deployment | Done (Slice 13), see docs/DEPLOYMENT_PLAN.md |
 | Tax data foundation: events, FIFO/LIFO/HIFO over indexed data, status model, Tax Center wiring | Done (Slice 6), fixture-backed; no real prices, no verified chain data |
 | Real historical prices, manual cost basis, reserve/donation/launch on-chain flows | Not started |
 | Smart contracts | Not started (blocked on architecture review) |
@@ -47,4 +48,4 @@ pnpm test        # all unit tests
 pnpm typecheck
 ```
 
-Docs: [ARCHITECTURE](docs/ARCHITECTURE.md), [DATABASE](docs/DATABASE.md), [THREAT_MODEL](docs/THREAT_MODEL.md), [MVP_PLAN](docs/MVP_PLAN.md), [API](docs/API.md), [SECURITY](docs/SECURITY.md), [FRONTEND](docs/FRONTEND.md), [TAX_ENGINE](docs/TAX_ENGINE.md), [TOKEN_PROOF](docs/TOKEN_PROOF.md), [LAUNCHPAD](docs/LAUNCHPAD.md), [LEGAL](docs/LEGAL_CONSIDERATIONS.md).
+Docs: [ARCHITECTURE](docs/ARCHITECTURE.md), [DATABASE](docs/DATABASE.md), [THREAT_MODEL](docs/THREAT_MODEL.md), [MVP_PLAN](docs/MVP_PLAN.md), [API](docs/API.md), [SECURITY](docs/SECURITY.md), [FRONTEND](docs/FRONTEND.md), [TAX_ENGINE](docs/TAX_ENGINE.md), [TOKEN_PROOF](docs/TOKEN_PROOF.md), [DEPLOYMENT_PLAN](docs/DEPLOYMENT_PLAN.md), [LAUNCHPAD](docs/LAUNCHPAD.md), [LEGAL](docs/LEGAL_CONSIDERATIONS.md).

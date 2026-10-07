@@ -190,7 +190,10 @@ describe("wizard validation and request mapping", () => {
 
 describe("mock client: no deployment surface", () => {
   it("exposes no deploy, mint, liquidity, distribution, payout, donation or transfer function", () => {
-    const names = Object.keys(createApiClient({ mode: "mock" })).join(" ").toLowerCase();
+    // the only deployment-named methods are the read-only plan and review getters (Slice 13)
+    const all = Object.keys(createApiClient({ mode: "mock" }));
+    expect(all.filter((k) => /deploy/i.test(k)).sort()).toEqual(["getDeploymentPlan", "getDeploymentReview"]);
+    const names = all.filter((k) => !/deploy/i.test(k)).join(" ").toLowerCase();
     expect(names).not.toMatch(/deploy|mint|liquidity|distribut|payout|donate|transfer|swap|sign/);
   });
   it("a saved mock launch is DEMO DATA, DRAFT and has a deterministic fingerprint", async () => {

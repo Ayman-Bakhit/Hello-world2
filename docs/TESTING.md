@@ -76,3 +76,11 @@
 - Web (`LaunchProof.test.tsx`, 17): exact status wording, no fixture ever shown as Verified Transparency, the view follows the server flag, sections A to G and disclosures, mismatch display, UNAVAILABLE not `$0`, public plain-words answers and redaction, escaping and no remote images, vocabulary lint, server-derived badge, mock and api client behavior.
 - Browser (124 API-mode checks, 131 mock-mode checks): API mode (real launch NOT DEPLOYED on owner and public pages, 401/404, no writes, no wallet address) and mock mode (demo launch is PARTIAL PROOF labeled DEMO / FIXTURE / NOT VERIFIED ON-CHAIN, scenario switch to VERIFICATION FAILED, no horizontal overflow at 390px).
 - Not verified: anything on a real network.
+
+## Slice 13 (deployment plan)
+- Shared (`deployment.test.ts`, 47): address validation, secret-field finder, READY gate and every build error, boundary values (u64 max builds, one over refused), precision-loss per share, BLOCKED plan content (blockers, no invented mint, pool, program or signature), authorities (explicit revoke), metadata, ordering and dependencies, schema refuses an executable or minted plan, determinism, hash sensitivity (every meaningful field) and insensitivity (timestamps), review generated from the plan, bridge to the Slice 12 evaluator, failure model.
+- API (`deployment-plan.test.ts`, 16, real Postgres): auth, ownership (foreign equals unknown), READY gate (all non-READY states, invalid addresses, stale after edit with a new hash and superseded count), unresolved charity wallet, idempotent append-only recording and DB constraints, empty-body rule, key-material refusal on every route without echo, no sign/send/submit/deploy/execute/broadcast/confirm route, source scan, reads move nothing.
+- Web (`DeploymentReview.test.tsx`, 14): status wording (PLAN BLOCKED), nine sections, blockers, only one disabled button and no deploy control, unknown values shown as unknown, supply allocation vs fee split, authority wording, escaping and no remote content, vocabulary lint, mock and api client behavior, no sign/send method.
+- Browser: API mode (127 checks) and mock mode (139 checks, desktop and 390px incl. no horizontal overflow).
+- Mutation checks: see SECURITY.md (13 mutations, all caught after one precision test was strengthened).
+- Not verified: anything on a real network; no wallet signs anything.
