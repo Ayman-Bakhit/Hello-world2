@@ -22,7 +22,7 @@ describe("deployment readiness view", () => {
   it("says BLOCKED, REAL EXECUTION: DISABLED and the three NO notices, and never says ready to sign", () => {
     const t = text(out());
     for (const x of ["DEPLOYMENT READINESS", "BLOCKED", "REAL EXECUTION: DISABLED", "NO TRANSACTIONS SENT", "NO FUNDS MOVED", "NO PRIVATE KEYS STORED", "DEMO · FIXTURE", "EXECUTION NOT ENABLED IN THIS BETA"]) expect(t).toContain(x);
-    expect(t).not.toMatch(/READY TO SIGN|READY FOR SIGNING|APPROVED|READY FOR EXECUTION|EXECUTION ENABLED/);
+    expect(t).not.toMatch(/READY TO SIGN|READY FOR SIGNING|APPROVED FOR (EXECUTION|SIGNING|DEPLOYMENT|MAINNET)|MAINNET READY|READY FOR EXECUTION|EXECUTION ENABLED/);
   });
   it("renders every gate with its status, and every blocked one says what must be decided and by which kind of owner", () => {
     const o = out();
@@ -31,7 +31,7 @@ describe("deployment readiness view", () => {
       const li = o.split(`data-gate="${g.id}"`)[1]!.split("</li>")[0]!;
       expect(text(li), g.id).toContain("Must be decided or done"); expect(li).toMatch(/PRODUCT DECISION|TECHNICAL|SECURITY|LEGAL/);
     }
-    expect(o).toContain('data-gate="FEE_ROUTING_ENFORCEABLE" data-status="PENDING"');
+    expect(o).toContain('data-gate="FEE_ROUTING_ENFORCEABLE" data-status="BLOCKED"');
     expect(o).toContain('data-gate="CHARITY_DESTINATIONS_VERIFIED" data-status="PASS"');
   });
   it("uses the exact blocker wording for fee routing, protocol destination and liquidity", () => {
@@ -40,11 +40,19 @@ describe("deployment readiness view", () => {
   });
   it("lists the decision records with status, version, provenance and what is missing", () => {
     const o = out(); const t = text(o);
-    expect(t).toContain("9 DECIDED"); expect(t).toContain("12 PENDING"); expect(t).toContain("21 WITHOUT PRODUCT APPROVAL");
+    expect(t).toContain("12 DECIDED"); expect(t).toContain("10 PENDING"); expect(t).toContain("11 WITHOUT PRODUCT APPROVAL");
     for (const d of decisions.decisions) expect(o).toContain(`data-decision="${d.id}" data-status="${d.status}"`);
     expect(t).toContain("Missing:"); expect(t).toMatch(/changing it invalidates readiness: yes/);
-    expect(t).toContain("approver: none recorded"); expect(t).toContain("approved at: not approved"); expect(t).toContain("Depends on:"); expect(t).toContain("Must be pinned down:"); expect(t).toContain("BLOCKING");
-    expect(o).toContain('data-decision="FEE_ROUTING_MECHANISM" data-status="PENDING" data-approval="PENDING_PRODUCT_APPROVAL" data-blocking="yes"');
+    expect(t).toContain("approver: none recorded");
+    // approved items show who approved, when, and under what reference; the approver is the role (no name was supplied)
+    const seg = (id: string) => text(o.split(`data-decision="${id}"`)[1]!.split("data-decision=")[0]!);
+    const fee = seg("FEE_ROUTING_MECHANISM");
+    expect(fee).toContain("approver: Product owner (name not supplied"); expect(fee).toContain("approved at: 2026-10-07"); expect(fee).toContain("reference: Product Economics decision pass 1");
+    expect(o).toContain('data-decision="FEE_ROUTING_MECHANISM" data-status="DECIDED" data-approval="APPROVED" data-blocking="no"');
+    expect(fee).toContain("CUSTOM_SOLANA_PROGRAM"); expect(fee).toMatch(/not implemented|No program exists/i);
+    expect(seg("LIQUIDITY_STRATEGY")).toContain("Do not guess the venue");
+    expect(text(o)).toContain("Product owner notes:"); expect(t).toContain("approved at: not approved"); expect(t).toContain("Depends on:"); expect(t).toContain("Must be pinned down:"); expect(t).toContain("BLOCKING");
+    expect(o).toContain('data-decision="LIQUIDITY_STRATEGY" data-status="PENDING" data-approval="PENDING_PRODUCT_APPROVAL" data-blocking="yes"');
     expect(t).toContain("Nothing on this page can approve a decision");
     for (const m of decisions.milestones) expect(o).toContain(`data-milestone="${m.id}" data-unblocked="no"`);
     expect(t).toContain("WHAT EACH DECISION BLOCKS");
@@ -76,7 +84,7 @@ describe("client: readiness, decisions, attempts", () => {
     const f = vi.fn(); const mc = createApiClient({ mode: "mock", fetchImpl: f as unknown as typeof fetch });
     const d = ExecutionReadinessResponse.parse(await mc.getExecutionReadiness(DEMO_IDS.launch));
     expect(d.readiness).toMatchObject({ overall: "BLOCKED", executionPermitted: false }); expect(d.dataSource).toBe("demo");
-    expect(DeploymentDecisionSummary.parse(await mc.getDeploymentDecisionSummary(DEMO_IDS.launch)).counts).toEqual({ decided: 9, pending: 12, unapproved: 21 });
+    expect(DeploymentDecisionSummary.parse(await mc.getDeploymentDecisionSummary(DEMO_IDS.launch)).counts).toEqual({ decided: 12, pending: 10, unapproved: 11 });
     expect(DeploymentAttemptList.parse(await mc.getDeploymentAttempts(DEMO_IDS.launch)).attempts).toEqual([]);
     await expect(mc.getExecutionReadiness(crypto.randomUUID())).rejects.toMatchObject({ status: 404 });
     expect(f).not.toHaveBeenCalled();

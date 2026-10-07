@@ -15,7 +15,7 @@ import type { Launch, LaunchConfig } from "./api/schemas";
 import { ASSOCIATED_TOKEN_PROGRAM, COMPUTE_BUDGET_PROGRAM, SYSTEM_PROGRAM, TOKEN_PROGRAM } from "./chain/types";
 import { CANONICAL_FEE_SPLIT, FEE_BUCKETS, isCanonicalFeeSplit, percentToBps, TOTAL_BPS, type FeeBucket } from "./feesplit";
 import { sha256Hex } from "./hash";
-import { DEPLOYMENT_POLICY, decisionOf, environmentFor, metadataDocumentSha256, policyHash, type DeploymentPolicy } from "./deploymentPolicy";
+import { DEPLOYMENT_POLICY, decisionOf, environmentFor, metadataDocumentSha256, policyHash, resolveSupplyAllocation, type DeploymentPolicy, type SupplyAllocationModel } from "./deploymentPolicy";
 import { LAUNCH_NETWORKS, MAX_U64 } from "./launchConstants";
 import { launchFingerprint } from "./launchModel";
 import { stableStringify } from "./taxdata/report";
@@ -52,11 +52,12 @@ export const CURRENT_DEPLOYMENT_FACTS: Readonly<DeploymentFacts> = Object.freeze
 });
 
 export const BLOCKER_CODES = [
-  "ALLOCATION_MODEL_UNDEFINED", "METADATA_URI_UNDEFINED", "PROTOCOL_DESTINATION_NOT_CONFIGURED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED",
+  "ALLOCATION_MODEL_UNDEFINED", "SUPPLY_BURN_MECHANISM_UNDEFINED", "METADATA_URI_UNDEFINED", "PROTOCOL_DESTINATION_NOT_CONFIGURED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED",
   "FEE_ROUTING_NOT_IMPLEMENTED", "CHARITY_DESTINATION_UNRESOLVED",
 ] as const;
 export type BlockerCode = (typeof BLOCKER_CODES)[number];
 const BLOCKER_TEXT: Record<BlockerCode, { message: string; decision: string }> = {
+  SUPPLY_BURN_MECHANISM_UNDEFINED: { message: "The allocation burns part of the supply, but how the burn is realized (minted then burned, or never minted) and observed is undecided. No burn is invented.", decision: "Decide how the burned share is realized, performed and observed." },
   ALLOCATION_MODEL_UNDEFINED: { message: "The configuration defines a creator share and a liquidity share of supply, but not where the rest goes. No allocation formula is invented.", decision: "Decide the initial token supply allocation model (who receives which share, and whether charity, reserve or protocol receive tokens at all)." },
   METADATA_URI_UNDEFINED: { message: "No metadata JSON URI is configured, so the metadata account cannot be fully specified. Nothing is fetched or invented.", decision: "Decide where token metadata JSON is hosted and who maintains it." },
   PROTOCOL_DESTINATION_NOT_CONFIGURED: { message: "No protocol destination address is configured. The protocol share has no recipient.", decision: "Decide the protocol wallet and its custody." },
@@ -70,7 +71,7 @@ export const FAILURE_STAGES = ["BUILD_ERROR", "SIGNING_ERROR", "SUBMISSION_ERROR
 export type FailureStage = (typeof FAILURE_STAGES)[number];
 export const BUILD_ERROR_CODES = [
   "LAUNCH_NOT_READY", "STALE_REVIEW", "INVALID_NETWORK", "INVALID_SUPPLY", "INVALID_DECIMALS", "INVALID_AUTHORITY_POLICY", "INVALID_FEE_SPLIT", "INVALID_ADDRESS",
-  "UNSUPPORTED_TOKEN_PROGRAM", "PRECISION_LOSS", "ALLOCATION_OVERFLOW", "CHARITY_NOT_FOUND", "CHARITY_NOT_VERIFIED",
+  "UNSUPPORTED_TOKEN_PROGRAM", "PRECISION_LOSS", "ALLOCATION_OVERFLOW", "ALLOCATION_MODEL_MISMATCH", "CHARITY_NOT_FOUND", "CHARITY_NOT_VERIFIED",
 ] as const;
 export type BuildErrorCode = (typeof BUILD_ERROR_CODES)[number];
 /** Failures that can only happen after BUILD. Listed so the vocabulary is fixed before Slice 14; NONE of these is implemented or ever faked. */
@@ -176,7 +177,7 @@ export const DeploymentPlan = z.object({
     updateAuthority: z.string(), isMutable: z.boolean(), account: z.null(), accountNote: z.string(),
     provenance: z.enum(["USER_PROVIDED", "TO_BE_WRITTEN"]), verified: z.literal(false), documentSha256: Hex64, imageUri: z.string().nullable(), website: z.string().nullable(), contentFetched: z.literal(false),
   }),
-  supplyAllocations: z.array(z.object({ role: z.enum(["CREATOR", "LIQUIDITY", "UNASSIGNED"]), bps: z.number().int().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]), note: z.string() })),
+  supplyAllocations: z.array(z.object({ role: z.enum(["CREATOR", "LIQUIDITY", "CHARITY", "TAX_RESERVE", "PROTOCOL", "BURN", "UNASSIGNED"]), bps: z.number().int().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]), note: z.string() })),
   feeAllocations: z.object({
     label: z.literal("Configured fee split (not token supply)"), enforcement: z.literal("not_enforced"),
     buckets: z.array(z.object({ bucket: z.enum(["creator", "taxReserve", "charity", "protocol"]), bps: z.number().int(), destinationRole: z.string() })),
@@ -285,11 +286,27 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
       else liqRaw = b.value;
     }
   }
+  // the decided supply allocation model (if any): every unit of supply has exactly one role and the roles sum to 10000 bps
+  const allocDec = decisionOf(policy, "SUPPLY_ALLOCATION_MODEL");
+  const model = allocDec.status === "DECIDED" && allocDec.value ? (allocDec.value as unknown as SupplyAllocationModel) : null;
+  const modelRaw: Array<{ role: "CREATOR" | "LIQUIDITY" | "CHARITY" | "TAX_RESERVE" | "PROTOCOL" | "BURN"; bps: number; raw: bigint }> = [];
+  if (errors.length === 0 && model) {
+    const r = resolveSupplyAllocation(c, model);
+    if (!r.ok) errors.push(err("ALLOCATION_MODEL_MISMATCH", "supplyAllocation", `This launch does not match the decided supply allocation model: ${r.errors.join("; ")}.`));
+    else for (const e of r.entries) {
+      if (e.bps === 0) continue;
+      const x = share(raw, e.bps);
+      if (!x.ok) errors.push(err("PRECISION_LOSS", `supplyAllocation.${e.role}`, `The ${e.role} share is not a whole number of base units at this supply and decimals.`));
+      else modelRaw.push({ role: e.role, bps: e.bps, raw: x.value });
+    }
+  }
   if (errors.length > 0 || creatorRaw === null || liqRaw === null) return { ok: false, errors };
 
   // ---- blockers: explicit, from facts ----
   const blockers: BlockerCode[] = [];
-  if (!facts.allocationModelDecided) blockers.push("ALLOCATION_MODEL_UNDEFINED");
+  if (!model) blockers.push("ALLOCATION_MODEL_UNDEFINED");
+  const burnBps = model ? model.burnBps : 0;
+  if (burnBps > 0 && decisionOf(policy, "SUPPLY_BURN_MECHANISM").status !== "DECIDED") blockers.push("SUPPLY_BURN_MECHANISM_UNDEFINED");
   if (facts.metadataUri === null) blockers.push("METADATA_URI_UNDEFINED");
   if (facts.protocolDestination === null) blockers.push("PROTOCOL_DESTINATION_NOT_CONFIGURED");
   if (!facts.liquidityBuilderImplemented) blockers.push("LIQUIDITY_BUILD_NOT_IMPLEMENTED");
@@ -304,7 +321,9 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   const isMutable = c.updateAuthority === "creator";
   const uri = facts.metadataUri;
   const docHash = metadataDocumentSha256(c);
-  const allocBlocked: BlockerCode[] = facts.allocationModelDecided ? [] : ["ALLOCATION_MODEL_UNDEFINED"];
+  const allocBlocked: BlockerCode[] = model ? [] : ["ALLOCATION_MODEL_UNDEFINED"];
+  // minting the supply and the authority revoke that follows it wait on everything that decides where each share goes
+  const mintBlocked: BlockerCode[] = blockers.filter((b) => b === "ALLOCATION_MODEL_UNDEFINED" || b === "SUPPLY_BURN_MECHANISM_UNDEFINED" || b === "LIQUIDITY_BUILD_NOT_IMPLEMENTED");
   const metaBlocked: BlockerCode[] = uri === null ? ["METADATA_URI_UNDEFINED"] : [];
   const acct = (ref: string, role: string, signer: boolean, writable: boolean, address: string | null, addressNote: string | null = null) => ({ ref, role, signer, writable, address, addressNote });
   const MINT_NOTE = "Generated in the wallet context at signing time; unknown to the server";
@@ -337,9 +356,9 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     },
     {
       id: "mint-supply", txIndex: 1, order: 1, program: "SPL_TOKEN", programId: TOKEN_PROGRAM, kind: "mintTo",
-      description: "Mint the supply to its recipients. BLOCKED: who receives which share beyond the creator and liquidity shares is undecided, so no amount or recipient is written.",
+      description: model ? "Mint the supply per the decided allocation model (creator, liquidity and the explicit burn). BLOCKED: no liquidity venue exists to receive the liquidity share and the burn mechanism is undecided, so no amount or recipient is written." : "Mint the supply to its recipients. BLOCKED: who receives which share beyond the creator and liquidity shares is undecided, so no amount or recipient is written.",
       accounts: [acct("mint", "mint", false, true, null, MINT_NOTE), acct("creatorTokenAccount", "destination", false, true, null, PDA_NOTE), acct("mintAuthority", "mint authority", true, false, creator)],
-      data: { amountRaw: null }, status: "BLOCKED", blockedBy: ["ALLOCATION_MODEL_UNDEFINED"], dependsOn: ["create-creator-token-account"],
+      data: { amountRaw: null }, status: "BLOCKED", blockedBy: mintBlocked, dependsOn: ["create-creator-token-account"],
     },
   ];
   if (c.mintAuthority === "disabled") {
@@ -347,7 +366,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
       id: "revoke-mint-authority", txIndex: 1, order: 2, program: "SPL_TOKEN", programId: TOKEN_PROGRAM, kind: "setAuthority",
       description: "Set the mint authority to NONE after the supply is minted. Until this instruction executes the creator still holds mint authority.",
       accounts: [acct("mint", "mint", false, true, null, MINT_NOTE), acct("mintAuthority", "current authority", true, false, creator)],
-      data: { authorityType: "MintTokens", newAuthority: null }, status: "BLOCKED", blockedBy: ["ALLOCATION_MODEL_UNDEFINED"], dependsOn: ["mint-supply"],
+      data: { authorityType: "MintTokens", newAuthority: null }, status: "BLOCKED", blockedBy: mintBlocked, dependsOn: ["mint-supply"],
     });
   }
   const txSpecs: Array<{ index: number; id: string; label: string; deps: number[] }> = [
@@ -376,11 +395,18 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     { role: "LIQUIDITY", address: null, provenance: "RESERVED_FOR_FUTURE", validation: "RESERVED" },
   ];
   const unassigned = raw - creatorRaw - liqRaw;
-  const supplyAllocations: DeploymentPlan["supplyAllocations"] = [
-    { role: "CREATOR", bps: creatorBps, amountRaw: creatorRaw.toString(), status: "DEFINED", note: "Share of supply the creator configured for themself." },
-    { role: "LIQUIDITY", bps: liqBps, amountRaw: liqRaw.toString(), status: "DEFINED", note: "Share of supply configured for liquidity. No venue exists, so none of it can be placed." },
-    { role: "UNASSIGNED", bps: TOTAL_BPS - creatorBps - liqBps, amountRaw: unassigned.toString(), status: "UNDEFINED", note: "No allocation model says where this remainder goes. None is invented." },
-  ];
+  const ROLE_NOTE: Record<string, string> = {
+    CREATOR: "Share of supply the creator configured for themself.", LIQUIDITY: "Share of supply configured for liquidity. No venue exists, so none of it can be placed.",
+    CHARITY: "A supply share for the charity (not part of the current model).", TAX_RESERVE: "A supply share for the launch tax reserve (not part of the current model).", PROTOCOL: "A supply share for the protocol (not part of the current model).",
+    BURN: "Explicit burn role from the product decision. How it is realized is a separate, undecided matter.",
+  };
+  const supplyAllocations: DeploymentPlan["supplyAllocations"] = model
+    ? modelRaw.map((e) => ({ role: e.role, bps: e.bps, amountRaw: e.raw.toString(), status: "DEFINED" as const, note: ROLE_NOTE[e.role]! }))
+    : [
+      { role: "CREATOR", bps: creatorBps, amountRaw: creatorRaw.toString(), status: "DEFINED", note: ROLE_NOTE.CREATOR! },
+      { role: "LIQUIDITY", bps: liqBps, amountRaw: liqRaw.toString(), status: "DEFINED", note: ROLE_NOTE.LIQUIDITY! },
+      { role: "UNASSIGNED", bps: TOTAL_BPS - creatorBps - liqBps, amountRaw: unassigned.toString(), status: "UNDEFINED", note: "No allocation model says where this remainder goes. None is invented." },
+    ];
   const feeRoleOf: Record<FeeBucket, string> = { creator: "CREATOR", taxReserve: "TAX_RESERVE", charity: "CHARITY", protocol: "PROTOCOL" };
   const feeBuckets = FEE_BUCKETS.map((b) => ({ bucket: b, bps: CANONICAL_FEE_SPLIT[b], destinationRole: feeRoleOf[b] }));
   const blockerList = blockers.map((code) => ({ code, ...BLOCKER_TEXT[code] }));
@@ -432,7 +458,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
       { kind: "LAMPORTS", from: "feePayer (creator)", to: "mint account (rent)", amount: null, note: "Rent exemption needs a live cluster read; not computed here." },
       { kind: "LAMPORTS", from: "feePayer (creator)", to: "metadata account (rent)", amount: null, note: "Rent exemption needs a live cluster read; not computed here." },
       { kind: "LAMPORTS", from: "feePayer (creator)", to: "creator token account (rent)", amount: null, note: "Rent exemption needs a live cluster read; not computed here." },
-      { kind: "TOKEN", from: "mint", to: "recipients", amount: null, note: "Blocked: no allocation model. The full supply (in base units) is shown under token.supplyRaw." },
+      { kind: "TOKEN", from: "mint", to: "recipients", amount: null, note: "Blocked: see the blockers. The full supply (in base units) is shown under token.supplyRaw." },
     ],
     computeBudget: { status: "NOT_MEASURED", note: `${COMPUTE_BUDGET_PROGRAM} instructions are not added: compute needs are measured by simulation, which needs RPC and a built transaction.` },
     rent: { status: "REQUIRES_RPC", note: "Rent-exempt minimums come from the cluster. Not estimated here." },

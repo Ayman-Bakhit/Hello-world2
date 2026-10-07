@@ -83,7 +83,9 @@ describe("read-only plan and review (owner)", () => {
     expect(d.plan.identity).toMatchObject({ launchId: l.id, configFingerprint: l.fingerprint, reviewedFingerprint: l.fingerprint, network: "devnet" });
     expect(d.plan.destinations.find((x) => x.role === "CHARITY")).toMatchObject({ address: live.charityWallet, provenance: "CHARITY_REGISTRY" });
     expect(d.plan.destinations.find((x) => x.role === "TAX_RESERVE")!.address).toBe(live.reserve);
-    expect(d.plan.blockers.map((b) => b.code)).toContain("ALLOCATION_MODEL_UNDEFINED");
+    expect(d.plan.blockers.map((b) => b.code)).toContain("SUPPLY_BURN_MECHANISM_UNDEFINED");
+    expect(d.plan.blockers.map((b) => b.code)).not.toContain("ALLOCATION_MODEL_UNDEFINED"); // decided: creator 8%, liquidity 40%, burn 52%
+    expect(d.plan.supplyAllocations.map((a) => [a.role, a.bps])).toEqual([["CREATOR", 800], ["LIQUIDITY", 4000], ["BURN", 5200]]);
     expect(d.recorded).toBe(false); expect(d.supersededPlans).toBe(0); expect(d.review.executionEnabled).toBe(false);
     expect(await planRows(l.id)).toBe(0);
     const again = await plan(l.id); expect(again.plan.identity.planHash).toBe(d.plan.identity.planHash);
@@ -139,6 +141,16 @@ describe("READY gate and validation, enforced by the server", () => {
     const second = await plan(l.id);
     expect(second.plan.identity.planHash).not.toBe(first.plan.identity.planHash); expect(second.plan.identity.configFingerprint).not.toBe(first.plan.identity.configFingerprint);
     expect(second).toMatchObject({ recorded: false, supersededPlans: 1 });
+  });
+  it("a READY launch that does not match the decided supply allocation (creator 8%, liquidity 40%, burn 52%) is refused with 422 ALLOCATION_MODEL_MISMATCH", async () => {
+    const l = Launch.parse((await call("POST", "/api/launches", live.token, { ...body({ creator: live.address, reserve: live.reserve, charityId: live.charityId }), creatorAllocationPercent: "10" })).json());
+    expect((await call("POST", `/api/launches/${l.id}/configure`, live.token)).statusCode).toBe(200);
+    expect((await call("POST", `/api/launches/${l.id}/review`, live.token)).statusCode).toBe(200);
+    expect((await call("POST", `/api/launches/${l.id}/ready`, live.token, { fingerprint: l.fingerprint, confirmed: true, publish: false })).statusCode).toBe(200);
+    const r = await call("GET", `/api/launches/${l.id}/deployment-plan`, live.token);
+    expect(r.statusCode).toBe(422); expect(ApiErrorBody.parse(r.json()).error.code).toBe("ALLOCATION_MODEL_MISMATCH");
+    expect((await call("POST", `/api/launches/${l.id}/deployment-plan`, live.token, {})).statusCode).toBe(422);
+    expect(await planRows(l.id)).toBe(0);
   });
   it("a charity with two verified wallets leaves the destination unresolved (blocker), never a guess", async () => {
     const id = await makeCharity("two", [fixtureAddress("two-a"), fixtureAddress("two-b")]); extraCharities.push(id);

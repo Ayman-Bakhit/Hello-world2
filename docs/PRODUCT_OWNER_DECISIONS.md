@@ -128,3 +128,6 @@ Who will complete each, and by when?
 ## Anything else the decisions must say
 ____________________________________________________________
 ____________________________________________________________
+
+---
+**Status:** answered on 2026-10-07 ("Product Economics decision pass 1"). The answers and what they changed are recorded in docs/PRODUCT_DECISIONS.md (section "Product owner decision pass 1"). Anything the answers left PENDING remains blocking.

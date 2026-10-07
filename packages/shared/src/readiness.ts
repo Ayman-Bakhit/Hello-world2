@@ -17,7 +17,7 @@ import { launchFingerprint } from "./launchModel";
 import { isValidSolanaAddress } from "./solanaAddress";
 
 export const GATE_IDS = [
-  "LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "ALLOCATION_LOCKS_DEFINED",
+  "LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "SUPPLY_BURN_MECHANISM_DEFINED", "ALLOCATION_LOCKS_DEFINED",
   "METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "CHARITY_DESTINATIONS_VERIFIED", "CHARITY_GOVERNANCE_DEFINED", "TAX_RESERVE_DESTINATION_VALID", "TAX_RESERVE_FUNDING_DEFINED",
   "LIQUIDITY_STRATEGY_DEFINED", "FEE_SPLIT_VALID",
   "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID", "PRODUCT_APPROVAL_COMPLETE",
@@ -98,6 +98,7 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
       : gate("ALLOCATIONS_SUM_10000_BPS", "Allocations sum to 10000 bps", "PRODUCT", "BLOCKED", r.errors.join("; "), "supply allocation model + launch configuration", "Correct the allocation model.", "SUPPLY_ALLOCATION_MODEL"));
   }
 
+  g.push(viaDecision(policy, "SUPPLY_BURN_MECHANISM", "SUPPLY_BURN_MECHANISM_DEFINED", "Burn mechanism defined", () => ({ ok: true, reason: "How the burned share is realized and observed is decided." })));
   g.push(viaDecision(policy, "ALLOCATION_LOCKS_AND_VESTING", "ALLOCATION_LOCKS_DEFINED", "Locks, vesting and burns defined", () => ({ ok: true, reason: "Transferability, locks, vesting and burns are decided for every supply share." })));
 
   const doc = decisionOf(policy, "METADATA_DOCUMENT"), host = decisionOf(policy, "METADATA_HOSTING");
@@ -158,7 +159,8 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
     : c.network === "mainnet-beta" && !reviewsDone ? gate("CLUSTER_VALID", "Cluster is valid for a launch", "SECURITY", "BLOCKED", "mainnet-beta requires completed security, smart-contract and legal reviews. They are not complete.", "decision ENVIRONMENT_POLICY", "Complete the reviews, or use devnet.", "ENVIRONMENT_POLICY")
     : gate("CLUSTER_VALID", "Cluster is valid for a launch", "SECURITY", "PASS", `${c.network} is a separate cluster; a plan built for it is refused on any other.`, "decision ENVIRONMENT_POLICY", null, "ENVIRONMENT_POLICY"));
 
-  const unapproved = policy.decisions.filter((d) => d.status === "DECIDED" && !isApproved(d));
+  // decided items need an approval; SUPPLY_SEMANTICS has no gate of its own, so it is also held here while it is not both decided and approved
+  const unapproved = policy.decisions.filter((d) => !isApproved(d) && (d.status === "DECIDED" || d.id === "SUPPLY_SEMANTICS"));
   g.push(unapproved.length === 0
     ? gate("PRODUCT_APPROVAL_COMPLETE", "Every decided item has product approval", "PRODUCT", "PASS", "Every decided item is approved by a named approver, with a date and a reference, at its current version.", "decision approvals")
     : gate("PRODUCT_APPROVAL_COMPLETE", "Every decided item has product approval", "PRODUCT", "PENDING", `${unapproved.length} decided item${unapproved.length === 1 ? " is" : "s are"} an engineering default or proposal without product approval: ${unapproved.map((d) => d.id).join(", ")}. A default is not a product decision, and approval is not on-chain implementation.`, "decision approvals", "The product owner records an approver, date and reference for each, or rejects it."));
@@ -170,7 +172,9 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
     return isCompleteReview(d.value) ? gate(gid, title, d.category, "PASS", `Review recorded: ${(d.value as { evidenceRef: string }).evidenceRef}.`, `decision ${id}: evidence reference`, null, id)
       : gate(gid, title, d.category, "BLOCKED", "The review record lacks an evidence reference and completion date.", `decision ${id}`, "Record real evidence.", id);
   };
-  const customProgram = frd.status === "PENDING" || decisionOf(policy, "LIQUIDITY_STRATEGY").status === "PENDING" || (frd.value as { programId?: unknown } | null)?.programId != null; // unknown design counts as possibly custom
+  const frv = frd.value as { programId?: unknown; requiresCustomProgram?: unknown; mechanism?: unknown } | null;
+  // a custom program is needed when the design is unknown, when the chosen mechanism says so, or when a program id is named
+  const customProgram = frd.status === "PENDING" || decisionOf(policy, "LIQUIDITY_STRATEGY").status === "PENDING" || frv?.requiresCustomProgram === true || frv?.programId != null || frv?.mechanism === "ON_CHAIN_FEE_VAULT" || frv?.mechanism === "CUSTOM_SOLANA_PROGRAM";
   g.push(review("SECURITY_REVIEW", "SECURITY_REVIEW_COMPLETE", "Security review complete", true));
   g.push(review("SMART_CONTRACT_REVIEW", "SMART_CONTRACT_REVIEW_COMPLETE", "Smart contract review complete", customProgram));
   g.push(review("LEGAL_REVIEW", "LEGAL_REVIEW_COMPLETE", "Legal review complete", true));
@@ -208,9 +212,9 @@ export type ExecutionReadinessResponse = z.infer<typeof ExecutionReadinessRespon
 const DecisionSchema = z.object({
   id: z.enum(DECISION_IDS),
   title: z.string(), category: z.enum(["PRODUCT", "TECHNICAL", "SECURITY", "LEGAL"]), status: z.enum(["DECIDED", "PENDING"]), value: z.record(z.string(), z.unknown()).nullable(),
-  version: z.number().int(), provenance: z.enum(["EXISTING_CONFIGURATION", "ENGINEERING_DEFAULT", "NONE"]), environments: z.array(z.string()), invalidatesReadiness: z.boolean(), summary: z.string(), missing: z.string().nullable(),
+  version: z.number().int(), provenance: z.enum(["EXISTING_CONFIGURATION", "ENGINEERING_DEFAULT", "PRODUCT_OWNER_DECISION", "NONE"]), environments: z.array(z.string()), invalidatesReadiness: z.boolean(), summary: z.string(), missing: z.string().nullable(),
   approval: z.object({ status: z.enum(["APPROVED", "PENDING_PRODUCT_APPROVAL", "REJECTED"]), approver: z.string().nullable(), approvedAt: z.string().nullable(), reference: z.string().nullable(), approvedVersion: z.number().int().nullable() }),
-  dependsOn: z.array(z.string()), requires: z.array(z.string()),
+  dependsOn: z.array(z.string()), requires: z.array(z.string()), notes: z.array(z.string()),
   /** true while the decision is pending, unapproved, or approved for an older version */
   blocking: z.boolean(),
 });

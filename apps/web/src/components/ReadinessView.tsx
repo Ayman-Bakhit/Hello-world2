@@ -11,7 +11,7 @@ const GATE_TONE: Record<string, Tone> = { PASS: "good", BLOCKED: "bad", PENDING:
 const CATEGORY_LABEL: Record<string, string> = { PRODUCT: "PRODUCT DECISION", TECHNICAL: "TECHNICAL", SECURITY: "SECURITY", LEGAL: "LEGAL" };
 const GROUPS: Array<{ title: string; ids: string[] }> = [
   { title: "Launch and plan", ids: ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT"] },
-  { title: "Token and economics", ids: ["TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "ALLOCATION_LOCKS_DEFINED", "METADATA_STRATEGY_DEFINED", "LIQUIDITY_STRATEGY_DEFINED"] },
+  { title: "Token and economics", ids: ["TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "SUPPLY_BURN_MECHANISM_DEFINED", "ALLOCATION_LOCKS_DEFINED", "METADATA_STRATEGY_DEFINED", "LIQUIDITY_STRATEGY_DEFINED"] },
   { title: "Fees and destinations", ids: ["FEE_SPLIT_VALID", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "PROTOCOL_DESTINATION_VALID", "CHARITY_DESTINATIONS_VERIFIED", "CHARITY_GOVERNANCE_DEFINED", "TAX_RESERVE_DESTINATION_VALID", "TAX_RESERVE_FUNDING_DEFINED"] },
   { title: "Keys, costs, environment and approval", ids: ["MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID", "PRODUCT_APPROVAL_COMPLETE"] },
   { title: "Reviews and the execution gate", ids: ["SECURITY_REVIEW_COMPLETE", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE", "REAL_EXECUTION_ENABLED"] },
@@ -72,6 +72,7 @@ export function ReadinessView({ data, decisions }: { data: ExecutionReadinessRes
                   <p className="mt-1 text-muted">{d.summary}</p>
                   <p className="mt-1"><span className="font-semibold">Value:</span> {d.value ? <code className="num break-all">{JSON.stringify(d.value)}</code> : <span className="text-faint">none: not decided</span>}</p>
                   {d.missing ? <p className="mt-1"><span className="font-semibold">Missing:</span> {d.missing}</p> : null}
+                  {d.notes.length > 0 ? <ul className="mt-1 list-disc pl-5"><li className="list-none -ml-5 font-semibold">Product owner notes:</li>{d.notes.map((n) => <li key={n}>{n}</li>)}</ul> : null}
                   {d.requires.length > 0 ? <ul className="mt-1 list-disc pl-5"><li className="list-none -ml-5 font-semibold">Must be pinned down:</li>{d.requires.map((r) => <li key={r}>{r}</li>)}</ul> : null}
                   <p className="mt-1 text-faint">Source: {d.provenance.replaceAll("_", " ")} · approver: {d.approval.approver ?? "none recorded"} · approved at: {d.approval.approvedAt ?? "not approved"}{d.approval.reference ? ` · reference: ${d.approval.reference}` : ""}</p>
                   <p className="mt-1 text-faint">Depends on: {d.dependsOn.length ? d.dependsOn.join(", ") : "nothing"} · applies to {d.environments.join(", ")} · changing it invalidates readiness: {d.invalidatesReadiness ? "yes" : "no"}</p>

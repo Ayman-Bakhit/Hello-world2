@@ -5,6 +5,7 @@ import {
   BLOCKER_CODES, BUILD_ERROR_CODES, BUILDER_VERSION, CURRENT_DEPLOYMENT_FACTS, DEPLOYMENT_PLAN_VERSION, DeploymentPlan, FAILURE_STAGES, FUTURE_FAILURES, METAPLEX_TOKEN_METADATA_PROGRAM,
   base58Encode, buildDeploymentPlan, buildDeploymentReview, expectedStateForProof, findSecretFields, fixtureAddress, isValidSolanaAddress, planStatus, type DeploymentFacts, type PlanInput,
 } from "./deployment";
+import { DEPLOYMENT_POLICY, withDecisions } from "./deploymentPolicy";
 import { CANONICAL_FEE_SPLIT } from "./feesplit";
 import { BANNED_PHRASES } from "./language";
 import { launchFingerprint } from "./launchModel";
@@ -12,8 +13,10 @@ import { evaluateProof } from "./proof";
 import { DEPLOYMENT_FIXTURES, FIXTURE_CHARITY, buildDeploymentFixture, deploymentFixtureInput, fixtureReadyLaunch } from "./demo/deploymentFixtures";
 import { FIXTURE_WALLETS, fixtureLaunchConfig, proofFixtureInputs } from "./demo/proofFixtures";
 
-const ok = (i: PlanInput) => { const r = buildDeploymentPlan(i); if (!r.ok) throw new Error(JSON.stringify(r.errors)); return r.plan; };
-const codes = (i: PlanInput) => { const r = buildDeploymentPlan(i); return r.ok ? [] : r.errors.map((e) => e.code); };
+/** The policy as it stood in Slice 13: no supply allocation model. These tests exercise the builder's own rules, independent of the decided model. */
+const PRE = withDecisions(DEPLOYMENT_POLICY, { SUPPLY_ALLOCATION_MODEL: { status: "PENDING", value: null, provenance: "NONE", missing: "pre-decision policy used by builder rule tests" } });
+const ok = (i: PlanInput) => { const r = buildDeploymentPlan({ policy: PRE, ...i }); if (!r.ok) throw new Error(JSON.stringify(r.errors)); return r.plan; };
+const codes = (i: PlanInput) => { const r = buildDeploymentPlan({ policy: PRE, ...i }); return r.ok ? [] : r.errors.map((e) => e.code); };
 const withCfg = (over: Record<string, unknown>, charity = FIXTURE_CHARITY): PlanInput => ({ launch: fixtureReadyLaunch({ ...fixtureLaunchConfig(), ...over } as never), charity });
 const base = (): PlanInput => deploymentFixtureInput("A_VALID_READY");
 
@@ -303,5 +306,41 @@ describe("a Launch value is not trusted beyond what the builder re-checks", () =
   it("rejects a forged READY with a mismatched review even when the config itself is valid", () => {
     const l: Launch = fixtureReadyLaunch();
     expect(codes({ ...base(), launch: { ...l, review: { ...l.review!, fingerprint: "c".repeat(64) } } })).toEqual(["STALE_REVIEW"]);
+  });
+});
+
+describe("the decided supply allocation model (creator 8%, liquidity 40%, burn 52%)", () => {
+  const direct = (i: PlanInput) => buildDeploymentPlan(i);
+  it("the plan carries exactly creator, liquidity and an explicit burn, every unit assigned, charity, reserve and protocol receiving none", () => {
+    const r = direct(base()); if (!r.ok) throw new Error(JSON.stringify(r.errors));
+    const a = r.plan.supplyAllocations;
+    expect(a.map((x) => [x.role, x.bps, x.amountRaw, x.status])).toEqual([["CREATOR", 800, "80000000000000", "DEFINED"], ["LIQUIDITY", 4000, "400000000000000", "DEFINED"], ["BURN", 5200, "520000000000000", "DEFINED"]]);
+    expect(a.reduce((s2, x) => s2 + x.bps!, 0)).toBe(10000); expect(a.reduce((s2, x) => s2 + BigInt(x.amountRaw!), 0n)).toBe(BigInt(r.plan.token.supplyRaw));
+    expect(a.some((x) => ["UNASSIGNED", "CHARITY", "TAX_RESERVE", "PROTOCOL"].includes(x.role))).toBe(false);
+    expect(r.plan.expectedState.allocations.map((x) => x.role)).toEqual(["CREATOR", "LIQUIDITY", "BURN"]);
+  });
+  it("the allocation blocker is gone, but the burn mechanism and liquidity venue still block minting", () => {
+    const r = direct(base()); if (!r.ok) throw new Error("builds");
+    const codes2 = r.plan.blockers.map((b) => b.code);
+    expect(codes2).not.toContain("ALLOCATION_MODEL_UNDEFINED"); expect(codes2).toContain("SUPPLY_BURN_MECHANISM_UNDEFINED"); expect(codes2).toContain("LIQUIDITY_BUILD_NOT_IMPLEMENTED");
+    expect(r.plan.status).toBe("BLOCKED");
+    for (const id of ["mint-supply", "revoke-mint-authority"]) { const i = r.plan.instructions.find((x) => x.id === id)!; expect(i.status).toBe("BLOCKED"); expect(i.blockedBy).toEqual(expect.arrayContaining(["SUPPLY_BURN_MECHANISM_UNDEFINED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED"])); }
+    expect(r.plan.instructions.find((x) => x.id === "create-creator-token-account")!.status).toBe("PLANNED");
+  });
+  it("a launch whose creator and liquidity shares do not total 48% does not match the model and cannot be planned", () => {
+    for (const over of [{ creatorAllocationPercent: "10" }, { creatorAllocationPercent: "0", liquidityConfiguration: { initialLiquidityUsdc: "1", supplyPercentage: "100", lockDays: 0 } }, { liquidityConfiguration: { initialLiquidityUsdc: "50000", supplyPercentage: "41", lockDays: 30 } }]) {
+      const r = direct(withCfg(over)); expect(r.ok, JSON.stringify(over)).toBe(false);
+      if (!r.ok) expect(r.errors.map((e) => e.code)).toEqual(["ALLOCATION_MODEL_MISMATCH"]);
+    }
+  });
+  it("precision is still exact for every share, including the burn", () => {
+    const r = direct(withCfg({ totalSupply: "7", decimals: 0 })); expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.map((e) => e.code)).toContain("PRECISION_LOSS");
+  });
+  it("the decided model changes the plan hash against the pre-decision plan, and an undecided model falls back to the explicit UNASSIGNED remainder", () => {
+    const a = direct(base()), b = buildDeploymentPlan({ ...base(), policy: PRE });
+    if (!a.ok || !b.ok) throw new Error("builds");
+    expect(a.plan.identity.planHash).not.toBe(b.plan.identity.planHash);
+    expect(b.plan.supplyAllocations.find((x) => x.role === "UNASSIGNED")).toMatchObject({ status: "UNDEFINED" }); expect(b.plan.blockers.map((x) => x.code)).toContain("ALLOCATION_MODEL_UNDEFINED");
   });
 });

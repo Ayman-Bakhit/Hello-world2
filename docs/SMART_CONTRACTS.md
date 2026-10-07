@@ -21,3 +21,6 @@ No program is deployed and no program id is invented. Token program: SPL Token (
 
 ## Product decision record
 Whether a custom on-chain program is needed depends on two undecided items: the fee routing mechanism and the liquidity venue. The options, what each can and cannot enforce, and the order in which to decide them are in docs/PRODUCT_DECISIONS.md (section 3). No program is chosen, written or deployed, and the smart-contract review stays PENDING.
+
+## Owner decision: custom Solana program (pass 1, 2026-10-07)
+The product owner chose a custom Solana program to enforce fee routing, with the split verifiable on-chain. This is a choice, not an implementation: no program is designed, written, audited or deployed and there is no program id. `FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED` stays in force, the smart-contract review is required and PENDING, and SPL Token classic remains approved only until the program's design shows whether it needs a Token-2022 extension. See docs/PRODUCT_DECISIONS.md section 3.

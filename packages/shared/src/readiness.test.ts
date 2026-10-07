@@ -19,6 +19,7 @@ const TEST_REVIEW = { evidenceRef: "TEST-ONLY-NOT-A-REAL-REVIEW", completedOn: "
 /** TEST-ONLY: records an approval for every decided item (a fake approver and reference), at the item's current version. */
 const approveAll = (p: DeploymentPolicy): DeploymentPolicy => ({ version: p.version, decisions: p.decisions.map((d) => (d.status === "DECIDED" ? { ...d, approval: { status: "APPROVED" as const, approver: "TEST-ONLY", approvedAt: "2000-01-01", reference: "TEST-ONLY", approvedVersion: d.version } } : d)) });
 const FULL: DeploymentPolicy = approveAll(withDecisions(DEPLOYMENT_POLICY, {
+  SUPPLY_BURN_MECHANISM: { status: "DECIDED", value: { burn: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   ALLOCATION_LOCKS_AND_VESTING: { status: "DECIDED", value: { creator: "TRANSFERABLE_NOW", locks: "NONE" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   CHARITY_VERIFICATION_GOVERNANCE: { status: "DECIDED", value: { verifier: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   TAX_RESERVE_FUNDING: { status: "DECIDED", value: { asset: "TEST_ONLY", funding: "DESIGNATED_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
@@ -46,11 +47,11 @@ describe("the policy in force", () => {
       else { expect(d.value).not.toBeNull(); expect(d.missing).toBeNull(); expect(d.provenance).not.toBe("NONE"); }
     }
   });
-  it("decided: token program, mint key, fee/compute, metadata format, fee split, charity model, tax reserve model, environments", () => {
-    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "DECIDED").map((d) => d.id).sort()).toEqual(["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_SPLIT", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "SUPPLY_SEMANTICS", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"]);
+  it("decided: token program, mint key, fee/compute, metadata format, fee split and scope, fee routing choice, supply semantics and allocation, charity model, tax reserve model, environments", () => {
+    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "DECIDED").map((d) => d.id).sort()).toEqual(["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_ROUTING_MECHANISM", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "SUPPLY_ALLOCATION_MODEL", "SUPPLY_SEMANTICS", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"]);
   });
-  it("pending (never guessed): metadata hosting, supply allocation, fee scope, fee routing, protocol destination, liquidity, and all three reviews", () => {
-    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "PENDING").map((d) => d.id).sort()).toEqual(["ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "FEE_ROUTING_MECHANISM", "FEE_SPLIT_SCOPE", "LEGAL_REVIEW", "LIQUIDITY_STRATEGY", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "SUPPLY_ALLOCATION_MODEL", "TAX_RESERVE_FUNDING"]);
+  it("pending (never guessed): burn mechanism, locks, metadata hosting, protocol destination, liquidity, charity governance, tax reserve funding and all three reviews", () => {
+    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "PENDING").map((d) => d.id).sort()).toEqual(["ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "LEGAL_REVIEW", "LIQUIDITY_STRATEGY", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "SUPPLY_BURN_MECHANISM", "TAX_RESERVE_FUNDING"]);
     for (const r of ["SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "LEGAL_REVIEW"] as const) expect(decisionOf(DEPLOYMENT_POLICY, r).status).toBe("PENDING"); // no audit or legal approval is claimed
   });
   it("the decided token program is classic SPL Token and records why Token-2022 is not used", () => {
@@ -91,8 +92,8 @@ describe("execution readiness: production policy", () => {
     for (const g of r.gates) { expect(g.reason.length).toBeGreaterThan(5); expect(g.provenance.length).toBeGreaterThan(3); expect(g.blocking).toBe(g.status === "BLOCKED" || g.status === "PENDING"); if (g.blocking) expect(g.required!.length).toBeGreaterThan(5); }
   });
   it("passes what is decided and true, and blocks the rest", () => {
-    for (const id of ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "CHARITY_DESTINATIONS_VERIFIED", "TAX_RESERVE_DESTINATION_VALID", "FEE_SPLIT_VALID", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID"] as const) expect(gateOf(r, id).status, id).toBe("PASS");
-    for (const id of ["SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "LIQUIDITY_STRATEGY_DEFINED", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "SECURITY_REVIEW_COMPLETE", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE"] as const) expect(gateOf(r, id).blocking, id).toBe(true);
+    for (const id of ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "CHARITY_DESTINATIONS_VERIFIED", "TAX_RESERVE_DESTINATION_VALID", "FEE_SPLIT_VALID", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID"] as const) expect(gateOf(r, id).status, id).toBe("PASS");
+    for (const id of ["SUPPLY_BURN_MECHANISM_DEFINED", "METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "LIQUIDITY_STRATEGY_DEFINED", "FEE_ROUTING_ENFORCEABLE", "PRODUCT_APPROVAL_COMPLETE", "SECURITY_REVIEW_COMPLETE", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE"] as const) expect(gateOf(r, id).blocking, id).toBe(true);
     expect(gateOf(r, "REAL_EXECUTION_ENABLED")).toMatchObject({ status: "BLOCKED", blocking: true });
   });
   it("names the fee routing blocker exactly and never calls the configured split enforced", () => {
@@ -117,7 +118,7 @@ describe("execution readiness: invariants", () => {
     expect(gateOf(r, "ALLOCATIONS_SUM_10000_BPS").status).toBe("PASS");
   });
   it("making any one required decision PENDING again blocks readiness (one at a time)", () => {
-    const required: DecisionId[] = ["TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW", "LEGAL_REVIEW"];
+    const required: DecisionId[] = ["SUPPLY_SEMANTICS", "SUPPLY_BURN_MECHANISM", "TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW", "LEGAL_REVIEW"];
     for (const id of required) {
       const p = withDecisions(FULL, { [id]: { status: "PENDING", value: null, provenance: "NONE", missing: "x" } });
       const r = evaluateExecutionReadiness(base({ policy: p }));
@@ -218,8 +219,9 @@ describe("execution readiness: invariants", () => {
   it("the decision summary reports counts and which decisions block this launch", () => {
     const l = base().launch; const r = evaluateExecutionReadiness(base());
     const s = DeploymentDecisionSummary.parse(buildDecisionSummary(l, r));
-    expect(s.counts).toEqual({ decided: 9, pending: 12, unapproved: 21 }); expect(s.execution.enabled).toBe(false);
-    expect(s.blockingForThisLaunch).toEqual(expect.arrayContaining(["SUPPLY_ALLOCATION_MODEL", "PROTOCOL_DESTINATION", "LIQUIDITY_STRATEGY", "FEE_ROUTING_MECHANISM", "METADATA_HOSTING", "LEGAL_REVIEW", "SECURITY_REVIEW"]));
+    expect(s.counts).toEqual({ decided: 12, pending: 10, unapproved: 11 }); expect(s.execution.enabled).toBe(false);
+    expect(s.blockingForThisLaunch).toEqual(expect.arrayContaining(["SUPPLY_BURN_MECHANISM", "PROTOCOL_DESTINATION", "LIQUIDITY_STRATEGY", "FEE_ROUTING_MECHANISM", "METADATA_HOSTING", "LEGAL_REVIEW", "SECURITY_REVIEW"]));
+    expect(s.blockingForThisLaunch).not.toContain("SUPPLY_ALLOCATION_MODEL"); // decided and consistent with this launch
   });
 });
 

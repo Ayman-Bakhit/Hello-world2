@@ -147,8 +147,8 @@ BUILD != SIGN != SEND != CONFIRM != RECONCILE != VERIFY. Only BUILD and REVIEW e
 
 ## Execution readiness (Slice 14)
 ```
-stored launch + registry charity + DEPLOYMENT_POLICY (21 decisions, docs/PRODUCT_DECISIONS.md) + recorded plan state
-  -> evaluateExecutionReadiness (server, pure) -> 27 gates -> BLOCKED | EXECUTION_DISABLED   (executionPermitted: false)
+stored launch + registry charity + DEPLOYMENT_POLICY (22 decisions, docs/PRODUCT_DECISIONS.md) + recorded plan state
+  -> evaluateExecutionReadiness (server, pure) -> 28 gates -> BLOCKED | EXECUTION_DISABLED   (executionPermitted: false)
 deployment attempts: separate append-only record; PLAN_BUILT / FAILED / CANCELLED only while execution is disabled
 ```
 Launch configuration state, deployment plan, readiness and deployment attempt are four different things. See docs/DEPLOYMENT_DECISIONS.md.

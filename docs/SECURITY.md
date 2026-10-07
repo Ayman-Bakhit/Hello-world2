@@ -197,3 +197,6 @@ No idle timeout or sliding refresh; no "list/revoke my sessions" or revoke-all; 
 - **Pending stays blocking; approval is not implementation.** `PRODUCT_APPROVAL_COMPLETE` blocks while any decided item lacks approval; an approved fee routing or liquidity decision still blocks until its mechanism exists.
 - **Decision records cannot carry chain facts**: a test scans every decision value for addresses (other than public program ids), URIs, signatures, pools, mints and observations. A document-sync test fails if docs/PRODUCT_DECISIONS.md disagrees with the code (status, approval, dependencies, blocked milestones).
 - Mutation audit of the decision logic is recorded in docs/TESTING.md.
+
+## Owner decision pass 1 (2026-10-07)
+Approvals are recorded in code against the role "Product owner" (the form's name was a placeholder, no name is invented). They are product approvals only: nothing is implemented, audited or mainnet-ready. The chosen custom Solana program does not exist; the split is not enforced; the three reviews are required and pending; execution stays disabled. The deployment plan refuses any launch whose creator and liquidity shares do not match the decided 8% / 40% / 52% burn model.
