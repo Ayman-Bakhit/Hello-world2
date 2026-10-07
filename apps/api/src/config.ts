@@ -65,6 +65,11 @@ const Env = z.object({
   TAX_MAX_TRANSACTIONS: blank(z.coerce.number().int().min(100).max(50_000).default(5000)),
   /** Rows listed in a tax report/export. More than this is reported as DATA_REQUIRED (listing capped, totals complete); an export is refused. */
   /** Saved launch configurations per account (drafts included). */
+  /**
+   * Real execution (signing, sending, confirming a transaction) does not exist in this build. The only accepted value is "false":
+   * setting it to "true" makes the API refuse to start, so a configuration file cannot turn on something the code cannot do.
+   */
+  REAL_EXECUTION_ENABLED: blank(z.literal("false", { error: "real execution is not available in this build; REAL_EXECUTION_ENABLED must be false or unset" }).default("false")),
   MAX_LAUNCHES_PER_USER: blank(z.coerce.number().int().min(1).max(5000).default(50)),
   REPORT_MAX_ROWS: blank(z.coerce.number().int().min(1).max(200_000).default(20_000)),
   /** Concurrent tax calculations: process-wide and per user. Over the limit is an explicit 503/429, not a queue. */

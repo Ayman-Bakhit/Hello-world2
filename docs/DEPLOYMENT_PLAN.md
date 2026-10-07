@@ -84,3 +84,6 @@ Minting, deployment, signing, sending, confirming, reconciling, serializing tran
 8. **Rent, fee and compute policy**: who pays, how estimated, how simulated.
 9. **Token-2022**: whether any extension is wanted (today: no).
 10. **Mainnet gating**: audit and legal review (see MVP_PLAN gates).
+
+## Slice 14 additions
+Plans now carry the policy hash and version, the cluster environment (id, programs, RPC environment label, execution not allowed), the metadata document sha256, and an expected liquidity that is separate from observed liquidity. The plan hash includes the policy hash, so a changed decision makes an earlier plan stale. Readiness (`GET /api/launches/:id/execution-readiness`) evaluates the plan together with every decision: see docs/DEPLOYMENT_DECISIONS.md. The ten open decisions listed above are now represented as decision records: token program decided (SPL Token), mint key flow decided (public key only), fee/compute policy decided, metadata document decided; supply allocation, metadata hosting, protocol destination, liquidity and fee routing remain PENDING.

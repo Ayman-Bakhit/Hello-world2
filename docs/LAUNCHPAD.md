@@ -53,3 +53,6 @@ A READY launch has a read-only proof view (`GET /api/launches/:id/proof`, `GET /
 
 ## Deployment plan (Slice 13)
 A READY launch has an owner-only, read-only deployment PLAN and review (`docs/DEPLOYMENT_PLAN.md`). It is BLOCKED today: the supply allocation model, metadata URI, protocol destination, liquidity venue and fee routing are undecided and nothing is invented. BUILD and REVIEW exist; SIGN, SEND, CONFIRM, RECONCILE are not implemented. The plan hash derives from the configuration fingerprint, so editing a launch makes its earlier plan stale.
+
+## Deployment economics and readiness (Slice 14)
+Every deployment decision is now a typed record (docs/DEPLOYMENT_DECISIONS.md): 8 decided, 9 pending. A server-side evaluator reports 23 readiness gates for a launch; today the answer is BLOCKED, and even a fully passing launch would be EXECUTION_DISABLED, because real execution is disabled in this build. The launch configuration state is separate from deployment attempts.

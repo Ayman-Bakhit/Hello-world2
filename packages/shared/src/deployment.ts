@@ -15,6 +15,7 @@ import type { Launch, LaunchConfig } from "./api/schemas";
 import { ASSOCIATED_TOKEN_PROGRAM, COMPUTE_BUDGET_PROGRAM, SYSTEM_PROGRAM, TOKEN_PROGRAM } from "./chain/types";
 import { CANONICAL_FEE_SPLIT, FEE_BUCKETS, isCanonicalFeeSplit, percentToBps, TOTAL_BPS, type FeeBucket } from "./feesplit";
 import { sha256Hex } from "./hash";
+import { DEPLOYMENT_POLICY, decisionOf, environmentFor, metadataDocumentSha256, policyHash, type DeploymentPolicy } from "./deploymentPolicy";
 import { LAUNCH_NETWORKS, MAX_U64 } from "./launchConstants";
 import { launchFingerprint } from "./launchModel";
 import { stableStringify } from "./taxdata/report";
@@ -86,36 +87,8 @@ export const FUTURE_FAILURES: ReadonlyArray<{ stage: Exclude<FailureStage, "BUIL
 ];
 export interface BuildError { stage: "BUILD_ERROR"; code: BuildErrorCode; field: string; message: string }
 
-// ---------- address validation ----------
-const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-/** A Solana public key: base58 that decodes to exactly 32 bytes. (Shape only: it does not say the account exists or who controls it.) */
-export function isValidSolanaAddress(s: unknown): s is string {
-  if (typeof s !== "string" || s.length < 32 || s.length > 44) return false;
-  let n = 0n;
-  for (const ch of s) {
-    const v = B58.indexOf(ch);
-    if (v < 0) return false;
-    n = n * 58n + BigInt(v);
-  }
-  const lead = s.length - s.replace(/^1+/, "").length;
-  const bytes = (n === 0n ? 0 : Math.ceil(n.toString(16).length / 2)) + lead;
-  return bytes === 32;
-}
-
-/** base58-encodes bytes (leading zero bytes become leading '1'). Used by fixtures to make well-formed 32-byte public keys. */
-export function base58Encode(bytes: Uint8Array): string {
-  let n = 0n;
-  for (const b of bytes) n = (n << 8n) | BigInt(b);
-  let out = "";
-  while (n > 0n) { out = B58[Number(n % 58n)] + out; n /= 58n; }
-  for (const b of bytes) { if (b === 0) out = "1" + out; else break; }
-  return out;
-}
-/** A deterministic, well-formed 32-byte base58 address for fixtures. FIXTURE ONLY: nobody holds a key for it. */
-export function fixtureAddress(seed: string): string {
-  const hex = sha256Hex(`fixture-address:${seed}`);
-  return base58Encode(Uint8Array.from(hex.match(/../g)!.map((h) => parseInt(h, 16))));
-}
+export { base58ByteLength, base58Encode, fixtureAddress, isValidSolanaAddress } from "./solanaAddress";
+import { isValidSolanaAddress } from "./solanaAddress";
 
 // ---------- secret material guard ----------
 const SECRET_KEY_RE = /^(private[_-]?key|secret[_-]?key|seed[_-]?phrase|mnemonic|recovery[_-]?phrase|keypair|secret|private)$/i;
@@ -161,15 +134,17 @@ const AuthorityPlan = z.object({
 });
 export const ExpectedState = z.object({
   provenance: z.literal("EXPECTED_NOT_OBSERVED"),
-  network: z.enum(LAUNCH_NETWORKS), tokenProgram: z.string(),
+  network: z.enum(LAUNCH_NETWORKS), cluster: z.enum(["devnet", "mainnet-beta"]), tokenProgram: z.string(), tokenProgramName: z.literal("SPL_TOKEN"),
   /** null until the mint keypair exists in the wallet context; an observation fills it later */
   mintAddress: z.null(), decimals: z.number().int(), supplyRaw: Raw,
   mintAuthority: z.string().nullable(), freezeAuthority: z.string().nullable(),
-  metadata: z.object({ name: z.string(), symbol: z.string(), uri: z.string().nullable(), updateAuthority: z.string(), isMutable: z.boolean(), sellerFeeBasisPoints: z.literal(0), provenance: z.enum(["USER_PROVIDED", "TO_BE_WRITTEN"]) }),
+  metadata: z.object({ name: z.string(), symbol: z.string(), uri: z.string().nullable(), documentSha256: Hex64, updateAuthority: z.string(), isMutable: z.boolean(), sellerFeeBasisPoints: z.literal(0), provenance: z.enum(["USER_PROVIDED", "TO_BE_WRITTEN"]) }),
   allocations: z.array(z.object({ role: z.string(), recipient: z.string().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]) })),
   destinations: z.array(z.object({ role: z.string(), address: z.string().nullable() })),
   feeRouting: z.object({ status: z.literal("NOT_IMPLEMENTED"), configuredBps: z.object({ creator: z.number().int(), taxReserve: z.number().int(), charity: z.number().int(), protocol: z.number().int() }), onChainEnforced: z.literal(false) }),
-  liquidity: z.object({ status: z.literal("LIQUIDITY_BUILD_NOT_IMPLEMENTED"), initialLiquidityUsdc: z.string(), lockDays: z.number().int(), poolAddress: z.null() }),
+  liquidity: z.object({ kind: z.literal("LIQUIDITY_EXPECTED"), status: z.literal("LIQUIDITY_BUILD_NOT_IMPLEMENTED"), initialLiquidityUsdc: z.string(), lockDays: z.number().int(), poolAddress: z.null() }),
+  /** what an observer found; always null here. Expected and observed liquidity are different things. */
+  liquidityObserved: z.null(),
   configFingerprint: Hex64, planHash: Hex64,
 });
 export type ExpectedState = z.infer<typeof ExpectedState>;
@@ -178,6 +153,12 @@ export const DeploymentPlan = z.object({
   identity: z.object({
     launchId: z.string().uuid(), network: z.enum(LAUNCH_NETWORKS), tokenProgram: z.object({ name: z.enum(["SPL_TOKEN"]), programId: z.string(), token2022: z.literal("NOT_IMPLEMENTED") }),
     creatorWallet: z.string(), planVersion: z.number().int(), builderVersion: z.string(), planId: z.string(), planHash: Hex64, configFingerprint: Hex64, reviewedFingerprint: Hex64,
+    /** the deployment policy (decisions) this plan was built under; a changed decision changes the plan hash */
+    policyVersion: z.number().int(), policyHash: Hex64,
+  }),
+  environment: z.object({
+    cluster: z.enum(["devnet", "mainnet-beta"]), environmentId: z.string(), rpcEnvironment: z.string(), executionAllowed: z.literal(false),
+    programs: z.object({ systemProgram: z.string(), tokenProgram: z.string(), associatedTokenProgram: z.string(), metadataProgram: z.string() }),
   }),
   status: z.enum(["BLOCKED", "READY_FOR_REVIEW"]),
   blockers: z.array(DeploymentBlocker),
@@ -193,7 +174,7 @@ export const DeploymentPlan = z.object({
   metadata: z.object({
     program: z.literal("METAPLEX_TOKEN_METADATA"), programId: z.string(), name: z.string(), symbol: z.string(), uri: z.string().nullable(), sellerFeeBasisPoints: z.literal(0),
     updateAuthority: z.string(), isMutable: z.boolean(), account: z.null(), accountNote: z.string(),
-    provenance: z.enum(["USER_PROVIDED", "TO_BE_WRITTEN"]), verified: z.literal(false), imageUri: z.string().nullable(), website: z.string().nullable(), contentFetched: z.literal(false),
+    provenance: z.enum(["USER_PROVIDED", "TO_BE_WRITTEN"]), verified: z.literal(false), documentSha256: Hex64, imageUri: z.string().nullable(), website: z.string().nullable(), contentFetched: z.literal(false),
   }),
   supplyAllocations: z.array(z.object({ role: z.enum(["CREATOR", "LIQUIDITY", "UNASSIGNED"]), bps: z.number().int().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]), note: z.string() })),
   feeAllocations: z.object({
@@ -227,6 +208,8 @@ export interface PlanInput {
   charity: PlanCharity | null;
   tokenProgram?: string;
   facts?: DeploymentFacts;
+  /** the decisions in force; defaults to DEPLOYMENT_POLICY */
+  policy?: DeploymentPolicy;
 }
 export type PlanResult = { ok: true; plan: DeploymentPlan } | { ok: false; errors: BuildError[] };
 
@@ -256,6 +239,9 @@ export function planStatus(blockers: readonly unknown[]): DeploymentPlan["status
 export function buildDeploymentPlan(input: PlanInput): PlanResult {
   const { launch, charity } = input;
   const facts = input.facts ?? CURRENT_DEPLOYMENT_FACTS;
+  const policy = input.policy ?? DEPLOYMENT_POLICY;
+  const policyId = policyHash(policy);
+  const tokenDecision = decisionOf(policy, "TOKEN_PROGRAM");
   const c: LaunchConfig = launch.config;
   const errors: BuildError[] = [];
 
@@ -264,9 +250,10 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   if (!launch.review || !launch.review.passed || launch.review.fingerprint !== launch.fingerprint || current !== launch.fingerprint || launch.review.fingerprint !== current) {
     return { ok: false, errors: [err("STALE_REVIEW", "fingerprint", "The configuration changed after it was reviewed, or was never reviewed. Review and mark it READY again.")] };
   }
-  const programName = (input.tokenProgram ?? SELECTED_TOKEN_PROGRAM) as string;
+  const programName = (input.tokenProgram ?? (tokenDecision.status === "DECIDED" ? (tokenDecision.value as { name: string }).name : "UNDECIDED")) as string;
   if (programName !== "SPL_TOKEN") errors.push(err("UNSUPPORTED_TOKEN_PROGRAM", "tokenProgram", "Only the SPL Token program is supported. Token-2022 and its extensions are not implemented."));
-  if (!(LAUNCH_NETWORKS as readonly string[]).includes(c.network)) errors.push(err("INVALID_NETWORK", "network", "Unsupported network."));
+  const env = environmentFor(c.network);
+  if (!(LAUNCH_NETWORKS as readonly string[]).includes(c.network) || !env || !env.launchAllowed) errors.push(err("INVALID_NETWORK", "network", "Unsupported network."));
   if (!Number.isInteger(c.decimals) || c.decimals < 0 || c.decimals > MAX_DECIMALS) errors.push(err("INVALID_DECIMALS", "decimals", `Decimals must be a whole number from 0 to ${MAX_DECIMALS}.`));
   let raw = 0n;
   if (!/^[1-9]\d{0,29}$/.test(c.totalSupply)) errors.push(err("INVALID_SUPPLY", "totalSupply", "Total supply must be a positive whole number written in plain digits."));
@@ -316,6 +303,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   const freezeFinal = c.freezeAuthority === "disabled" ? null : creator;
   const isMutable = c.updateAuthority === "creator";
   const uri = facts.metadataUri;
+  const docHash = metadataDocumentSha256(c);
   const allocBlocked: BlockerCode[] = facts.allocationModelDecided ? [] : ["ALLOCATION_MODEL_UNDEFINED"];
   const metaBlocked: BlockerCode[] = uri === null ? ["METADATA_URI_UNDEFINED"] : [];
   const acct = (ref: string, role: string, signer: boolean, writable: boolean, address: string | null, addressNote: string | null = null) => ({ ref, role, signer, writable, address, addressNote });
@@ -402,7 +390,8 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     configFingerprint: launch.fingerprint, reviewedFingerprint: launch.review.fingerprint, creator,
     token: { name: c.name, symbol: c.symbol, decimals: c.decimals, supplyRaw: raw.toString() },
     authorities: { mint: { initial: mintAuthInitial, final: mintAuthFinal }, freeze: { initial: freezeFinal, final: freezeFinal }, updateIsMutable: isMutable },
-    metadata: { uri, imageUri: c.imageUri, website: c.website },
+    metadata: { uri, imageUri: c.imageUri, website: c.website, documentSha256: docHash },
+    policyHash: policyId, cluster: c.network,
     supplyAllocations, feeBuckets, destinations, instructions: instr.map((i) => ({ id: i.id, tx: i.txIndex, kind: i.kind, data: i.data, status: i.status, blockedBy: i.blockedBy })),
     liquidity: { usdc: c.liquidityConfiguration.initialLiquidityUsdc, supplyBps: liqBps, lockDays: c.liquidityConfiguration.lockDays },
     blockers,
@@ -416,8 +405,9 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     identity: {
       launchId: launch.id, network: c.network, tokenProgram: { name: "SPL_TOKEN", programId: TOKEN_PROGRAM, token2022: "NOT_IMPLEMENTED" }, creatorWallet: creator,
       planVersion: DEPLOYMENT_PLAN_VERSION, builderVersion: BUILDER_VERSION, planId: `${launch.id}:v${DEPLOYMENT_PLAN_VERSION}:${planHash.slice(0, 16)}`, planHash,
-      configFingerprint: launch.fingerprint, reviewedFingerprint: launch.review.fingerprint,
+      configFingerprint: launch.fingerprint, reviewedFingerprint: launch.review.fingerprint, policyVersion: policy.version, policyHash: policyId,
     },
+    environment: { cluster: c.network, environmentId: env!.environmentId, rpcEnvironment: env!.rpcEnvironment, executionAllowed: false, programs: env!.programs },
     status: planStatus(blockers), blockers: blockerList, executionEnabled: false, labels: ["NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED"],
     token: { name: c.name, symbol: c.symbol, decimals: c.decimals, totalSupply: c.totalSupply, supplyRaw: raw.toString() },
     mint: { strategy: "CLIENT_GENERATED_KEYPAIR", address: null, note: "The mint keypair is generated in the wallet context at signing time. Its private key never reaches the server, and the server never generates or stores one. The mint address is therefore unknown now and is not invented." },
@@ -428,7 +418,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     },
     metadata: {
       program: "METAPLEX_TOKEN_METADATA", programId: METAPLEX_TOKEN_METADATA_PROGRAM, name: c.name, symbol: c.symbol, uri, sellerFeeBasisPoints: 0, updateAuthority: creator, isMutable,
-      account: null, accountNote: PDA_NOTE, provenance: metaProv, verified: false, imageUri: c.imageUri, website: c.website, contentFetched: false,
+      account: null, accountNote: PDA_NOTE, provenance: metaProv, verified: false, documentSha256: docHash, imageUri: c.imageUri, website: c.website, contentFetched: false,
     },
     supplyAllocations,
     feeAllocations: { label: "Configured fee split (not token supply)", enforcement: "not_enforced", buckets: feeBuckets },
@@ -448,13 +438,14 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     rent: { status: "REQUIRES_RPC", note: "Rent-exempt minimums come from the cluster. Not estimated here." },
     signingBoundary: { serverSigns: false, serverHoldsKeys: false, serverAcceptsKeyMaterial: false, submission: "NOT_IMPLEMENTED", mintKeypair: "GENERATED_IN_WALLET_CONTEXT_PRIVATE_KEY_NEVER_SENT", futureFlow: SIGNING_FLOW },
     expectedState: {
-      provenance: "EXPECTED_NOT_OBSERVED", network: c.network, tokenProgram: TOKEN_PROGRAM, mintAddress: null, decimals: c.decimals, supplyRaw: raw.toString(),
+      provenance: "EXPECTED_NOT_OBSERVED", network: c.network, cluster: c.network, tokenProgram: TOKEN_PROGRAM, tokenProgramName: "SPL_TOKEN", mintAddress: null, decimals: c.decimals, supplyRaw: raw.toString(),
       mintAuthority: mintAuthFinal, freezeAuthority: freezeFinal,
-      metadata: { name: c.name, symbol: c.symbol, uri, updateAuthority: creator, isMutable, sellerFeeBasisPoints: 0, provenance: uri === null ? "USER_PROVIDED" : "TO_BE_WRITTEN" },
+      metadata: { name: c.name, symbol: c.symbol, uri, documentSha256: docHash, updateAuthority: creator, isMutable, sellerFeeBasisPoints: 0, provenance: uri === null ? "USER_PROVIDED" : "TO_BE_WRITTEN" },
       allocations: supplyAllocations.map((a) => ({ role: a.role, recipient: a.role === "CREATOR" ? creator : null, amountRaw: a.amountRaw, status: a.status })),
       destinations: destinations.map((d) => ({ role: d.role, address: d.address })),
       feeRouting: { status: "NOT_IMPLEMENTED", configuredBps, onChainEnforced: false },
-      liquidity: { status: "LIQUIDITY_BUILD_NOT_IMPLEMENTED", initialLiquidityUsdc: c.liquidityConfiguration.initialLiquidityUsdc, lockDays: c.liquidityConfiguration.lockDays, poolAddress: null },
+      liquidity: { kind: "LIQUIDITY_EXPECTED", status: "LIQUIDITY_BUILD_NOT_IMPLEMENTED", initialLiquidityUsdc: c.liquidityConfiguration.initialLiquidityUsdc, lockDays: c.liquidityConfiguration.lockDays, poolAddress: null },
+      liquidityObserved: null,
       configFingerprint: launch.fingerprint, planHash,
     },
     dataSource: launch.dataSource,
@@ -503,7 +494,7 @@ export function buildDeploymentReview(plan: DeploymentPlan): DeploymentReview {
  */
 export function expectedStateForProof(plan: DeploymentPlan) {
   const e = plan.expectedState;
-  return { network: e.network, decimals: e.decimals, supplyRaw: e.supplyRaw, mintAuthority: e.mintAuthority, freezeAuthority: e.freezeAuthority, name: e.metadata.name, symbol: e.metadata.symbol, feeBps: e.feeRouting.configuredBps, configFingerprint: e.configFingerprint, planHash: e.planHash };
+  return { network: e.network, decimals: e.decimals, supplyRaw: e.supplyRaw, mintAuthority: e.mintAuthority, freezeAuthority: e.freezeAuthority, name: e.metadata.name, symbol: e.metadata.symbol, feeBps: e.feeRouting.configuredBps, cluster: e.cluster, tokenProgram: e.tokenProgramName, metadataDocumentSha256: e.metadata.documentSha256, configFingerprint: e.configFingerprint, planHash: e.planHash };
 }
 
 // ---------- API response schemas ----------
@@ -526,3 +517,14 @@ export const DeploymentPlanResponse = z.object({
 export type DeploymentPlanResponse = z.infer<typeof DeploymentPlanResponse>;
 export const DeploymentReviewResponse = z.object({ review: DeploymentReviewSchema, planId: z.string() });
 export type DeploymentReviewResponse = z.infer<typeof DeploymentReviewResponse>;
+
+/** Facts the builder takes from the policy in force. Only values a decision can supply are read; capabilities that need new code stay false. */
+export function factsFromPolicy(policy: DeploymentPolicy): DeploymentFacts {
+  const host = decisionOf(policy, "METADATA_HOSTING");
+  const proto = decisionOf(policy, "PROTOCOL_DESTINATION");
+  return {
+    ...CURRENT_DEPLOYMENT_FACTS,
+    metadataUri: host.status === "DECIDED" && host.value && typeof host.value.uri === "string" ? host.value.uri : null,
+    protocolDestination: proto.status === "DECIDED" && proto.value && typeof proto.value.address === "string" ? proto.value.address : null,
+  };
+}

@@ -1,6 +1,6 @@
 import {
   CharityEvidenceResponse, CharityList, LaunchHistory, PublicLaunch, PublicLaunchList, buildDemoPublicLaunch, planLaunchAction, launchFingerprint, revisionRowHash, toPublicLaunch, STATUS_MEANING, type LaunchAction, type LaunchActionName, DEMO_CHARITIES, DonationDetail, DonationPlanResponse, Receipt, buildCharityEvidence, buildDonationDetail, buildDonationPlan, buildReceipt, parseUsdToCents, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
-  DeploymentPlanResponse, DeploymentReviewResponse, buildDeploymentPlan, buildDeploymentReview, buildDemoDeploymentPlan, LaunchList, LaunchProof, PROOF_SCENARIOS, buildLaunchProof, buildProofFixture, DEMO_IDS as PROOF_DEMO_IDS, type ProofScenario, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
+  DeploymentAttemptList, DeploymentDecisionSummary, ExecutionReadinessResponse, FIXTURE_CHARITY, buildDecisionSummary, buildReadinessResponse, evaluateExecutionReadiness, fixtureReadyLaunch, DeploymentPlanResponse, DeploymentReviewResponse, buildDeploymentPlan, buildDeploymentReview, buildDemoDeploymentPlan, LaunchList, LaunchProof, PROOF_SCENARIOS, buildLaunchProof, buildProofFixture, DEMO_IDS as PROOF_DEMO_IDS, type ProofScenario, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
   type CreateManualBasisRequest, type ReviseManualBasisRequest, type VoidManualBasisRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
   buildTax, buildTaxDetails, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
@@ -93,6 +93,13 @@ export function createApiClient(opts: ClientOptions = {}) {
       throw new ApiClientError(first.code === "LAUNCH_NOT_READY" || first.code === "STALE_REVIEW" ? 409 : 422, first.code, first.message, f);
     }
     return { plan: r.plan, review: buildDeploymentReview(r.plan), recorded: false, supersededPlans: 0 };
+  };
+  /** Mock mode: the same pure evaluator the API uses. The labeled demo launch is a fixture; saved mock launches have no resolvable charity wallet. */
+  const mockReadinessFor = (id: string) => {
+    if (id === PROOF_DEMO_IDS.launch) { const launch = fixtureReadyLaunch(); return { launch, readiness: evaluateExecutionReadiness({ launch, charity: FIXTURE_CHARITY, planState: { recorded: false, supersededPlans: 0 } }) }; }
+    const launch = need(mockLaunches.find((x) => x.id === id) ?? null, "Launch");
+    const c = mockCharity(launch.config.charityConfiguration.charityId);
+    return { launch, readiness: evaluateExecutionReadiness({ launch, charity: c ? { id: c.id, verificationState: c.verificationState, walletAddress: null } : null }) };
   };
   const mockProof = (l: Launch, audience: "owner" | "public"): LaunchProof => {
     const c = mockCharity(l.config.charityConfiguration.charityId);
@@ -217,6 +224,22 @@ export function createApiClient(opts: ClientOptions = {}) {
       if (mode === "api") return http(DeploymentReviewResponse, `/api/launches/${encodeURIComponent(id)}/deployment-review`);
       const d = mockPlan(id);
       return { review: d.review, planId: d.plan.identity.planId };
+    },
+    /** Owner-only execution READINESS (read-only; real execution is disabled, so this never says a launch can be signed or sent). */
+    getExecutionReadiness: async (id: string): Promise<ExecutionReadinessResponse> => {
+      if (mode === "api") return http(ExecutionReadinessResponse, `/api/launches/${encodeURIComponent(id)}/execution-readiness`);
+      const { launch, readiness } = mockReadinessFor(id);
+      return buildReadinessResponse(launch, readiness);
+    },
+    getDeploymentDecisionSummary: async (id: string): Promise<DeploymentDecisionSummary> => {
+      if (mode === "api") return http(DeploymentDecisionSummary, `/api/launches/${encodeURIComponent(id)}/deployment-decision-summary`);
+      const { launch, readiness } = mockReadinessFor(id);
+      return buildDecisionSummary(launch, readiness);
+    },
+    getDeploymentAttempts: async (id: string): Promise<DeploymentAttemptList> => {
+      if (mode === "api") return http(DeploymentAttemptList, `/api/launches/${encodeURIComponent(id)}/deployment-attempts`);
+      mockReadinessFor(id);
+      return { launchId: id, attempts: [], execution: { enabled: false }, note: "A READY launch can have no deployment attempt. Attempts are a separate, append-only record; none is created while real execution is disabled." };
     },
     /** Owner-only token proof for a launch. Mock mode: a saved launch is never deployed, so its proof is always NOT DEPLOYED. */
     getLaunchProof: async (id: string): Promise<LaunchProof> => {
@@ -368,4 +391,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, updateLaunch, configureLaunch, reviewLaunch, readyLaunch, cancelLaunch, getLaunchHistory, getPublicLaunches, getPublicLaunch, getLaunchProof, getPublicLaunchProof, getDeploymentPlan, getDeploymentReview, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, updateLaunch, configureLaunch, reviewLaunch, readyLaunch, cancelLaunch, getLaunchHistory, getPublicLaunches, getPublicLaunch, getLaunchProof, getPublicLaunchProof, getDeploymentPlan, getDeploymentReview, getExecutionReadiness, getDeploymentDecisionSummary, getDeploymentAttempts, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

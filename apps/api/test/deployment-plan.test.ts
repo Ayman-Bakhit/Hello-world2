@@ -65,6 +65,8 @@ async function ready(token = live.token, o: Partial<Parameters<typeof body>[0]> 
   return Launch.parse(r.json());
 }
 const plan = async (id: string, token = live.token) => DeploymentPlanResponse.parse((await call("GET", `/api/launches/${id}/deployment-plan`, token)).json());
+/** a different, still well-formed hash (the first character is changed, whatever it was: a fixed replacement would collide 1 time in 16) */
+const other0 = (h: string) => (h[0] === "0" ? "1" : "0") + h.slice(1);
 const planRows = async (id: string) => Number((await ctx.pool.query("SELECT count(*) FROM deployment_plans WHERE launch_id = $1", [id])).rows[0].count);
 
 describe("read-only plan and review (owner)", () => {
@@ -174,9 +176,9 @@ describe("recording a plan (append-only, idempotent)", () => {
     await expect(ctx.pool.query("UPDATE deployment_plans SET status = 'READY_FOR_REVIEW' WHERE launch_id = $1", [l.id])).rejects.toThrow();
     await expect(ctx.pool.query("DELETE FROM deployment_plans WHERE launch_id = $1", [l.id])).rejects.toThrow();
     const d = (await plan(l.id)).plan;
-    const ins = (p: object, fp = d.identity.configFingerprint, user = live.userId, hash = d.identity.planHash.replace(/^./, "0")) =>
+    const ins = (p: object, fp = d.identity.configFingerprint, user = live.userId, hash = other0(d.identity.planHash)) =>
       ctx.pool.query("INSERT INTO deployment_plans (launch_id, plan_version, builder_version, config_fingerprint, plan_hash, status, plan, created_by) VALUES ($1,1,'x',$2,$3,'BLOCKED',$4,$5)", [l.id, fp, hash, JSON.stringify(p), user]);
-    const h = d.identity.planHash.replace(/^./, "0");
+    const h = other0(d.identity.planHash);
     const withHash = { ...d, identity: { ...d.identity, planHash: h } };
     await expect(ins({ ...withHash, executionEnabled: true })).rejects.toThrow();
     await expect(ins({ ...withHash, mint: { ...d.mint, address: fixtureAddress("m") } })).rejects.toThrow();

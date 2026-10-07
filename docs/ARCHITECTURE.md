@@ -144,3 +144,11 @@ launch configuration (READY) + deployment record (none today) + observation hist
 READY launch (server) -> buildDeploymentPlan (pure, deterministic) -> plan + hash -> review (same plan) -> [Slice 14: sign, send, confirm] -> reconcile -> Token Proof
 ```
 BUILD != SIGN != SEND != CONFIRM != RECONCILE != VERIFY. Only BUILD and REVIEW exist. The plan's expected state is the bridge to Slice 12's observed-state proof. See docs/DEPLOYMENT_PLAN.md.
+
+## Execution readiness (Slice 14)
+```
+stored launch + registry charity + DEPLOYMENT_POLICY (17 decisions) + recorded plan state
+  -> evaluateExecutionReadiness (server, pure) -> 23 gates -> BLOCKED | EXECUTION_DISABLED   (executionPermitted: false)
+deployment attempts: separate append-only record; PLAN_BUILT / FAILED / CANCELLED only while execution is disabled
+```
+Launch configuration state, deployment plan, readiness and deployment attempt are four different things. See docs/DEPLOYMENT_DECISIONS.md.

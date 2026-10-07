@@ -29,6 +29,12 @@ export async function buildApp(deps: { config: Config; pool: Pool; logStream?: {
       ...(deps.logStream ? { stream: deps.logStream } : {}),
       // Secrets never reach logs.
       redact: { paths: ["req.headers.authorization", "req.headers.cookie", "res.headers['set-cookie']"], censor: "[redacted]" },
+      // A query string can carry anything a client puts there (including a mistakenly pasted secret), so only the path is logged.
+      serializers: {
+        req: (req: { method?: string; url?: string; headers?: Record<string, unknown>; ip?: string; socket?: { remotePort?: number } }) => ({
+          method: req.method, url: (req.url ?? "").split("?")[0], host: typeof req.headers?.host === "string" ? req.headers.host : undefined, remoteAddress: req.ip, remotePort: req.socket?.remotePort,
+        }),
+      },
     },
     bodyLimit: 64 * 1024,
     trustProxy: config.TRUST_PROXY,

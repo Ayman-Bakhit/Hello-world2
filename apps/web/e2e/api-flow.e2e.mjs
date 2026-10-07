@@ -475,6 +475,22 @@ t = await text();
 check("deployment plan page: PLAN BLOCKED, NOT DEPLOYED / NOT SIGNED / NO FUNDS MOVED, nine sections, disabled execution, no deploy control", t.includes("PLAN BLOCKED") && ["NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED", "EXECUTION NOT ENABLED IN THIS BETA", "1 · TOKEN", "2 · AUTHORITIES", "3 · METADATA", "4 · ALLOCATIONS", "5 · DESTINATIONS", "6 · FUTURE LIQUIDITY", "7 · FUTURE FEE ROUTING", "8 · EXPECTED POST-DEPLOYMENT STATE", "9 · WHAT THE WALLET WILL NEED TO SIGN"].every((x) => t.includes(x)) && !/DEPLOY NOW|SIGN NOW|DEPLOYED SUCCESSFULLY/.test(t) && !t.includes("DEMO · FIXTURE") && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute/i }).count()) === 0, t.slice(0, 700));
 await shot("9c-deployment-plan");
 
+// execution readiness: server-derived, owner only, execution disabled
+const erRes = await apiGet(`/api/launches/${LAUNCH_ID}/execution-readiness`);
+const er = await erRes.json();
+check("execution readiness API: BLOCKED, executionPermitted false, execution disabled, fee routing and protocol destination blocked, no flag accepted", erRes.status() === 200 && er.readiness.overall === "BLOCKED" && er.readiness.executionPermitted === false && er.execution.enabled === false && er.readiness.gates.find((g) => g.id === "FEE_ROUTING_ENFORCEABLE").reason.includes("FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED") && er.readiness.gates.find((g) => g.id === "PROTOCOL_DESTINATION_VALID").blocking === true && er.readiness.gates.find((g) => g.id === "REAL_EXECUTION_ENABLED").blocking === true && (await (await apiGet(`/api/launches/${LAUNCH_ID}/execution-readiness?ready=true&approved=true&executionEnabled=true`)).json()).readiness.overall === "BLOCKED");
+const ds = await (await apiGet(`/api/launches/${LAUNCH_ID}/deployment-decision-summary`)).json();
+const at = await (await apiGet(`/api/launches/${LAUNCH_ID}/deployment-attempts`)).json();
+const erProbe = await Promise.all(["execute", "sign", "send", "submit", "approve", "start"].map((p) => context.request.post(`${API}/api/launches/${LAUNCH_ID}/${p}`, { headers: { origin: WEB }, data: { ready: true, approved: true, executionEnabled: true } })));
+const erSecret = await apiGet(`/api/launches/${LAUNCH_ID}/execution-readiness?privateKey=abc`);
+check("decision summary and attempts: 8 decided / 9 pending, no attempts, no execute/sign/send/approve route, key material refused, unauthenticated 401", ds.counts.decided === 8 && ds.counts.pending === 9 && ds.execution.enabled === false && at.attempts.length === 0 && erProbe.every((r) => r.status() === 404) && erSecret.status() === 400 && (await fetch(`${API}/api/launches/${LAUNCH_ID}/execution-readiness`)).status === 401 && (await fetch(`${API}/api/public/launches/${LAUNCH_ID}/execution-readiness`)).status === 404);
+await go(`/launch/readiness?id=${LAUNCH_ID}`);
+await page.getByText("DEPLOYMENT READINESS").first().waitFor({ timeout: 8000 });
+await page.getByText("DECISION RECORDS").first().waitFor({ timeout: 8000 });
+t = await text();
+check("deployment readiness page: BLOCKED, REAL EXECUTION: DISABLED, the three NO notices, gates and decisions, never ready to sign, no execution control", t.includes("BLOCKED") && ["REAL EXECUTION: DISABLED", "NO TRANSACTIONS SENT", "NO FUNDS MOVED", "NO PRIVATE KEYS STORED", "EXECUTION NOT ENABLED IN THIS BETA", "FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED", "PROTOCOL_DESTINATION_PENDING", "8 DECIDED", "9 PENDING"].every((x) => t.includes(x)) && !/READY TO SIGN|READY FOR SIGNING|APPROVED|DEMO · FIXTURE/.test(t) && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute|approve/i }).count()) === 0, t.slice(0, 800));
+await shot("9d-readiness");
+
 // editing returns the launch to DRAFT, un-publishes it, changes the fingerprint and is recorded
 const edited = await put({ ...cfg0, description: "edited by e2e" });
 const editedBody = await edited.json();

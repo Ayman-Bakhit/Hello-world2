@@ -100,7 +100,7 @@ describe("client: deployment plan", () => {
     await expect(createApiClient({ mode: "api", baseUrl: "http://api.test", fetchImpl: bad as unknown as typeof fetch }).getDeploymentPlan(id)).rejects.toThrow();
   });
   it("the client exposes no sign, send, submit or deploy method", () => {
-    expect(Object.keys(c).filter((k) => /sign|send|submit|deploy(?!mentPlan|mentReview)|execute|broadcast/i.test(k))).toEqual([]);
+    expect(Object.keys(c).filter((k) => /sign|send|submit|deploy(?!mentPlan|mentReview|mentDecisionSummary|mentAttempts)|execute|broadcast/i.test(k))).toEqual([]);
     const src = readFileSync(join(__dirname, "../lib/api/client.ts"), "utf8");
     expect(src).not.toMatch(/signTransaction|sendTransaction|signAndSend|Keypair|secretKey|privateKey/);
   });

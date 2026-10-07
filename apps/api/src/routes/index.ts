@@ -8,6 +8,7 @@ import { donationRoutes } from "./donations";
 import { healthRoutes } from "./health";
 import { launchRoutes } from "./launches";
 import { deploymentPlanRoutes } from "./deploymentPlan";
+import { executionReadinessRoutes } from "./executionReadiness";
 import { launchProofRoutes } from "./launchProof";
 import { publicLaunchRoutes } from "./publicLaunches";
 import { manualBasisRoutes } from "./manualBasis";
@@ -44,6 +45,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
   await app.register(publicLaunchRoutes, deps);
   await app.register(launchProofRoutes, deps);
   await app.register(deploymentPlanRoutes, deps);
+  await app.register(executionReadinessRoutes, deps);
   await app.register(tokenRoutes, deps);
   await app.register(proofRoutes, deps);
   await app.register(discoverRoutes, deps);

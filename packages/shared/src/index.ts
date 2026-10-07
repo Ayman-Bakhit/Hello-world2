@@ -19,3 +19,5 @@ export * from "./hash";
 export * from "./launchModel";
 export * from "./proof";
 export * from "./deployment";
+export * from "./deploymentPolicy";
+export * from "./readiness";

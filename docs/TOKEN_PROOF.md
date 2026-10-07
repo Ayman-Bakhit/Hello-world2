@@ -70,3 +70,6 @@ Real Solana RPC is not validated from this environment; no real token or verific
 
 ## Expected state from the deployment plan (Slice 13)
 `DeploymentPlan.expectedState` (and `expectedStateForProof`) restate what a deployment is expected to produce, in the proof's terms (network, decimals, supply in base units, final authorities, name and symbol, configured fee bps, configuration fingerprint, plan hash). A test shows it agrees with `evaluateProof`'s expectations for the same configuration. It is EXPECTED, not observed, and verifies nothing; VERIFIED still needs a real on-chain observation. See docs/DEPLOYMENT_PLAN.md.
+
+## Slice 14 expected state
+The expected state now also carries the cluster, the token program name, the metadata document sha256 and an expected liquidity kept apart from observed liquidity (`liquidityObserved: null`). `expectedStateForProof` includes them. Slice 12's evaluator is unchanged and still derives verification only from an on-chain observation.

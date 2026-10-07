@@ -190,9 +190,9 @@ describe("wizard validation and request mapping", () => {
 
 describe("mock client: no deployment surface", () => {
   it("exposes no deploy, mint, liquidity, distribution, payout, donation or transfer function", () => {
-    // the only deployment-named methods are the read-only plan and review getters (Slice 13)
+    // the only deployment-named methods are read-only getters: plan, review, decision summary, attempt list (Slices 13 and 14)
     const all = Object.keys(createApiClient({ mode: "mock" }));
-    expect(all.filter((k) => /deploy/i.test(k)).sort()).toEqual(["getDeploymentPlan", "getDeploymentReview"]);
+    expect(all.filter((k) => /deploy/i.test(k)).sort()).toEqual(["getDeploymentAttempts", "getDeploymentDecisionSummary", "getDeploymentPlan", "getDeploymentReview"]);
     const names = all.filter((k) => !/deploy/i.test(k)).join(" ").toLowerCase();
     expect(names).not.toMatch(/deploy|mint|liquidity|distribut|payout|donate|transfer|swap|sign/);
   });

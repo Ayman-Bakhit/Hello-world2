@@ -46,3 +46,6 @@ API e2e harness requirements (all four are needed; otherwise the run fails for r
 - A freshly started local fake RPC (`apps/api/scripts/fake-rpc-server.ts`, port 8899). It keeps state (the `new-tx` control endpoint adds a transaction), so a reused process breaks the "3 indexed, then 4" checks.
 Also raise `RATE_LIMIT_MAX`, `RATE_LIMIT_WRITE_MAX` and set `INDEXER_SYNC_RATE_LIMIT_MAX=100` (the maximum the config accepts). The fake RPC is local; no real Solana RPC or price provider is used.
 Mock-mode smoke (web built without the api env, any port): `E2E_WEB_URL=http://localhost:3112 pnpm --filter @project-name/web e2e:mock`
+
+## REAL_EXECUTION_ENABLED
+Optional. The only accepted value is `false` (also the default when unset). Any other value makes the API refuse to start: real execution does not exist in this build and cannot be switched on by configuration.

@@ -11,7 +11,7 @@ const check = (name, ok, extra = "") => { results.push(ok); console.log(`${ok ? 
 const errors = [];
 
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
-const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/launches", "/launches/view?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801&scenario=SUPPLY_MISMATCH", "/launch/deployment?id=00000000-0000-4000-8000-000000000801", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
+const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/launches", "/launches/view?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801&scenario=SUPPLY_MISMATCH", "/launch/deployment?id=00000000-0000-4000-8000-000000000801", "/launch/readiness?id=00000000-0000-4000-8000-000000000801", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
 
 for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile", { width: 390, height: 844 }]]) {
   const ctx = await browser.newContext({ viewport: vp });
@@ -152,6 +152,11 @@ for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile",
   t = await main();
   check(`${label} demo deployment plan: PLAN BLOCKED, DEMO · FIXTURE, NOT DEPLOYED / NOT SIGNED / NO FUNDS MOVED, disabled execution, no deploy control`, ["PLAN BLOCKED", "DEMO · FIXTURE", "NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED", "EXECUTION NOT ENABLED IN THIS BETA", "DECISIONS REQUIRED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED", "9 · WHAT THE WALLET WILL NEED TO SIGN"].every((x) => t.includes(x)) && !/DEPLOY NOW|SIGN NOW|DEPLOYED SUCCESSFULLY|READY FOR USER REVIEW/.test(t) && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute/i }).count()) === 0, t.slice(0, 700));
   check(`${label} deployment plan: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+  await go("/launch/readiness?id=00000000-0000-4000-8000-000000000801");
+  await page.getByText("DECISION RECORDS").first().waitFor({ timeout: 8000 });
+  t = await main();
+  check(`${label} demo deployment readiness: BLOCKED, REAL EXECUTION: DISABLED, DEMO · FIXTURE, blockers with what is missing, no execution control`, ["BLOCKED", "REAL EXECUTION: DISABLED", "NO TRANSACTIONS SENT", "NO FUNDS MOVED", "NO PRIVATE KEYS STORED", "DEMO · FIXTURE", "Must be decided or done", "FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED", "8 DECIDED", "9 PENDING", "EXECUTION NOT ENABLED IN THIS BETA"].every((x) => t.includes(x)) && !/READY TO SIGN|READY FOR SIGNING|APPROVED/.test(t) && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute|approve/i }).count()) === 0, t.slice(0, 800));
+  check(`${label} deployment readiness: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await ctx.close();
 }
 await browser.close();
