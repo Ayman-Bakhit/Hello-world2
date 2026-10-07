@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FEE_BUCKETS, LAUNCH_COPY, allocationName, launchAllocations, safeHttpUrl, verificationLabel, type Launch, type LaunchHistory, type PublicLaunch } from "@project-name/shared";
 import { BUCKET_COLOR, BUCKET_LABEL } from "@/lib/feeDrafts";
 import { formatDate, formatDateTime, formatUsd, shortAddress } from "@/lib/format";
@@ -40,7 +41,7 @@ export function Fingerprint({ value }: { value: string }) {
 }
 
 /** Links are validated again at render and opened with rel=noopener noreferrer nofollow. Metadata is text, never HTML. */
-function SafeLink({ href }: { href: string | null }) {
+export function SafeLink({ href }: { href: string | null }) {
   if (!href) return <span className="text-faint">None</span>;
   const u = safeHttpUrl(href);
   return u ? <a className="break-all text-accent underline underline-offset-2" href={u} target="_blank" rel="noopener noreferrer nofollow">{u}</a> : <span className="text-faint">Not shown (unsafe URL)</span>;
@@ -193,6 +194,7 @@ export function PublicLaunchView({ launch }: { launch: PublicLaunch }) {
       <CharityBlock charity={launch.charity} />
       <Fingerprint value={launch.fingerprint} />
       <p className="text-xs font-semibold text-warn">{LAUNCH_COPY.deploymentDisabled} No token, mint, liquidity or fee routing exists for this configuration.</p>
+      <p className="text-xs"><Link className="text-accent underline underline-offset-2" href={`/launches/proof?id=${encodeURIComponent(launch.id)}`}>VIEW TOKEN PROOF</Link></p>
     </div>
   );
 }

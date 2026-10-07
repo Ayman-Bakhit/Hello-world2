@@ -1,6 +1,6 @@
 import {
   CharityEvidenceResponse, CharityList, LaunchHistory, PublicLaunch, PublicLaunchList, buildDemoPublicLaunch, planLaunchAction, launchFingerprint, revisionRowHash, toPublicLaunch, STATUS_MEANING, type LaunchAction, type LaunchActionName, DEMO_CHARITIES, DonationDetail, DonationPlanResponse, Receipt, buildCharityEvidence, buildDonationDetail, buildDonationPlan, buildReceipt, parseUsdToCents, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
-  LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
+  LaunchList, LaunchProof, PROOF_SCENARIOS, buildLaunchProof, buildProofFixture, DEMO_IDS as PROOF_DEMO_IDS, type ProofScenario, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
   type CreateManualBasisRequest, type ReviseManualBasisRequest, type VoidManualBasisRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
   buildTax, buildTaxDetails, buildTaxReserve, buildTokenProof, buildTransactions, DEMO_TOKENS, reviewLaunchConfig, summarizeToken,
@@ -79,6 +79,13 @@ export function createApiClient(opts: ClientOptions = {}) {
     const createdAt = new Date().toISOString();
     const row = { seq: rows.length + 1, action, statusAfter: l.status, fingerprint: l.fingerprint, reason, createdAt, prevHash: prev, rowHash: revisionRowHash({ launchId: l.id, seq: rows.length + 1, action, statusAfter: l.status, fingerprint: l.fingerprint, createdBy: "demo", reason, prevHash: prev, createdAt }) };
     mockHistory.set(l.id, [...rows, row]);
+  };
+  const mockProof = (l: Launch, audience: "owner" | "public"): LaunchProof => {
+    const c = mockCharity(l.config.charityConfiguration.charityId);
+    return buildLaunchProof({
+      subject: { launchId: l.id, dataSource: l.dataSource, config: l.config, fingerprint: l.fingerprint, charity: c ? { id: c.id, name: c.name, walletAddress: null } : null },
+      deployment: null, observation: null, observationCount: 0, historyIntact: true, audience,
+    });
   };
   const mockLaunch = (config: LaunchConfig, id: string, status: Launch["status"], now: string): Launch => ({
     id, status, statusMeaning: STATUS_MEANING[status], config, review: null, fingerprint: launchFingerprint(config), revision: 1, publicVisible: false, readyAt: null,
@@ -189,6 +196,24 @@ export function createApiClient(opts: ClientOptions = {}) {
       const own = mockLaunches.filter((l) => l.status === "READY" && l.publicVisible).map((l) => toPublicLaunch(l, publicCharity(l)));
       const all = [...own, buildDemoPublicLaunch()];
       return { launches: all.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 25)), pagination: { limit: params.limit ?? 25, offset: params.offset ?? 0, total: all.length } };
+    },
+    /** Owner-only token proof for a launch. Mock mode: a saved launch is never deployed, so its proof is always NOT DEPLOYED. */
+    getLaunchProof: async (id: string): Promise<LaunchProof> => {
+      if (mode === "api") return http(LaunchProof, `/api/launches/${encodeURIComponent(id)}/proof`);
+      return mockProof(need(mockLaunches.find((l) => l.id === id) ?? null, "Launch"), "owner");
+    },
+    /**
+     * Public token proof (READY and published only). Mock mode: the labeled DEMO launch serves a deterministic FIXTURE scenario
+     * (default FULL_MATCH, which is still NOT verified); a user's own published launch is NOT DEPLOYED. `scenario` is ignored in api mode.
+     */
+    getPublicLaunchProof: async (id: string, scenario?: string): Promise<LaunchProof> => {
+      if (mode === "api") return http(LaunchProof, `/api/public/launches/${encodeURIComponent(id)}/proof`);
+      if (id === PROOF_DEMO_IDS.launch) {
+        const s = (PROOF_SCENARIOS as readonly string[]).includes(scenario ?? "") ? (scenario as ProofScenario) : "FULL_MATCH";
+        return buildProofFixture(s, "public");
+      }
+      const l = mockLaunches.find((x) => x.id === id && x.status === "READY" && x.publicVisible);
+      return mockProof(need(l ?? null, "Launch"), "public");
     },
     getPublicLaunch: async (id: string): Promise<PublicLaunch> => {
       if (mode === "api") return http(PublicLaunch, `/api/public/launches/${encodeURIComponent(id)}`);
@@ -322,4 +347,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, updateLaunch, configureLaunch, reviewLaunch, readyLaunch, cancelLaunch, getLaunchHistory, getPublicLaunches, getPublicLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, updateLaunch, configureLaunch, reviewLaunch, readyLaunch, cancelLaunch, getLaunchHistory, getPublicLaunches, getPublicLaunch, getLaunchProof, getPublicLaunchProof, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

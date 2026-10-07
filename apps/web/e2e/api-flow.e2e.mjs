@@ -354,7 +354,7 @@ check("discover: demo tokens are labeled DEMO DATA with the API ranking rule", t
 await page.getByRole("tab", { name: "Verified Transparency" }).click();
 await page.waitForTimeout(500);
 t = await text();
-check("discover: Verified Transparency filter is the API's (all 9 checks REPORTED), never 'verified'", t.includes("Harbor Demo Token") && t.includes("Orchard Demo") && !t.includes("Lantern Demo") && !t.includes("VERIFIED TRANSPARENCY\n") && t.includes("ALL 9 CHECKS REPORTED"));
+check("discover: the Verified Transparency filter uses the SERVER flag: no demo token qualifies, and nothing says VERIFIED TRANSPARENCY", t.includes("NO TOKENS MATCH") && !t.includes("Harbor Demo Token") && !/VERIFIED TRANSPARENCY\n/.test(t), t.slice(0, 600));
 await page.getByRole("tab", { name: "New" }).click();
 await page.waitForTimeout(500);
 t = await text();
@@ -443,6 +443,23 @@ const put = (body) => context.request.put(`${API}/api/launches/${LAUNCH_ID}`, { 
 check("launch API: a client cannot send a status or change the fee split", (await put({ ...cfg0, status: "LIVE" })).status() === 400 && (await put({ ...cfg0, feeSplit: { creator: 5000, taxReserve: 2500, charity: 1500, protocol: 1000 } })).status() === 400 && (await context.request.post(`${API}/api/launches/${LAUNCH_ID}/ready`, { headers: { origin: WEB }, data: { fingerprint: ready.fingerprint, confirmed: true, status: "LIVE" } })).status() === 400);
 check("launch API: no deploy, mint, liquidity, payout or donation endpoint exists", (await Promise.all(["deploy", "mint", "liquidity", "distribute", "payout", "donate"].map((p) => context.request.post(`${API}/api/launches/${LAUNCH_ID}/${p}`, { headers: { origin: WEB }, data: {} })))).every((r) => r.status() === 404));
 check("launch API: another user's launch id is a 404", (await apiGet("/api/launches/00000000-0000-4000-8000-0000000fffff")).status() === 404);
+
+// token proof: a real READY launch was never deployed, so it is NOT DEPLOYED and nothing is invented or verified
+const ownProof = await (await apiGet(`/api/launches/${LAUNCH_ID}/proof`)).json();
+check("token proof API (owner): NOT DEPLOYED, no mint/signature/explorer/observed timestamp, nothing verified", ownProof.status === "NOT_DEPLOYED" && ownProof.verifiedOnChain === false && ownProof.verifiedTransparency === false && ownProof.identity.mintAddress === null && ownProof.identity.deploymentSignature === null && ownProof.identity.observedAt === null && ownProof.identity.explorerUrl === null && ownProof.observed === null && ownProof.checks.length === 0);
+const pubProofRes = await fetch(`${API}/api/public/launches/${LAUNCH_ID}/proof`);
+const pubProofText = await pubProofRes.text();
+check("token proof API (public): readable without a session, no wallet address, reserve destination, user id or session", pubProofRes.status === 200 && !pubProofText.includes(ADDRESS) && JSON.parse(pubProofText).configured.taxReserve.destination === null && !/creatorUserId|userId|session|destinationAddress/i.test(pubProofText));
+check("token proof API: needs a session for the owner view; writes do not exist; unknown ids are 404", (await fetch(`${API}/api/launches/${LAUNCH_ID}/proof`)).status === 401 && (await context.request.post(`${API}/api/launches/${LAUNCH_ID}/proof`, { headers: { origin: WEB }, data: { status: "VERIFIED", verifiedOnChain: true } })).status() === 404 && (await apiGet("/api/launches/00000000-0000-4000-8000-0000000fffff/proof")).status() === 404 && (await fetch(`${API}/api/public/launches/00000000-0000-4000-8000-0000000fffff/proof`)).status === 404);
+await go(`/launch/proof?id=${LAUNCH_ID}`);
+await page.getByText("A · IDENTITY").first().waitFor({ timeout: 8000 });
+t = await text();
+check("token proof page (owner): NOT DEPLOYED, sections A-G, disclosure wording, no VERIFIED TRANSPARENCY, no fixture label", t.includes("NOT DEPLOYED") && ["A · IDENTITY", "B · CONFIGURATION", "C · OBSERVED ON-CHAIN", "D · VERIFICATION CHECKS", "E · MISMATCHES", "F · PROVENANCE", "G · DISCLOSURE"].every((x) => t.includes(x)) && t.includes("Configured values describe the intended launch configuration. They are not blockchain proof.") && !/VERIFIED TRANSPARENCY(?! is shown only)/.test(t) && !t.includes("FIXTURE") && !/\$0\b/.test(t), t.slice(0, 900));
+await go(`/launches/proof?id=${LAUNCH_ID}`);
+await page.getByText("IN PLAIN WORDS").first().waitFor({ timeout: 8000 });
+t = await text();
+check("token proof page (public): plain-words answers, NOT DEPLOYED, no scenario picker against a real API, no wallet address", ["What was promised?", "What was observed?", "Do they match?", "What could not be verified?", "NOT DEPLOYED"].every((x) => t.includes(x)) && !t.includes("FIXTURE SCENARIO") && !t.includes(ADDRESS), t.slice(0, 900));
+await shot("9b-token-proof");
 
 // editing returns the launch to DRAFT, un-publishes it, changes the fingerprint and is recorded
 const edited = await put({ ...cfg0, description: "edited by e2e" });

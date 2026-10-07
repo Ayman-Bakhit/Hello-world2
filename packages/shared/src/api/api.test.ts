@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BANNED_PHRASES, DEMO_IDS, DEMO_TOKENS, DiscoverQuery, FeeSplitSchema, LaunchConfigSchema, SetTaxReserveTargetRequest,
   buildDiscover, buildPortfolio, buildTax, buildTaxReserve, buildTokenProof, buildTransactions, centsToUsdString,
-  discoverTokens, parseUsdToCents, reviewLaunchConfig, validateFeeSplit, type LaunchConfig,
+  allChecksReported, discoverTokens, parseUsdToCents, reviewLaunchConfig, validateFeeSplit, type LaunchConfig,
 } from "../index";
 
 const W = DEMO_IDS.wallets;
@@ -132,9 +132,10 @@ describe("discover", () => {
     expect(discoverTokens(DEMO_TOKENS, q({ minHolders: 2000 })).total).toBe(2);
     expect(discoverTokens(DEMO_TOKENS, q({ minVolume: "20000" })).items.map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH"]);
   });
-  it("verifiedTransparency filters on all 9 reported checks", () => {
-    expect(discoverTokens(DEMO_TOKENS, q({ verifiedTransparency: "true" })).items.map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH"]);
-    expect(discoverTokens(DEMO_TOKENS, q({ verifiedTransparency: "false" })).total).toBe(4);
+  it("verifiedTransparency filters on the SERVER-derived flag: reported checks are not verification, so no demo token matches", () => {
+    expect(discoverTokens(DEMO_TOKENS, q({ verifiedTransparency: "true" })).total).toBe(0);
+    expect(discoverTokens(DEMO_TOKENS, q({ verifiedTransparency: "false" })).total).toBe(DEMO_TOKENS.length);
+    expect(DEMO_TOKENS.some((t) => allChecksReported(t))).toBe(true);
   });
   it("launchedWithinDays keeps only recent launches (fixed demo reference time)", () => {
     expect(discoverTokens(DEMO_TOKENS, q({ launchedWithinDays: 14, sort: "newest" })).items.map((t) => t.symbol)).toEqual(["LNTN", "FNDM"]);

@@ -163,3 +163,12 @@ No idle timeout or sliding refresh; no "list/revoke my sessions" or revoke-all; 
 - **History**: append-only, hash-chained, owner-only; tampering outside the API is detected (tested). Not a blockchain proof.
 - **Language**: banned phrases, "immutable", "deployed", "live", "earned/received/paid" are linted over responses and UI; fixtures are labeled DEMO DATA, NOT DEPLOYED, NOT VERIFIED ON-CHAIN.
 - Residual: a fixture-VERIFIED charity can be selected (flagged); mainnet-beta is recorded as configuration only; per-account launch cap (`MAX_LAUNCHES_PER_USER`, default 50) and write rate limits bound abuse; the per-process limiter caveat still applies.
+
+## Slice 12: token proof / transparency
+- **One server-side rule**: `evaluateProof` derives status, every check and both verification flags. No request field can influence them; no write route exists under any proof path (tested for every method); the privileged writers are not imported by any route (tested).
+- **No fake verification**: fixtures cannot pass `OBSERVATION_FROM_CHAIN`, so they can never be VERIFIED; the database refuses fixture observations on non-demo proofs; a tampered observation breaks the hash chain and the proof becomes UNAVAILABLE (tested by bypassing the trigger). Observations are validated by a strict schema (base58 addresses, u64 supply as a string, no extras) before storage.
+- **Ownership and visibility**: owner proof filters by `creator_user_id` in SQL (foreign equals unknown, 404); the public proof serves only READY and published launches. The public form hides the tax reserve destination and recipient, abbreviates the creator and authority addresses, and carries no user id, session or secret (tested).
+- **Untrusted metadata**: user-provided and on-chain text is rendered escaped; URLs validated; no image loaded; nothing fetched; no explorer URL generated.
+- **Language**: required disclosures; never SAFE, GUARANTEED, TRUSTLESS, IMMUTABLE or AUDITED; VERIFIED TRANSPARENCY only when the server says so; unavailable values are labeled, not zero.
+- Mutation checks (by hand, then reverted): fixture allowed to pass the chain check, unknown treated as pass, mismatch no longer failing, public form using the owner view, public form exposing the reserve destination, history integrity not checked. All caught. Removing `&& real` from the final VERIFIED flag is an equivalent mutant (the chain check already requires it).
+- Residual: nothing populates real proofs yet; the observer, its trust and RPC failure handling are future work.

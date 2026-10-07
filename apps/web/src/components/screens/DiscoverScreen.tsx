@@ -43,7 +43,7 @@ export function DiscoverResults({ data }: { data: DiscoverResponse }) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.tokens.map((t) => {
-            const b = transparencyBadge({ reported: t.transparencyChecksReported, total: t.transparencyChecksTotal, verifiedOnChain: data.verifiedOnChain, dataSource: t.dataSource });
+            const b = transparencyBadge({ reported: t.transparencyChecksReported, total: t.transparencyChecksTotal, verifiedTransparency: t.verifiedTransparency, dataSource: t.dataSource });
             return (
               <Link key={t.id} href={`/token/${t.id}`} className="group rounded-lg border border-line bg-surface p-4 transition-colors hover:border-line-strong">
                 <div className="flex items-start justify-between gap-2">

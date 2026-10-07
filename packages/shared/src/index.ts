@@ -17,3 +17,4 @@ export * from "./give";
 export * from "./reserve";
 export * from "./hash";
 export * from "./launchModel";
+export * from "./proof";

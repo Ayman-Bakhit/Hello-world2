@@ -6,6 +6,12 @@ import { DEMO_REFERENCE_TIME, DEMO_TOKENS, TRANSPARENCY_CHECK_KEYS, type DemoTok
 
 export const checksReported = (t: DemoToken) => Object.values(t.checks).filter(Boolean).length;
 export const allChecksReported = (t: DemoToken) => checksReported(t) === TRANSPARENCY_CHECK_KEYS.length;
+/**
+ * The ONE rule for the "Verified Transparency" claim on a listed token. Demo tokens have no on-chain observation, so it is false for
+ * every one of them. Reported checks (a creator's own disclosure) are not verification. A real token's value must come from
+ * `evaluateProof` (proof.ts), never from this function and never from a client.
+ */
+export const tokenVerifiedTransparency = (_t: DemoToken): boolean => false;
 export const charityGeneratedCents = (t: DemoToken) => splitAmount(t.lifetimeFeesCents, t.feeSplit).charity;
 
 const usd = (whole: string) => BigInt(whole) * 100n;
@@ -33,8 +39,8 @@ export function discoverTokens(tokens: DemoToken[], q: DiscoverQuery): { items: 
       const age = Date.parse(DEMO_REFERENCE_TIME) - Date.parse(t.launchedAt);
       if (age < 0 || age > q.launchedWithinDays * 86_400_000) return false;
     }
-    if (q.verifiedTransparency === "true" && !allChecksReported(t)) return false;
-    if (q.verifiedTransparency === "false" && allChecksReported(t)) return false;
+    if (q.verifiedTransparency === "true" && !tokenVerifiedTransparency(t)) return false;
+    if (q.verifiedTransparency === "false" && tokenVerifiedTransparency(t)) return false;
     return true;
   });
   const key: Record<DiscoverQuery["sort"], (a: DemoToken, b: DemoToken) => number> = {

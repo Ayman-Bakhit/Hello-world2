@@ -42,7 +42,7 @@ describe("mock mode", () => {
     await expect(c.getPortfolio("00000000-0000-4000-8000-0000000000ff")).rejects.toMatchObject({ status: 404 });
   });
   it("discover filters work and bad params are rejected", async () => {
-    expect((await c.getDiscover({ verifiedTransparency: true })).tokens.map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH"]);
+    expect((await c.getDiscover({ verifiedTransparency: true })).tokens).toEqual([]);
     expect((await c.getDiscover({ minHolders: 1000 })).tokens).toHaveLength(3);
     await expect(c.getDiscover({ sort: "pump" as never })).rejects.toThrow();
   });

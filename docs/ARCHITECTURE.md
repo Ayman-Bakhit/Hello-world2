@@ -128,3 +128,13 @@ creator (session) -> launch configuration (DRAFT)
 - The fee split is a fixed, server-validated configuration (60/15/15/10); the launch tax reserve allocation is separate from the user's personal Tax Reserve (Slice 10); the selected charity comes from the Slice 9 registry; nothing here moves money or touches a chain.
 - `launchFingerprint` + the hash-chained `launch_configuration_revisions` give auditability and the anchor a future deployment slice compares against. They are not blockchain proofs.
 - Deployment, minting, liquidity, fee routing, payouts and custody are explicitly out of scope and undecided (docs/LAUNCHPAD.md).
+
+## Token proof (Slice 12): derive, never declare
+```
+launch configuration (READY) + deployment record (none today) + observation history (none today)
+  -> evaluateProof (shared, the ONLY verification rule) -> status + per-check PASS/FAIL/UNKNOWN/UNAVAILABLE/NOT_APPLICABLE
+  -> buildLaunchProof (owner or redacted public) -> read-only API -> web renders what the server derived
+```
+- The frontend never decides verification; the server derives `verifiedOnChain` / `verifiedTransparency` from check state; no client field or endpoint can set them.
+- A FIXTURE observation can never pass `OBSERVATION_FROM_CHAIN`, so it can never yield VERIFIED. Observations are append-only and hash-chained (tamper-evident auditability, not a blockchain proof).
+- `TokenSummary` / `TokenProof` carry a server-computed `verifiedTransparency` (false for demo tokens); the old frontend-decided badge is gone. Details: docs/TOKEN_PROOF.md.

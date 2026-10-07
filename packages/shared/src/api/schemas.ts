@@ -938,6 +938,8 @@ export const TokenProof = z.object({
   freezeAuthority: z.enum(["disabled", "creator"]),
   adminStatus: z.string(),
   transparencyChecksReported: z.record(z.string(), z.boolean()),
+  /** decided on the server only (never by a client); false until a real on-chain observation passes every required check */
+  verifiedTransparency: z.boolean(),
   evidence: z.array(z.object({ label: z.string(), url: z.string() })),
   notice: z.string(),
   ...provenance,
@@ -959,6 +961,8 @@ export const TokenSummary = z.object({
   transparencyChecksReported: z.number().int(),
   transparencyChecksTotal: z.number().int(),
   allTransparencyChecksReported: z.boolean(),
+  /** decided on the server only; false for every demo token */
+  verifiedTransparency: z.boolean(),
   dataSource: DataSource,
 });
 export type TokenSummary = z.infer<typeof TokenSummary>;

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { Launch } from "@project-name/shared";
 import { api } from "@/lib/api/client";
@@ -21,7 +22,10 @@ function Detail({ id }: { id: string }) {
   return (
     <div className="space-y-3">
       <ResourceView resource={res} loadingLabel="Loading configuration">{(l) => <LaunchSummary launch={l} />}</ResourceView>
-      <Button variant="ghost" onClick={() => setShowHistory((v) => !v)}>{showHistory ? "HIDE HISTORY" : "HISTORY"}</Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="ghost" onClick={() => setShowHistory((v) => !v)}>{showHistory ? "HIDE HISTORY" : "HISTORY"}</Button>
+        <Link className="text-xs text-accent underline underline-offset-2" href={`/launch/proof?id=${encodeURIComponent(id)}`}>TOKEN PROOF</Link>
+      </div>
       {showHistory ? <ResourceView resource={hist} loadingLabel="Loading history">{(h) => <HistoryList history={h} />}</ResourceView> : null}
     </div>
   );

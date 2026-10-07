@@ -11,7 +11,7 @@ const check = (name, ok, extra = "") => { results.push(ok); console.log(`${ok ? 
 const errors = [];
 
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
-const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/launches", "/launches/view?id=00000000-0000-4000-8000-000000000801", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
+const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/launches", "/launches/view?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801", "/launches/proof?id=00000000-0000-4000-8000-000000000801&scenario=SUPPLY_MISMATCH", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
 
 for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile", { width: 390, height: 844 }]]) {
   const ctx = await browser.newContext({ viewport: vp });
@@ -86,7 +86,7 @@ for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile",
   await page.getByRole("tab", { name: "Verified Transparency" }).click();
   await page.waitForTimeout(400);
   t = await main();
-  check(`${label} discover: filter works and never says VERIFIED TRANSPARENCY for demo`, t.includes("Orchard Demo") && !t.includes("Lantern Demo") && !t.includes("VERIFIED TRANSPARENCY\n"));
+  check(`${label} discover: the Verified Transparency filter uses the server flag, so no demo token qualifies`, t.includes("NO TOKENS MATCH") && !t.includes("Orchard Demo") && !t.includes("VERIFIED TRANSPARENCY\n"));
 
   await go("/token/demo");
   t = await page.locator("body").innerText();
@@ -136,6 +136,17 @@ for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile",
   await page.getByText("Configured allocations").first().waitFor({ timeout: 5000 });
   t = await main();
   check(`${label} demo launch view: DEMO DATA, NOT DEPLOYED, NOT VERIFIED ON-CHAIN, user-provided metadata, fingerprint`, ["demo data", "not deployed", "not verified on-chain", "user-provided", "configuration fingerprint", "it is not a blockchain proof."].every((x) => t.toLowerCase().includes(x)), t.slice(0, 600));
+  await go("/launches/proof?id=00000000-0000-4000-8000-000000000801");
+  await page.getByText("A · IDENTITY").first().waitFor({ timeout: 8000 });
+  t = await main();
+  check(`${label} demo token proof: PARTIAL PROOF, labeled DEMO / FIXTURE / NOT VERIFIED ON-CHAIN, never Verified Transparency`, t.includes("PARTIAL PROOF") && t.includes("DEMO · FIXTURE · NOT VERIFIED ON-CHAIN") && t.includes("IN PLAIN WORDS") && t.includes("FIXTURE SCENARIO") && !/VERIFIED TRANSPARENCY(?! is shown only)/.test(t), t.slice(0, 800));
+  await page.getByRole("button", { name: /SUPPLY MISMATCH/ }).click();
+  await page.waitForURL(/scenario=SUPPLY_MISMATCH/, { timeout: 5000 });
+  await page.getByText("VERIFICATION FAILED").first().waitFor({ timeout: 5000 });
+  t = await main();
+  check(`${label} demo token proof: a supply mismatch shows VERIFICATION FAILED with configured vs observed values`, t.includes("VERIFICATION FAILED") && t.includes("1,000,000,000,000,000") && t.includes("1000000000000001"));
+  const noScroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+  check(`${label} token proof: no horizontal overflow`, noScroll);
   await ctx.close();
 }
 await browser.close();

@@ -97,3 +97,6 @@ No hard delete exists anywhere: voiding is a new revision. The API computes `row
 - `launch_configuration_revisions` (new, append-only): one row per action (`create, update, configure, review, ready, cancel`) with the status after, the fingerprint, a snapshot of the configuration, the acting user and auth method, an optional reason, `prev_hash` and `row_hash` (a hash chain). UPDATE and DELETE are rejected by trigger. Tamper-evident, not tamper-proof, and not a blockchain proof.
 - The configuration itself stays in `config jsonb` (validated by the shared schema before every write). No mint, signature, contract or payout column exists anywhere.
 - The launch tax reserve allocation lives inside the configuration; it shares nothing with `tax_reserves` (the personal Tax Reserve).
+
+## Slice 12: token proof (`db/migrations/009_token_proof.sql`)
+- `token_proofs` (one per launch, base58 mint and signature checks, READY launch on the same network, append-only) and `token_proof_observations` (append-only, hash-chained, `observed_at` not in the future, `FIXTURE` observations only on `demo` proofs). Nothing in the application writes either in production. Tamper-evident auditability, not a blockchain proof, not called immutable.

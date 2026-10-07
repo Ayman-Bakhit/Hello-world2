@@ -47,3 +47,6 @@ Token program (SPL Token vs Token-2022); mint and freeze authority policy on-cha
 
 ## Caveats that still apply
 Real Solana RPC has not been validated from this environment; real historical prices are not connected; tax calculations are not jurisdiction-complete; user-provided cost basis is unverified; charity verification is fixture/admin-data driven; no real money movement; no real token deployment.
+
+## Token proof (Slice 12)
+A READY launch has a read-only proof view (`GET /api/launches/:id/proof`, `GET /api/public/launches/:id/proof`). Without a deployment record it is NOT DEPLOYED; nothing in this repo records a deployment or an observation in production, so no real launch can be VERIFIED. The fingerprint stored at READY stays the anchor a deployment is compared against (`CONFIGURATION_FINGERPRINT_MATCH`). See docs/TOKEN_PROOF.md.

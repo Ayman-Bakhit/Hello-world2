@@ -255,15 +255,17 @@ describe("token proof: verification state comes from the API", () => {
     expect(out).toContain("NOT VERIFIED ON-CHAIN");
     expect(out.toLowerCase()).not.toMatch(/immutable|"safe"|anti-rug/);
   });
-  it("VERIFIED TRANSPARENCY appears only when the API reports verifiedOnChain (synthetic proof)", () => {
-    const live: TokenProof = { ...buildTokenProof("demo")!, verifiedOnChain: true, dataSource: "chain" };
+  it("VERIFIED TRANSPARENCY appears only when the SERVER reports verifiedTransparency (synthetic proof); verifiedOnChain alone is not enough", () => {
+    const onChainOnly: TokenProof = { ...buildTokenProof("demo")!, verifiedOnChain: true, verifiedTransparency: false, dataSource: "chain" };
+    expect(html(<TokenProofView proof={onChainOnly} summary={null} />)).not.toContain("VERIFIED TRANSPARENCY");
+    const live: TokenProof = { ...buildTokenProof("demo")!, verifiedOnChain: true, verifiedTransparency: true, dataSource: "chain" };
     const out = html(<TokenProofView proof={live} summary={null} />);
     expect(out).toContain("VERIFIED TRANSPARENCY");
     expect(out).toContain("LIVE DATA");
     expect(out).not.toContain("BLOCKCHAIN VERIFICATION NOT YET CONNECTED");
     // reported-but-not-verified never earns the badge, whatever the check count is
-    expect(transparencyBadge({ reported: 9, total: 9, verifiedOnChain: false, dataSource: "demo" }).label).toBe("ALL 9 CHECKS REPORTED · DEMO");
-    expect(transparencyBadge({ reported: 4, total: 9, verifiedOnChain: true, dataSource: "chain" }).label).toBe("4/9 CHECKS REPORTED");
+    expect(transparencyBadge({ reported: 9, total: 9, verifiedTransparency: false, dataSource: "demo" }).label).toBe("ALL 9 CHECKS REPORTED · DEMO");
+    expect(transparencyBadge({ reported: 4, total: 9, verifiedTransparency: false, dataSource: "chain" }).label).toBe("4/9 CHECKS REPORTED");
   });
 });
 
@@ -279,7 +281,7 @@ describe("discover", () => {
     const c = createApiClient({ mode: "mock" });
     const first = async (id: string) => (await c.getDiscover(DISCOVER_FILTERS.find((f) => f.id === id)!.params)).tokens.map((t) => t.symbol);
     expect(await first("new")).toEqual(["LNTN", "FNDM"]);
-    expect((await first("verified")).sort()).toEqual(["HRBR", "ORCH"]);
+    expect(await first("verified")).toEqual([]); // reported checks are not verification, so no demo token qualifies
     expect((await first("volume"))[0]).toBe("ORCH");
     expect((await first("concentration"))[0]).toBe("ORCH");
     expect((await first("charity"))[0]).toBe("ORCH");

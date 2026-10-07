@@ -2,7 +2,7 @@ import type {
   DiscoverQuery, DiscoverResponse, PortfolioResponse, TaxDetailsResponse, TaxReserveResponse, TaxResponse, TokenProof,
   TokenSummary, TransactionsResponse,
 } from "../api/schemas";
-import { SORT_RULES, allChecksReported, charityGeneratedCents, checksReported, discoverTokens } from "../discover";
+import { SORT_RULES, allChecksReported, charityGeneratedCents, checksReported, discoverTokens, tokenVerifiedTransparency } from "../discover";
 import { splitAmount } from "../feesplit";
 import { estimateTax } from "../tax/engine";
 import { buildReserveState, type ReserveTargetSource } from "../reserve";
@@ -189,7 +189,7 @@ export function summarizeToken(t: DemoToken): TokenSummary {
     liquidityCents: str(t.liquidityCents), volume24hCents: str(t.volume24hCents), holders: t.holders, launchedAt: t.launchedAt,
     creatorConcentrationBps: t.creatorAllocationBps, charityGeneratedCents: str(charityGeneratedCents(t)),
     transparencyChecksReported: checksReported(t), transparencyChecksTotal: TRANSPARENCY_CHECK_KEYS.length,
-    allTransparencyChecksReported: allChecksReported(t), dataSource: "demo",
+    allTransparencyChecksReported: allChecksReported(t), verifiedTransparency: tokenVerifiedTransparency(t), dataSource: "demo",
   };
 }
 
@@ -210,7 +210,7 @@ export function buildTokenProof(tokenId: string): TokenProof | null {
     mintAuthority: t.mintAuthority,
     freezeAuthority: t.freezeAuthority,
     adminStatus: t.adminPrivileges === "none" ? "No admin privileges reported (unverified)" : "Fee configuration reported as admin controlled (unverified)",
-    transparencyChecksReported: t.checks,
+    transparencyChecksReported: t.checks, verifiedTransparency: tokenVerifiedTransparency(t),
     evidence: [],
     notice: PROOF_NOTICE,
     ...DEMO_PROVENANCE,

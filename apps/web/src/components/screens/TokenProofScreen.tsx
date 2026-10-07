@@ -48,7 +48,7 @@ export function riskRows(p: TokenProof, s: TokenSummary | null): Row[] {
 export function TokenProofView({ proof, summary }: { proof: TokenProof; summary: TokenSummary | null }) {
   const reported = Object.values(proof.transparencyChecksReported).filter(Boolean).length;
   const total = Object.keys(proof.transparencyChecksReported).length;
-  const badge = transparencyBadge({ reported, total, verifiedOnChain: proof.verifiedOnChain, dataSource: proof.dataSource });
+  const badge = transparencyBadge({ reported, total, verifiedTransparency: proof.verifiedTransparency, dataSource: proof.dataSource });
   return (
     <div className="space-y-6">
       {!proof.verifiedOnChain ? (

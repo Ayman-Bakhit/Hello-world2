@@ -72,10 +72,11 @@ describe("discover", () => {
     expect((await q("?launchedWithinDays=14&sort=newest")).tokens.map((t) => t.symbol)).toEqual(["LNTN", "FNDM"]);
     expect((await get("/api/discover?launchedWithinDays=0")).statusCode).toBe(400);
   });
-  it("verifiedTransparency=true means all 9 checks REPORTED, and says so", async () => {
-    const d = await q("?verifiedTransparency=true");
-    expect(d.tokens.map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH"]);
-    expect(d.tokens.every((t) => t.allTransparencyChecksReported && t.transparencyChecksReported === 9)).toBe(true);
+  it("verifiedTransparency=true uses the server-derived flag: reported checks are not verification, so demo tokens never match", async () => {
+    expect((await q("?verifiedTransparency=true")).tokens).toEqual([]);
+    const all = await q("");
+    expect(all.tokens.every((t) => t.verifiedTransparency === false)).toBe(true);
+    expect(all.tokens.filter((t) => t.allTransparencyChecksReported).map((t) => t.symbol).sort()).toEqual(["HRBR", "ORCH"]);
   });
   it("paginates deterministically", async () => {
     const a = await q("?limit=2&offset=0"), b = await q("?limit=2&offset=2");
