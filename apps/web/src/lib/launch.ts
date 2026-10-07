@@ -1,5 +1,4 @@
-import { percentToBps } from "@project-name/shared";
-import { parseFeeDrafts } from "./feeDrafts";
+import { CANONICAL_FEE_SPLIT, cleanText, percentToBps, safeHttpUrl, supplyFitsU64 } from "@project-name/shared";
 import type { LaunchConfiguration } from "./types";
 
 export const LAUNCH_STEPS = [
@@ -8,11 +7,11 @@ export const LAUNCH_STEPS = [
   { id: "info", title: "Token information" },
   { id: "supply", title: "Supply" },
   { id: "liquidity", title: "Liquidity" },
-  { id: "fees", title: "Fee configuration" },
-  { id: "charity", title: "Charity configuration" },
-  { id: "reserve", title: "Tax reserve configuration" },
+  { id: "fees", title: "Launch economics" },
+  { id: "charity", title: "Charity" },
+  { id: "reserve", title: "Tax reserve allocation" },
   { id: "review", title: "Review" },
-  { id: "deploy", title: "Deploy (unavailable)" },
+  { id: "deploy", title: "Ready for deployment" },
   { id: "verify", title: "Verify (unavailable)" },
   { id: "publish", title: "Publish (unavailable)" },
 ] as const;
@@ -45,12 +44,20 @@ export function stepErrors(step: LaunchStepId, c: LaunchConfiguration, ctx: Step
       break;
     case "info":
       if (c.name.trim().length < 1 || c.name.trim().length > 32) e.push("Token name must be 1 to 32 characters.");
+      else if (c.name.trim() !== cleanText(c.name.trim(), 32) || /[<>]/.test(c.name)) e.push("Token name must be plain text: no angle brackets, control characters or repeated spaces.");
       if (!/^[A-Z0-9]{2,10}$/.test(c.symbol)) e.push("Symbol must be 2 to 10 characters, A-Z and 0-9.");
       if (c.description.length > 280) e.push("Description must be 280 characters or fewer.");
+      else if (c.description !== cleanText(c.description, 280) || /[<>]/.test(c.description)) e.push("Description must be plain text: no angle brackets, control characters or repeated spaces.");
+      if (c.imageUrl.trim() && safeHttpUrl(c.imageUrl.trim(), { httpsOnly: true }) === null) e.push("Image must be an https URL.");
+      if (c.website.trim() && safeHttpUrl(c.website.trim()) === null) e.push("Website must be an http or https URL.");
+      for (const [k, v] of [["Twitter", c.twitter], ["Telegram", c.telegram], ["Discord", c.discord], ["GitHub", c.github]] as const) {
+        if (v.trim() && safeHttpUrl(v.trim(), { httpsOnly: true }) === null) e.push(`${k} link must be an https URL.`);
+      }
       break;
     case "supply": {
       if (!isPosInt(c.totalSupply)) e.push("Total supply must be a positive whole number.");
       if (!isNonNegInt(c.decimals) || Number(c.decimals) > 9) e.push("Decimals must be a whole number from 0 to 9.");
+      else if (isPosInt(c.totalSupply) && !supplyFitsU64(c.totalSupply.trim(), Number(c.decimals))) e.push("Total supply scaled by decimals must fit an unsigned 64-bit integer (18446744073709551615).");
       try {
         const bps = percentToBps(c.creatorAllocationPercent);
         if (bps > 10_000) e.push("Creator allocation cannot exceed 100%.");
@@ -72,7 +79,7 @@ export function stepErrors(step: LaunchStepId, c: LaunchConfiguration, ctx: Step
       break;
     }
     case "fees":
-      e.push(...parseFeeDrafts(c.feeDrafts).messages);
+      // fixed in this version (60/15/15/10): nothing to validate on the client, and the server enforces it
       break;
     case "charity":
       if (!ctx.verifiedCharityIds.includes(effectiveCharityId(c.charityId, ctx))) e.push("Select a verified charity.");
@@ -107,16 +114,19 @@ export interface LaunchRequestContext {
 }
 
 /**
- * Wizard state -> POST /api/launches body. Pure. The fee split is parsed by the shared validator; if it is invalid this
- * throws, so an invalid split can never be sent.
+ * Wizard state -> POST/PUT /api/launches body. Pure. The fee split is the canonical 60/15/15/10 constant from the shared package:
+ * the user cannot change it, and the server re-validates it anyway. The body carries no status, no owner and no fingerprint.
  */
 export function toLaunchRequest(c: LaunchConfiguration, r: LaunchRequestContext) {
-  const fee = parseFeeDrafts(c.feeDrafts);
-  if (!fee.split) throw new Error("Fee split is invalid");
+  const url = (v: string) => (v.trim() === "" ? null : v.trim());
   return {
     name: c.name.trim(),
     symbol: c.symbol,
     description: c.description,
+    network: c.network,
+    imageUri: url(c.imageUrl),
+    website: url(c.website),
+    socials: { twitter: url(c.twitter), telegram: url(c.telegram), discord: url(c.discord), github: url(c.github) },
     totalSupply: c.totalSupply.trim(),
     decimals: Number(c.decimals),
     creatorAllocationPercent: c.creatorAllocationPercent.trim(),
@@ -129,7 +139,7 @@ export function toLaunchRequest(c: LaunchConfiguration, r: LaunchRequestContext)
       supplyPercentage: c.liquiditySupplyPercent.trim(),
       lockDays: Number(c.liquidityLockDays),
     },
-    feeSplit: fee.split,
+    feeSplit: { ...CANONICAL_FEE_SPLIT },
     charityConfiguration: { charityId: r.charityId },
     taxReserveConfiguration: { destinationType: "creator_controlled" as const, destinationAddress: r.reserveAddress },
   };

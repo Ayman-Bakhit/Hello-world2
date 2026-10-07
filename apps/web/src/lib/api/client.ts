@@ -1,5 +1,5 @@
 import {
-  CharityEvidenceResponse, CharityList, DEMO_CHARITIES, DonationDetail, DonationPlanResponse, Receipt, buildCharityEvidence, buildDonationDetail, buildDonationPlan, buildReceipt, parseUsdToCents, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
+  CharityEvidenceResponse, CharityList, LaunchHistory, PublicLaunch, PublicLaunchList, buildDemoPublicLaunch, planLaunchAction, launchFingerprint, revisionRowHash, toPublicLaunch, STATUS_MEANING, type LaunchAction, type LaunchActionName, DEMO_CHARITIES, DonationDetail, DonationPlanResponse, Receipt, buildCharityEvidence, buildDonationDetail, buildDonationPlan, buildReceipt, parseUsdToCents, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
   LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
   type CreateManualBasisRequest, type ReviseManualBasisRequest, type VoidManualBasisRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
@@ -49,21 +49,65 @@ export function createApiClient(opts: ClientOptions = {}) {
   function http<S extends z.ZodType>(schema: S, path: string, query?: Record<string, string | number | boolean | undefined>): Promise<z.infer<S>> {
     return requestJson(schema, { baseUrl, fetchImpl: doFetch, path, ...(query ? { query } : {}), token: token() });
   }
-  function send<S extends z.ZodType>(schema: S, path: string, body?: unknown): Promise<z.infer<S>> {
-    return requestJson(schema, { baseUrl, fetchImpl: doFetch, method: "POST", path, ...(body !== undefined ? { body } : {}), token: token() });
+  function send<S extends z.ZodType>(schema: S, path: string, body?: unknown, method: "POST" | "PUT" = "POST"): Promise<z.infer<S>> {
+    return requestJson(schema, { baseUrl, fetchImpl: doFetch, method, path, ...(body !== undefined ? { body } : {}), token: token() });
   }
 
   // ---- mock mode: in-memory stand-ins for the API's stored data (never persisted, never sent anywhere) ----
   let mockTarget: StoredTarget = { targetType: "percentage", percentBps: 3000, targetCents: null, source: "USER_SET", enabled: true, updatedAt: "2026-01-01T00:00:00.000Z" };
   const mockLaunches: Launch[] = [];
+  /** Mock-mode revision rows, kept in memory per launch. They use the same hash chain as the API. */
+  const mockHistory = new Map<string, Array<{ seq: number; action: LaunchAction; statusAfter: Launch["status"]; fingerprint: string; reason: string | null; createdAt: string; prevHash: string | null; rowHash: string }>>();
   const mockWallets = (): Wallet[] => DEMO_WALLETS.map((w) => ({ id: w.id, chain: "solana" as const, address: w.address, label: w.label, ownershipVerified: false, dataSource: "demo" as const, createdAt: "2026-01-01T00:00:00.000Z" }));
+  const mockCharity = (id: string) => buildCharityList().find((c) => c.id === id) ?? null;
   const mockReview = (config: LaunchConfig) => {
-    const charity = DEMO_CHARITIES.find((c) => c.id === config.charityConfiguration.charityId);
+    const charity = mockCharity(config.charityConfiguration.charityId);
     return reviewLaunchConfig(config, {
       ownedWalletAddresses: DEMO_WALLETS.map((w) => w.address),
-      charity: charity ? { verified: charity.state === "VERIFIED", hasVerifiedWallet: charity.wallet.verification === "verified" } : null,
+      charity: charity
+        ? {
+            verified: charity.verificationState === "VERIFIED", hasVerifiedWallet: charity.wallets.some((w) => w.verificationStatus === "verified"),
+            snapshot: { id: charity.id, name: charity.name, verificationState: charity.verificationState, verificationSource: charity.verificationSource, lastReviewedAt: charity.lastReviewedAt, dataSource: charity.dataSource },
+          }
+        : null,
       now: new Date(),
     });
+  };
+  const mockRecord = (l: Launch, action: LaunchAction, reason: string | null) => {
+    const rows = mockHistory.get(l.id) ?? [];
+    const prev = rows.at(-1)?.rowHash ?? null;
+    const createdAt = new Date().toISOString();
+    const row = { seq: rows.length + 1, action, statusAfter: l.status, fingerprint: l.fingerprint, reason, createdAt, prevHash: prev, rowHash: revisionRowHash({ launchId: l.id, seq: rows.length + 1, action, statusAfter: l.status, fingerprint: l.fingerprint, createdBy: "demo", reason, prevHash: prev, createdAt }) };
+    mockHistory.set(l.id, [...rows, row]);
+  };
+  const mockLaunch = (config: LaunchConfig, id: string, status: Launch["status"], now: string): Launch => ({
+    id, status, statusMeaning: STATUS_MEANING[status], config, review: null, fingerprint: launchFingerprint(config), revision: 1, publicVisible: false, readyAt: null,
+    deployment: { status: "not_deployed", mintAddress: null, transactionSignature: null, contractAddress: null }, metadata: { source: "USER_PROVIDED", verifiedOnChain: false }, createdAt: now, updatedAt: now, dataSource: "demo",
+  });
+  const publicCharity = (l: Launch) => { const c = mockCharity(l.config.charityConfiguration.charityId); return c ? { id: c.id, name: c.name, verificationState: c.verificationState, verificationSource: c.verificationSource, lastReviewedAt: c.lastReviewedAt, dataSource: c.dataSource } : null; };
+  const mockCheckRefs = (cfg: LaunchConfig) => {
+    const addrs = DEMO_WALLETS.map((w) => w.address);
+    if (!addrs.includes(cfg.creatorWallet)) throw new ApiClientError(422, "WALLET_NOT_OWNED", "creatorWallet must be one of your registered wallets", { creatorWallet: ["not one of your registered wallets"] });
+    if (!addrs.includes(cfg.taxReserveConfiguration.destinationAddress)) throw new ApiClientError(422, "WALLET_NOT_OWNED", "The tax reserve allocation destination must be one of your registered wallets", { "taxReserveConfiguration.destinationAddress": ["not one of your registered wallets"] });
+    if (!mockCharity(cfg.charityConfiguration.charityId)) throw new ApiClientError(422, "CHARITY_NOT_FOUND", "The selected charity is not in the registry", { "charityConfiguration.charityId": ["not a registry charity"] });
+  };
+  /** Same transition function as the API (planLaunchAction); only the storage differs. */
+  const mockAct = (id: string, action: LaunchActionName, o: { config?: LaunchConfig; reason?: string | null; publish?: boolean; fingerprint?: string } = {}): Launch => {
+    const i = mockLaunches.findIndex((l) => l.id === id);
+    const found = mockLaunches[i];
+    if (!found) throw notFound("Launch");
+    if (action === "ready" && o.fingerprint !== found.fingerprint) throw new ApiClientError(409, "FINGERPRINT_MISMATCH", "The confirmed fingerprint is not this launch's current configuration fingerprint.");
+    const needsReview = action === "configure" || action === "review" || action === "ready";
+    const review = needsReview ? mockReview(found.config) : undefined;
+    const plan = planLaunchAction({ current: { status: found.status, config: found.config, review: found.review, revision: found.revision }, action, now: new Date(), ...(o.config ? { config: o.config } : {}), ...(review ? { review } : {}), ...(o.publish !== undefined ? { publish: o.publish } : {}) });
+    if (!plan) throw new ApiClientError(409, "INVALID_LAUNCH_TRANSITION", `This action is not available while the launch is ${found.status}.`);
+    const updated: Launch = {
+      ...found, status: plan.status, statusMeaning: STATUS_MEANING[plan.status], config: plan.config, review: plan.review, fingerprint: plan.fingerprint, revision: plan.revision,
+      publicVisible: plan.publicVisible, readyAt: plan.readyAt, updatedAt: new Date().toISOString(),
+    };
+    mockLaunches[i] = updated;
+    mockRecord(updated, action, o.reason ?? null);
+    return updated;
   };
 
   const manualUnsupported = () => new ApiClientError(409, "MANUAL_BASIS_UNSUPPORTED", "Demo data has no editable cost basis. Cost basis can only be added to real wallets.");
@@ -106,29 +150,52 @@ export function createApiClient(opts: ClientOptions = {}) {
       return buildTaxReserve(mockId(walletId), mockTarget, "demo");
     },
 
-    /** Saves a launch CONFIGURATION (draft). Deploys nothing. */
+    /** Saves a launch CONFIGURATION (a DRAFT). Deploys nothing; no status can be sent. */
     createLaunch: async (config: unknown): Promise<Launch> => {
       if (mode === "api") return send(Launch, "/api/launches", config);
       const r = LaunchConfigSchema.safeParse(config);
       if (!r.success) throw zodToClientError(r.error);
-      const now = new Date().toISOString();
-      const launch: Launch = {
-        id: crypto.randomUUID(), status: "draft", config: r.data, review: null,
-        deployment: { status: "not_deployed", contractAddress: null }, createdAt: now, updatedAt: now, dataSource: "demo",
-      };
+      mockCheckRefs(r.data);
+      const launch = mockLaunch(r.data, crypto.randomUUID(), "DRAFT", new Date().toISOString());
       mockLaunches.unshift(launch);
+      mockRecord(launch, "create", null);
       return launch;
     },
-
-    reviewLaunch: async (id: string): Promise<Launch> => {
-      if (mode === "api") return send(Launch, `/api/launches/${encodeURIComponent(id)}/review`);
-      const i = mockLaunches.findIndex((l) => l.id === id);
-      const found = mockLaunches[i];
-      if (!found) throw notFound("Launch");
-      const review = mockReview(found.config);
-      const updated: Launch = { ...found, review, status: review.passed ? "review_passed" : "review_failed", updatedAt: new Date().toISOString() };
-      mockLaunches[i] = updated;
-      return updated;
+    /** Replaces the configuration. The launch returns to DRAFT. */
+    updateLaunch: async (id: string, config: unknown): Promise<Launch> => {
+      if (mode === "api") return send(Launch, `/api/launches/${encodeURIComponent(id)}`, config, "PUT");
+      const r = LaunchConfigSchema.safeParse(config);
+      if (!r.success) throw zodToClientError(r.error);
+      mockCheckRefs(r.data);
+      return mockAct(id, "update", { config: r.data });
+    },
+    /** Server validation of the stored configuration: DRAFT -> CONFIGURED when it passes. */
+    configureLaunch: async (id: string): Promise<Launch> => (mode === "api" ? send(Launch, `/api/launches/${encodeURIComponent(id)}/configure`) : mockAct(id, "configure")),
+    /** Submit for review: CONFIGURED -> REVIEW. */
+    reviewLaunch: async (id: string): Promise<Launch> => (mode === "api" ? send(Launch, `/api/launches/${encodeURIComponent(id)}/review`) : mockAct(id, "review")),
+    /** REVIEW -> READY, only with the exact current fingerprint and explicit confirmation. READY is not deployed. */
+    readyLaunch: async (id: string, req: { fingerprint: string; confirmed: true; publish: boolean }): Promise<Launch> =>
+      mode === "api" ? send(Launch, `/api/launches/${encodeURIComponent(id)}/ready`, req) : mockAct(id, "ready", { fingerprint: req.fingerprint, publish: req.publish }),
+    cancelLaunch: async (id: string, reason?: string): Promise<Launch> =>
+      mode === "api" ? send(Launch, `/api/launches/${encodeURIComponent(id)}/cancel`, reason ? { reason } : {}) : mockAct(id, "cancel", { reason: reason ?? null }),
+    getLaunchHistory: async (id: string): Promise<LaunchHistory> => {
+      if (mode === "api") return http(LaunchHistory, `/api/launches/${encodeURIComponent(id)}/history`);
+      need(mockLaunches.find((l) => l.id === id) ?? null, "Launch");
+      return { launchId: id, revisions: (mockHistory.get(id) ?? []) as LaunchHistory["revisions"], historyIntact: true, note: "Append-only and hash-chained, so an edit made outside the API is detectable. This is auditability, not a blockchain proof." };
+    },
+    /** Public, read-only: READY and published configurations. Mock mode adds one labeled demo launch. */
+    getPublicLaunches: async (params: { limit?: number; offset?: number } = {}): Promise<PublicLaunchList> => {
+      if (mode === "api") return http(PublicLaunchList, "/api/public/launches", params);
+      const own = mockLaunches.filter((l) => l.status === "READY" && l.publicVisible).map((l) => toPublicLaunch(l, publicCharity(l)));
+      const all = [...own, buildDemoPublicLaunch()];
+      return { launches: all.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 25)), pagination: { limit: params.limit ?? 25, offset: params.offset ?? 0, total: all.length } };
+    },
+    getPublicLaunch: async (id: string): Promise<PublicLaunch> => {
+      if (mode === "api") return http(PublicLaunch, `/api/public/launches/${encodeURIComponent(id)}`);
+      const demo = buildDemoPublicLaunch();
+      if (id === demo.id) return demo;
+      const l = mockLaunches.find((x) => x.id === id && x.status === "READY" && x.publicVisible);
+      return toPublicLaunch(need(l ?? null, "Launch"), publicCharity(l!));
     },
 
     getPortfolio: async (walletId: string): Promise<PortfolioResponse> =>
@@ -255,4 +322,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, updateLaunch, configureLaunch, reviewLaunch, readyLaunch, cancelLaunch, getLaunchHistory, getPublicLaunches, getPublicLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

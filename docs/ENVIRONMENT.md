@@ -18,7 +18,7 @@ Then sign in on the web app, open Portfolio, press SYNC WALLET. With a real devn
 `TAX_PRICE_MAX_AGE_SECONDS` (default 3600: a stored price counts for a transaction only if observed at most this long before it), `TAX_MAX_TRANSACTIONS` (default 5000: cap per calculation; beyond it the result is marked incomplete). There is no setting that enables fixture prices outside tests, on purpose. Tax rates are never configured server-side: the user supplies them per request, and none are assumed.
 
 ## Report and tax limits (Slice 8)
-`REPORT_MAX_ROWS` (default 20000: disposals listed in a report; more is DATA_REQUIRED with a capped list and an export is refused with 413), `TAX_MAX_CONCURRENT` (16) and `TAX_MAX_CONCURRENT_PER_USER` (8): concurrent tax calculations, process-wide and per user; excess gets an immediate 503/429. Together with `TAX_MAX_TRANSACTIONS` these bound the work of any report or export.
+`MAX_LAUNCHES_PER_USER` (default 50): saved launch configurations per account, drafts included (409 beyond it). `REPORT_MAX_ROWS` (default 20000: disposals listed in a report; more is DATA_REQUIRED with a capped list and an export is refused with 413), `TAX_MAX_CONCURRENT` (16) and `TAX_MAX_CONCURRENT_PER_USER` (8): concurrent tax calculations, process-wide and per user; excess gets an immediate 503/429. Together with `TAX_MAX_TRANSACTIONS` these bound the work of any report or export.
 
 ## Run locally
 ```

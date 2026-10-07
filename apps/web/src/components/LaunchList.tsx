@@ -11,18 +11,26 @@ import { Badge } from "./Badge";
 import { Button } from "./Button";
 import { Card } from "./Card";
 import { EmptyState } from "./EmptyState";
-import { launchStatusBadge, LaunchSummary } from "./PrepareLaunchPanel";
+import { HistoryList, launchStatusBadge, LaunchSummary } from "./LaunchSummary";
 import { AuthRequired, ResourceView } from "./states";
 
 function Detail({ id }: { id: string }) {
   const res = useResource(`launch:${id}`, () => api.getLaunch(id));
-  return <ResourceView resource={res} loadingLabel="Loading configuration">{(l) => <LaunchSummary launch={l} />}</ResourceView>;
+  const [showHistory, setShowHistory] = useState(false);
+  const hist = useResource(`launch-history:${id}:${showHistory}`, showHistory ? () => api.getLaunchHistory(id) : null);
+  return (
+    <div className="space-y-3">
+      <ResourceView resource={res} loadingLabel="Loading configuration">{(l) => <LaunchSummary launch={l} />}</ResourceView>
+      <Button variant="ghost" onClick={() => setShowHistory((v) => !v)}>{showHistory ? "HIDE HISTORY" : "HISTORY"}</Button>
+      {showHistory ? <ResourceView resource={hist} loadingLabel="Loading history">{(h) => <HistoryList history={h} />}</ResourceView> : null}
+    </div>
+  );
 }
 
 /** Pure list view. Empty means empty: nothing is invented. */
 export function LaunchListView({ launches, openId, onToggle }: { launches: Launch[]; openId: string | null; onToggle: (id: string) => void }) {
   if (launches.length === 0) {
-    return <EmptyState badge="NONE YET" title="NO SAVED CONFIGURATIONS" description="Prepare a launch above and save it to see it here. Saved configurations are records only." />;
+    return <EmptyState badge="NONE YET" title="NO SAVED CONFIGURATIONS" description="Configure a launch above and save a draft to see it here. Saved configurations are records only." />;
   }
   return (
     <ul className="divide-y divide-line">
@@ -36,6 +44,7 @@ export function LaunchListView({ launches, openId, onToggle }: { launches: Launc
                 <span className="num font-mono text-xs text-muted">{l.config.symbol}</span>
                 <Badge tone={st.tone}>{st.label}</Badge>
                 <Badge tone="neutral">NOT DEPLOYED</Badge>
+                <span className="num font-mono text-[11px] text-faint">{l.fingerprint.slice(0, 10)}…</span>
               </div>
               <div className="flex items-center gap-3 text-xs text-faint">
                 <span className="num">{formatDateTime(l.createdAt)}</span>

@@ -366,44 +366,99 @@ t = await page.locator("body").innerText();
 check("proof: demo token says blockchain verification is not connected and never claims verification", t.includes("BLOCKCHAIN VERIFICATION NOT YET CONNECTED") && t.includes("DEMO DATA") && !t.includes("VERIFIED TRANSPARENCY") && t.includes("Not deployed. This is a demo token."));
 await shot("8-proof");
 
-// Launch: prepare, save, review. Nothing is deployed.
+// Launch (Slice 11): configure, validate, review, mark READY. Nothing is deployed, minted or sent.
 await go("/launch");
 await page.waitForTimeout(500);
 t = await text();
-check("launch: wizard recognizes the authenticated wallet", t.includes("Authenticated:") && t.includes("PREPARE LAUNCH"));
-check("launch: starts with no saved configurations", t.includes("NO SAVED CONFIGURATIONS"));
+check("launch: wizard recognizes the authenticated wallet", t.includes("Authenticated:") && t.includes("CONFIGURE LAUNCH"));
+check("launch: starts with no saved configurations (nothing fabricated)", t.includes("NO SAVED CONFIGURATIONS") && (await (await apiGet("/api/launches")).json()).launches.length === 0);
 const next = () => page.getByRole("button", { name: "CONTINUE", exact: true }).click();
 await next(); // create
 await next(); // info
 await page.locator("#t-name").fill("E2E Token");
 await page.locator("#t-symbol").fill("E2E");
+await page.locator("#t-website").fill("javascript:alert(1)");
+await page.getByText("Website must be an http or https URL.").waitFor({ timeout: 3000 });
+check("launch: a dangerous website URL is refused and CONTINUE is blocked", await page.getByRole("button", { name: "CONTINUE", exact: true }).isDisabled());
+await page.locator("#t-website").fill("https://example.org");
+await page.locator("#t-image").fill("https://example.org/e2e.png");
 await next(); // supply
 await next(); // liquidity
 await next(); // fees
+t = await text();
+check("launch: the fee split is fixed 60/15/15/10, shown as configuration, with nothing to edit", t.includes("FIXED FOR THIS VERSION") && t.includes("60%") && t.includes("10%") && t.includes("It is not enforced on-chain.") && (await page.locator("main input[inputmode='decimal']").count()) === 0 && !/immutable/i.test(t), t.slice(0, 700));
 await next(); // charity
 await next(); // reserve
+t = await text();
+check("launch: the tax reserve allocation is not your personal Tax Reserve", t.includes("Tax reserve destination") || t.toLowerCase().includes("tax reserve allocation"));
 await next(); // review
-await page.getByRole("button", { name: "SAVE LAUNCH CONFIGURATION" }).waitFor();
-check("launch review: nothing deployed notice", (await text()).includes("NOTHING IS DEPLOYED"));
-await page.getByRole("button", { name: "SAVE LAUNCH CONFIGURATION" }).click();
-await page.getByText("DRAFT", { exact: true }).first().waitFor({ timeout: 8000 });
-check("launch: saved as a DRAFT, NOT DEPLOYED", (await text()).includes("NOT DEPLOYED") && (await page.getByText("Not reviewed yet.").count()) === 1);
-await page.getByRole("button", { name: "RUN SERVER REVIEW" }).click();
-await page.getByText("REVIEW PASSED").first().waitFor({ timeout: 8000 });
+await page.getByRole("button", { name: "SAVE DRAFT" }).waitFor();
 t = await text();
-check("launch: server review passed; fee split is 'Configured fee split', not enforced, not deployable", t.includes("Configured fee split") && t.includes("not enforced") && t.includes("Deployable: no") && !/immutable/i.test(t));
-const launches = await (await apiGet("/api/launches")).json();
-check("launch: the API stored exactly this configuration for this user", launches.launches.length === 1 && launches.launches[0].status === "review_passed" && launches.launches[0].deployment.status === "not_deployed" && launches.launches[0].config.creatorWallet === ADDRESS);
-await next(); // deploy (unavailable)
+check("launch review: nothing deployed notice and fixed allocations", t.includes("NOTHING IS DEPLOYED") && t.includes("CONFIGURED ALLOCATIONS") && t.includes("Configured creator allocation"));
+await page.getByRole("button", { name: "SAVE DRAFT" }).click();
+await page.getByText("Not validated yet.").first().waitFor({ timeout: 8000 });
 t = await text();
-check("launch: deploy step is unavailable and cannot be passed", t.includes("DEPLOYMENT NOT AVAILABLE") && await page.getByRole("button", { name: "CONTINUE", exact: true }).isDisabled());
+let stored = (await (await apiGet("/api/launches")).json()).launches;
+check("launch: saved as a DRAFT with a fingerprint, NOT DEPLOYED, NOT VERIFIED ON-CHAIN", t.includes("NOT DEPLOYED") && t.includes("NOT VERIFIED ON-CHAIN") && t.includes(stored[0]?.fingerprint ?? "x") && stored.length === 1 && stored[0].status === "DRAFT" && /^[0-9a-f]{64}$/.test(stored[0].fingerprint) && stored[0].metadata.verifiedOnChain === false);
+const LAUNCH_ID = stored[0].id;
+await page.getByRole("button", { name: "VALIDATE CONFIGURATION" }).click();
+await page.getByText("Server validation passed this configuration.").first().waitFor({ timeout: 8000 });
+t = await text();
+check("launch: validation shows the charity's registry state with source and last reviewed, and a fixture caveat; no donation promise", t.includes("VERIFIED (FIXTURE, NOT REAL-WORLD)") && t.includes("Verification source") && t.toLowerCase().includes("last reviewed") && t.includes("does not execute a donation") && t.includes("Deployable: no"));
+check("launch: the server moved it to CONFIGURED", (await (await apiGet(`/api/launches/${LAUNCH_ID}`)).json()).status === "CONFIGURED");
+check("launch: READY is not offered before review", (await page.getByRole("button", { name: "MARK READY FOR DEPLOYMENT" }).count()) === 0);
+await page.getByRole("button", { name: "SUBMIT FOR REVIEW" }).click();
+await page.getByText("IN REVIEW").first().waitFor({ timeout: 8000 });
+await page.getByRole("button", { name: "MARK READY FOR DEPLOYMENT" }).waitFor();
+check("launch: marking READY needs explicit confirmation", await page.getByRole("button", { name: "MARK READY FOR DEPLOYMENT" }).isDisabled());
+await page.getByLabel(/I have reviewed this exact configuration/).check();
+await page.getByLabel(/Make this configuration publicly viewable/).check();
+await page.getByRole("button", { name: "MARK READY FOR DEPLOYMENT" }).click();
+await page.getByText("Configuration validated.").first().waitFor({ timeout: 8000 });
+t = await text();
+const ready = await (await apiGet(`/api/launches/${LAUNCH_ID}`)).json();
+check("launch: READY means ready for a future flow, never deployed", t.includes("READY FOR DEPLOYMENT") && t.includes("No on-chain transaction has been submitted") && t.includes("On-chain deployment is not enabled in this beta.") && !/\bLIVE\b|launched successfully/i.test(t) && ready.status === "READY" && ready.deployment.status === "not_deployed" && ready.deployment.mintAddress === null && ready.deployment.transactionSignature === null && ready.publicVisible === true);
+await next(); // deploy
+t = await text();
+check("launch: the final step says READY FOR DEPLOYMENT and cannot be passed", t.includes("READY FOR DEPLOYMENT") && t.includes("On-chain deployment is not enabled in this beta.") && await page.getByRole("button", { name: "CONTINUE", exact: true }).isDisabled());
 await shot("9-launch");
+
+// public, read-only view of the published configuration
+await go("/launches");
+await page.waitForTimeout(500);
+t = await text();
+check("public launches: the published configuration is listed as CONFIGURED / NOT DEPLOYED / NOT VERIFIED ON-CHAIN", t.includes("E2E Token") && t.includes("NOT DEPLOYED") && t.includes("NOT VERIFIED ON-CHAIN") && !t.includes("DEMO DATA"));
+await page.getByRole("link", { name: "VIEW CONFIGURATION" }).first().click();
+await page.getByText("Configured allocations").first().waitFor({ timeout: 8000 });
+t = await text();
+check("public launch view: allocations, charity status, fingerprint, user-provided metadata; no wallet address", t.toLowerCase().includes("configured allocations") && t.includes("Clear Sky Education Fund (demo)") && t.includes("VERIFIED (FIXTURE, NOT REAL-WORLD)") && t.includes(ready.fingerprint) && t.includes("USER-PROVIDED") && !t.includes(ADDRESS) && !t.includes("AUTHENTICATED"), t.slice(0, 1800) + JSON.stringify({ alloc: t.toLowerCase().includes("configured allocations"), charity: t.includes("Clear Sky Education Fund (demo)"), fixture: t.includes("VERIFIED (FIXTURE, NOT REAL-WORLD)"), fp: t.includes(ready.fingerprint), up: t.includes("USER-PROVIDED"), addr: t.includes(ADDRESS), auth: t.includes("AUTHENTICATED") }));
+const pub = await (await fetch(`${API}/api/public/launches/${LAUNCH_ID}`)).text();
+check("public launch API: readable without a session and exposes no user id, session, wallet address or reserve destination", pub.includes('"name":"E2E Token"') && !pub.includes(ADDRESS) && !/creatorWallet|destinationAddress|userId|creatorUserId|session/i.test(pub));
+
+// authorization, status control and the absence of any deployment surface
+const unauth = await fetch(`${API}/api/launches`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+check("launch API: creation and private reads need a session", unauth.status === 401 && (await fetch(`${API}/api/launches/${LAUNCH_ID}`)).status === 401 && (await fetch(`${API}/api/launches/${LAUNCH_ID}/history`)).status === 401);
+const cfg0 = { ...ready.config };
+const put = (body) => context.request.put(`${API}/api/launches/${LAUNCH_ID}`, { headers: { origin: WEB }, data: body });
+check("launch API: a client cannot send a status or change the fee split", (await put({ ...cfg0, status: "LIVE" })).status() === 400 && (await put({ ...cfg0, feeSplit: { creator: 5000, taxReserve: 2500, charity: 1500, protocol: 1000 } })).status() === 400 && (await context.request.post(`${API}/api/launches/${LAUNCH_ID}/ready`, { headers: { origin: WEB }, data: { fingerprint: ready.fingerprint, confirmed: true, status: "LIVE" } })).status() === 400);
+check("launch API: no deploy, mint, liquidity, payout or donation endpoint exists", (await Promise.all(["deploy", "mint", "liquidity", "distribute", "payout", "donate"].map((p) => context.request.post(`${API}/api/launches/${LAUNCH_ID}/${p}`, { headers: { origin: WEB }, data: {} })))).every((r) => r.status() === 404));
+check("launch API: another user's launch id is a 404", (await apiGet("/api/launches/00000000-0000-4000-8000-0000000fffff")).status() === 404);
+
+// editing returns the launch to DRAFT, un-publishes it, changes the fingerprint and is recorded
+const edited = await put({ ...cfg0, description: "edited by e2e" });
+const editedBody = await edited.json();
+check("launch: an edit returns it to DRAFT, hides it publicly and changes the fingerprint", edited.status() === 200 && editedBody.status === "DRAFT" && editedBody.publicVisible === false && editedBody.fingerprint !== ready.fingerprint && (await fetch(`${API}/api/public/launches/${LAUNCH_ID}`)).status === 404);
+const hist = await (await apiGet(`/api/launches/${LAUNCH_ID}/history`)).json();
+check("launch: the configuration history records every step and its hash chain verifies", JSON.stringify(hist.revisions.map((r) => r.action)) === JSON.stringify(["create", "configure", "review", "ready", "update"]) && hist.historyIntact === true && /not a blockchain proof/.test(hist.note));
 await go("/launch");
 await page.waitForTimeout(600);
-check("launch: saved configuration appears in your list (GET /api/launches)", (await text()).includes("E2E Token"));
+check("launch: the saved configuration appears in your list (GET /api/launches)", (await text()).includes("E2E Token"));
 await page.getByRole("button", { name: "VIEW", exact: true }).first().click();
 await page.getByText("Configuration id").first().waitFor({ timeout: 5000 });
-check("launch: detail loads through GET /api/launches/:id", (await text()).includes("REVIEW PASSED"));
+check("launch: detail loads through GET /api/launches/:id and shows the edited DRAFT", (await text()).includes("DRAFT") && (await text()).includes("edited by e2e"));
+await page.getByRole("button", { name: "HISTORY", exact: true }).last().click();
+await page.getByText("Configuration history").first().waitFor({ timeout: 5000 });
+check("launch: history is visible with the hash-chain caveat", (await text()).includes("Hash chain verified.") && (await text()).includes("not a blockchain proof"));
 
 // 5. Reload restores the session from the cookie
 await page.reload({ waitUntil: "networkidle" });
@@ -421,7 +476,9 @@ check("replaying the exact signed request is rejected", replay.status() === 401)
 // 7. Log out
 await page.locator("header").first().getByRole("button", { name: /AUTHENTICATED|^[A-Za-z0-9]{4}…/ }).first().click();
 await page.getByRole("menuitem").first().waitFor({ timeout: 2000 }).catch(() => {});
+const logoutResponse = page.waitForResponse((r) => r.url().endsWith("/api/auth/logout"), { timeout: 10000 });
 await page.getByRole("button", { name: "LOG OUT & DISCONNECT" }).click();
+await logoutResponse; // the server must have answered before its effect is checked
 await page.getByRole("button", { name: "CONNECT WALLET" }).first().waitFor();
 check("logout: UI returns to CONNECT WALLET", true);
 check("logout: server session is revoked (old cookie no longer works)", (await context.cookies(API)).every((c) => c.name !== "pn_session") && (await apiGet("/api/wallets")).status() === 401);

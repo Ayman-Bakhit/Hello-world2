@@ -9,7 +9,7 @@ export const NAV: NavItem[] = [
   { label: "PORTFOLIO", href: "/portfolio" },
   { label: "TAX", href: "/tax", children: [{ label: "Tax reserve", href: "/tax-reserve" }] },
   { label: "GIVE", href: "/give" },
-  { label: "LAUNCH", href: "/launch", children: [{ label: "Configuration", href: "/launch/configuration" }] },
+  { label: "LAUNCH", href: "/launch", children: [{ label: "Configuration", href: "/launch/configuration" }, { label: "Public configurations", href: "/launches" }] },
   { label: "DISCOVER", href: "/discover" },
   { label: "ANALYTICS", href: "/analytics" },
   { label: "VAULTS", href: "/vaults" },

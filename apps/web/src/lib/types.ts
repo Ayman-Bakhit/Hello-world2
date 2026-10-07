@@ -168,7 +168,14 @@ export interface LaunchConfiguration {
   name: string;
   symbol: string;
   description: string;
-  imageName: string;
+  network: "devnet" | "mainnet-beta";
+  /** USER-PROVIDED references (never fetched, never "verified metadata") */
+  imageUrl: string;
+  website: string;
+  twitter: string;
+  telegram: string;
+  discord: string;
+  github: string;
   totalSupply: string;
   decimals: string;
   creatorAllocationPercent: string;
@@ -179,7 +186,6 @@ export interface LaunchConfiguration {
   liquidityUsdc: string;
   liquiditySupplyPercent: string;
   liquidityLockDays: string;
-  feeDrafts: Record<"creator" | "taxReserve" | "charity" | "protocol", string>;
   charityId: string;
   reserveWalletId: string;
 }

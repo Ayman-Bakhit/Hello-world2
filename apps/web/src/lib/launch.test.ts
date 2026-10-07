@@ -22,10 +22,8 @@ describe("launch validation", () => {
     expect(stepErrors("supply", { ...ok, decimals: "10" }, ctx)).toHaveLength(1);
     expect(stepErrors("supply", { ...ok, creatorAllocationPercent: "101" }, ctx)).toHaveLength(1);
   });
-  it("blocks on an invalid fee split", () => {
-    const bad = { ...ok, feeDrafts: { ...ok.feeDrafts, creator: "60.01" } };
-    expect(stepErrors("fees", bad, ctx)[0]).toContain("100.01%");
-    expect(allErrors(bad, ctx).some((e) => e.step === "fees")).toBe(true);
+  it("the fee split step has nothing to edit: it is fixed at 60/15/15/10", () => {
+    expect(stepErrors("fees", ok, ctx)).toEqual([]);
   });
   it("only verified charities are selectable", () => {
     expect(stepErrors("charity", { ...ok, charityId: "c4" }, ctx)).toHaveLength(1);

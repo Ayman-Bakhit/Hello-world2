@@ -161,7 +161,8 @@ describe("launch config + review", () => {
     feeSplit: ok, charityConfiguration: { charityId: DEMO_IDS.charities.c1 },
     taxReserveConfiguration: { destinationType: "creator_controlled", destinationAddress: "DEMO3fB8cJ5yR1uH6dV2KEq47M" },
   });
-  const ctx = { ownedWalletAddresses: ["DEMO3fB8cJ5yR1uH6dV2KEq47M"], charity: { verified: true, hasVerifiedWallet: true }, now: new Date("2026-10-05T00:00:00Z") };
+  const snap = { id: DEMO_IDS.charities.c1, name: "Open Water Initiative (demo)", verificationState: "VERIFIED" as const, verificationSource: "FIXTURE" as const, lastReviewedAt: "2026-01-01T00:00:00.000Z", dataSource: "demo" as const };
+  const ctx = { ownedWalletAddresses: ["DEMO3fB8cJ5yR1uH6dV2KEq47M"], charity: { verified: true, hasVerifiedWallet: true, snapshot: snap }, now: new Date("2026-10-05T00:00:00Z") };
 
   it("defaults are transparency-favoring", () => {
     expect(cfg).toMatchObject({ mintAuthority: "disabled", freezeAuthority: "disabled", description: "" });
@@ -177,7 +178,7 @@ describe("launch config + review", () => {
   it("fails on foreign wallets, unverified charity, oversubscribed supply", () => {
     const r = reviewLaunchConfig(
       { ...cfg, creatorWallet: "SOMEONEELSE111111111111111", creatorAllocationPercent: "70" },
-      { ...ctx, charity: { verified: false, hasVerifiedWallet: false } },
+      { ...ctx, charity: { verified: false, hasVerifiedWallet: false, snapshot: { ...snap, verificationState: "PENDING_REVIEW" as const, verificationSource: null } } },
     );
     expect(r.passed).toBe(false);
     expect(r.errors.map((e) => e.field)).toEqual(expect.arrayContaining(["creatorWallet", "charityConfiguration.charityId", "supply"]));

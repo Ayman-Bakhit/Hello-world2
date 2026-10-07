@@ -11,7 +11,7 @@ const check = (name, ok, extra = "") => { results.push(ok); console.log(`${ok ? 
 const errors = [];
 
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
-const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
+const ROUTES = ["/", "/connect", "/portfolio", "/tax", "/tax-reserve", "/give", "/launch", "/launch/configuration", "/launches", "/launches/view?id=00000000-0000-4000-8000-000000000801", "/token/demo", "/discover", "/analytics", "/vaults", "/documents", "/trust"];
 
 for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile", { width: 390, height: 844 }]]) {
   const ctx = await browser.newContext({ viewport: vp });
@@ -109,11 +109,33 @@ for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile",
   await page.locator("#t-name").fill("Mock Token");
   await page.locator("#t-symbol").fill("MOCK");
   for (let i = 0; i < 6; i++) await next();
-  await page.getByRole("button", { name: "SAVE LAUNCH CONFIGURATION" }).click();
+  await page.getByRole("button", { name: "SAVE DRAFT" }).click();
   await page.getByText("NOT DEPLOYED").first().waitFor({ timeout: 5000 });
-  await page.getByRole("button", { name: "RUN SERVER REVIEW" }).click();
-  await page.getByText("REVIEW PASSED").first().waitFor({ timeout: 5000 });
-  check(`${label} launch (mock): saved and reviewed, nothing deployed`, (await main()).includes("Deployable: no"));
+  check(`${label} launch (mock): saved as a DRAFT, NOT DEPLOYED, NOT VERIFIED ON-CHAIN, DEMO DATA`, (await main()).includes("NOT VERIFIED ON-CHAIN") && (await main()).includes("DEMO DATA") && (await main()).includes("Not validated yet."));
+  await page.getByRole("button", { name: "VALIDATE CONFIGURATION" }).click();
+  await page.getByText("Server validation passed this configuration.").first().waitFor({ timeout: 5000 });
+  check(`${label} launch (mock): validated; the fixture charity is labeled and nothing is deployed`, (await main()).includes("VERIFIED (FIXTURE, NOT REAL-WORLD)") && (await main()).includes("Deployable: no"));
+  await page.getByRole("button", { name: "SUBMIT FOR REVIEW" }).click();
+  await page.getByRole("button", { name: "MARK READY FOR DEPLOYMENT" }).waitFor({ timeout: 5000 });
+  check(`${label} launch (mock): READY needs confirmation`, await page.getByRole("button", { name: "MARK READY FOR DEPLOYMENT" }).isDisabled());
+  await page.getByLabel(/I have reviewed this exact configuration/).check();
+  await page.getByLabel(/Make this configuration publicly viewable/).check();
+  await page.getByRole("button", { name: "MARK READY FOR DEPLOYMENT" }).click();
+  await page.getByText("Configuration validated.").first().waitFor({ timeout: 5000 });
+  t = await main();
+  check(`${label} launch (mock): READY FOR DEPLOYMENT, not deployed, deployment not enabled`, t.includes("READY FOR DEPLOYMENT") && t.includes("On-chain deployment is not enabled in this beta.") && t.includes("No on-chain transaction has been submitted") && !/\bLIVE\b/.test(t));
+  if (label === "desktop") {
+    await page.getByRole("link", { name: "PUBLIC CONFIGURATIONS" }).first().click();
+    await page.waitForURL(/\/launches$/, { timeout: 5000 });
+    await page.getByText("Published configurations").first().waitFor({ timeout: 5000 });
+    await page.getByText("VIEW CONFIGURATION").first().waitFor({ timeout: 5000 });
+    t = await main();
+    check(`${label} public launches (mock): the published one and the demo one, both labeled`, ["mock token", "harbor demo launch", "demo data", "not deployed", "not verified on-chain"].every((x) => t.toLowerCase().includes(x)), t.slice(0, 600));
+  }
+  await go("/launches/view?id=00000000-0000-4000-8000-000000000801");
+  await page.getByText("Configured allocations").first().waitFor({ timeout: 5000 });
+  t = await main();
+  check(`${label} demo launch view: DEMO DATA, NOT DEPLOYED, NOT VERIFIED ON-CHAIN, user-provided metadata, fingerprint`, ["demo data", "not deployed", "not verified on-chain", "user-provided", "configuration fingerprint", "it is not a blockchain proof."].every((x) => t.toLowerCase().includes(x)), t.slice(0, 600));
   await ctx.close();
 }
 await browser.close();

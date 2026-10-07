@@ -1,20 +1,19 @@
 "use client";
 
-import { FEE_BUCKETS, percentToBps } from "@project-name/shared";
+import { LAUNCH_COPY, percentToBps } from "@project-name/shared";
 import { cn } from "@/lib/cn";
-import { BUCKET_COLOR, BUCKET_LABEL, parseFeeDrafts } from "@/lib/feeDrafts";
 import { formatPercentBps } from "@/lib/format";
 import { allErrors, effectiveWalletId, LAST_REACHABLE_STEP, LAUNCH_STEPS, stepErrors, type LaunchStepId, type StepContext } from "@/lib/launch";
 import type { Charity } from "@/lib/types";
 import { useLaunch } from "@/state/launch";
 import { useWallet } from "@/state/wallet";
-import { AllocationBar } from "./AllocationBar";
 import { Badge } from "./Badge";
 import { Button } from "./Button";
 import { Card } from "./Card";
 import { FeeSplitEditor } from "./FeeSplitEditor";
 import { CharityConfig, Field, inputCls, ReserveConfig, WalletSelect } from "./LaunchParts";
-import { PrepareLaunchPanel } from "./PrepareLaunchPanel";
+import { LaunchLifecyclePanel } from "./LaunchLifecyclePanel";
+import { ReadyBanner } from "./LaunchSummary";
 import { RiskPanel, type Row } from "./RiskPanel";
 import { UnavailableState } from "./states";
 
@@ -42,7 +41,7 @@ function reviewRows(c: ReturnType<typeof useLaunch>["config"]): Row[] {
 }
 
 export function LaunchWizard({ charities }: { charities: Charity[] }) {
-  const { config, update, setFeeDraft, step, setStep, savedLaunch } = useLaunch();
+  const { config, update, step, setStep, savedLaunch, dirty } = useLaunch();
   const wallet = useWallet();
   const ctx = useStepContext(charities);
 
@@ -55,8 +54,6 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
   const go = (to: LaunchStepId) => { if (IDS.indexOf(to) <= maxIdx) setStep(to); };
   const next = () => { const n = IDS[idx + 1]; if (n) setStep(n); };
   const prev = () => { const p = IDS[idx - 1]; if (p) setStep(p); };
-
-  const feeResult = parseFeeDrafts(config.feeDrafts);
 
   return (
     <div id="wizard" className="scroll-mt-20">
@@ -97,7 +94,13 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
 
         {step === "create" ? (
           <div className="space-y-4 text-sm">
-            <p className="text-muted">Chain: Solana. Tokens will use standard SPL Token / Token-2022 created through audited libraries. No custom token logic.</p>
+            <p className="text-muted">Chain: Solana. A future deployment would use standard SPL Token / Token-2022 created through audited libraries. This build only records configuration.</p>
+            <Field label="Network" htmlFor="t-network" hint="Recorded as configuration only. Nothing is deployed to any network.">
+              <select id="t-network" className={inputCls} value={config.network} onChange={(e) => update({ network: e.target.value as "devnet" | "mainnet-beta" })}>
+                <option value="devnet">devnet (default)</option>
+                <option value="mainnet-beta">mainnet-beta</option>
+              </select>
+            </Field>
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Mint authority" htmlFor="mint-auth" hint="Default: revoked, so supply cannot grow.">
                 <select id="mint-auth" className={inputCls} value={config.mintAuthority} onChange={(e) => update({ mintAuthority: e.target.value as "disabled" | "creator" })}>
@@ -131,10 +134,14 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
               </Field>
             </div>
             <div className="sm:col-span-2">
-              <Field label="Image" htmlFor="t-image" hint="Demo: the file is not uploaded or stored; only its name is kept in this tab.">
-                <input id="t-image" type="file" accept="image/png,image/jpeg,image/webp" className="text-xs text-muted" onChange={(e) => update({ imageName: e.target.files?.[0]?.name ?? "" })} />
-              </Field>
+              <p className="text-[11px] text-faint">{LAUNCH_COPY.metadataNote} URLs are stored as text and never fetched by the server.</p>
             </div>
+            <Field label="Image URL (optional)" htmlFor="t-image" hint="https only."><input id="t-image" className={inputCls} maxLength={500} value={config.imageUrl} onChange={(e) => update({ imageUrl: e.target.value })} placeholder="https://" /></Field>
+            <Field label="Website (optional)" htmlFor="t-website" hint="http or https."><input id="t-website" className={inputCls} maxLength={500} value={config.website} onChange={(e) => update({ website: e.target.value })} placeholder="https://" /></Field>
+            <Field label="Twitter link (optional)" htmlFor="t-twitter"><input id="t-twitter" className={inputCls} maxLength={500} value={config.twitter} onChange={(e) => update({ twitter: e.target.value })} placeholder="https://" /></Field>
+            <Field label="Telegram link (optional)" htmlFor="t-telegram"><input id="t-telegram" className={inputCls} maxLength={500} value={config.telegram} onChange={(e) => update({ telegram: e.target.value })} placeholder="https://" /></Field>
+            <Field label="Discord link (optional)" htmlFor="t-discord"><input id="t-discord" className={inputCls} maxLength={500} value={config.discord} onChange={(e) => update({ discord: e.target.value })} placeholder="https://" /></Field>
+            <Field label="GitHub link (optional)" htmlFor="t-github"><input id="t-github" className={inputCls} maxLength={500} value={config.github} onChange={(e) => update({ github: e.target.value })} placeholder="https://" /></Field>
           </div>
         ) : null}
 
@@ -156,7 +163,7 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
         ) : null}
 
         {step === "fees" ? (
-          <FeeSplitEditor drafts={config.feeDrafts} onChange={setFeeDraft} />
+          <FeeSplitEditor />
         ) : null}
 
         {step === "charity" ? <CharityConfig charities={charities} /> : null}
@@ -166,7 +173,7 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
           <div className="space-y-5">
             {blocked.length > 0 ? (
               <div role="alert" className="rounded-md border border-loss/40 bg-loss/10 p-3 text-xs text-loss">
-                <p className="mb-1 font-semibold">Configuration is incomplete. Deployment is blocked.</p>
+                <p className="mb-1 font-semibold">Configuration is incomplete.</p>
                 <ul className="list-disc space-y-0.5 pl-4">
                   {blocked.map((b) => (
                     <li key={`${b.step}-${b.message}`}>{b.message} <button type="button" className="underline" onClick={() => setStep(b.step)}>Fix</button></li>
@@ -174,7 +181,7 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
                 </ul>
               </div>
             ) : (
-              <p className="text-xs text-gain">All checks passed for this demo configuration.</p>
+              <p className="text-xs text-gain">Client-side checks passed. The server re-validates everything when you save and validate.</p>
             )}
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               {[
@@ -189,25 +196,21 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
               ))}
             </dl>
             <div>
-              <p className="eyebrow mb-2">WHERE THE MONEY GOES</p>
-              <AllocationBar segments={FEE_BUCKETS.map((b) => ({ label: BUCKET_LABEL[b], bps: feeResult.split?.[b] ?? 0, colorClass: BUCKET_COLOR[b] }))} />
-              <ul className="mt-2 text-sm">
-                {FEE_BUCKETS.map((b) => (
-                  <li key={b} className="flex justify-between py-0.5"><span className="text-muted">{BUCKET_LABEL[b]}</span><span className="num">{feeResult.split ? formatPercentBps(feeResult.split[b], { digits: 2 }) : "—"}</span></li>
-                ))}
-                <li className="flex justify-between border-t border-line pt-1 font-semibold"><span>Total</span><span className="num">{feeResult.totalBps === null ? "—" : formatPercentBps(feeResult.totalBps, { digits: 2 })}</span></li>
-              </ul>
-              <p className="mt-2 text-xs text-warn">DEMO CONFIGURATION — ON-CHAIN ENFORCEMENT NOT IMPLEMENTED. Split mutability is undetermined because no contract exists.</p>
+              <p className="eyebrow mb-2">CONFIGURED ALLOCATIONS</p>
+              <FeeSplitEditor />
             </div>
             <RiskPanel title="RISK INDICATORS" rows={reviewRows(config)} />
-            <PrepareLaunchPanel ctx={ctx} blocked={blocked.length > 0} />
+            <LaunchLifecyclePanel ctx={ctx} blocked={blocked.length > 0} />
           </div>
         ) : null}
 
         {step === "deploy" ? (
           <div className="space-y-3">
-            <UnavailableState title="DEPLOYMENT NOT AVAILABLE" message="This build prepares and reviews launch configurations only. No token, liquidity, contract, or fee routing is created, and no transaction is sent. Verification and publishing come after on-chain deployment exists." />
-            {savedLaunch ? <p className="text-xs text-muted">Your saved configuration ({savedLaunch.config.symbol}) stays a record only: status {savedLaunch.status.replace("_", " ")}, not deployed.</p> : <p className="text-xs text-muted">Go back to Review to save this configuration.</p>}
+            {savedLaunch && savedLaunch.status === "READY" && !dirty ? <ReadyBanner /> : (
+              <UnavailableState title="NOT READY" message={`Ready for deployment means this exact configuration was validated, reviewed and confirmed. ${savedLaunch ? `The current status is ${savedLaunch.status}${dirty ? " with unsaved changes" : ""}.` : "Nothing has been saved yet."} Go back to Review to continue.`} />
+            )}
+            <p className="text-xs font-semibold text-warn">{LAUNCH_COPY.deploymentDisabled}</p>
+            <p className="text-xs text-muted">No token, mint, liquidity, contract or fee routing is created, and no transaction is sent. Verification and publishing on-chain come in a later release, which will compare the deployed state with this configuration&apos;s fingerprint.</p>
           </div>
         ) : null}
 

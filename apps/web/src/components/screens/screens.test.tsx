@@ -18,7 +18,7 @@ import { WalletContext } from "@/state/wallet";
 import { makeWalletValue } from "@/state/testing";
 import { AuthStatusPill, authStatusLabel } from "../AuthStatusPill";
 import { LaunchListView } from "../LaunchList";
-import { LaunchSummary } from "../PrepareLaunchPanel";
+import { LaunchSummary } from "../LaunchSummary";
 import { ApiErrorState, LoadingState, NoLiveData, ResourceView, UnauthenticatedState, UnavailableState } from "../states";
 import { WalletMenu } from "../WalletMenu";
 import { DISCOVER_FILTERS, DiscoverResults } from "./DiscoverScreen";
@@ -213,7 +213,7 @@ describe("launch: preparation only", () => {
     expect(LaunchConfigSchema.safeParse(req).success).toBe(true);
     expect(req.feeSplit).toEqual({ creator: 6000, taxReserve: 1500, charity: 1500, protocol: 1000 });
     expect(req.decimals).toBe(6);
-    expect(() => toLaunchRequest({ ...filled, feeDrafts: { ...filled.feeDrafts, creator: "60.01" } }, { creatorAddress: creator, reserveAddress: creator, charityId: "x" })).toThrow();
+    expect(req).not.toHaveProperty("status"); // no status, owner or fingerprint ever travels from the client
   });
   it("default charity means 'first verified'; an explicit unverified charity is an error", () => {
     expect(stepErrors("charity", filled, ctx)).toEqual([]);
@@ -222,17 +222,18 @@ describe("launch: preparation only", () => {
   it("saved launch summary says NOT DEPLOYED, not deployable, 'Configured fee split', and never 'immutable'", async () => {
     const c = createApiClient({ mode: "mock" });
     const l = await c.createLaunch(toLaunchRequest(filled, { creatorAddress: creator, reserveAddress: creator, charityId: DEMO_IDS.charities.c1 }));
-    const reviewed = await c.reviewLaunch(l.id);
+    const reviewed = await c.configureLaunch(l.id);
     const out = html(<LaunchSummary launch={reviewed} />);
-    for (const s of ["NOT DEPLOYED", "REVIEW PASSED", "Configured fee split", "Deployable: no", "no token, liquidity, contract, or fee routing exists", "DEMO DATA"]) expect(out, s).toContain(s);
+    for (const s of ["NOT DEPLOYED", "NOT VERIFIED ON-CHAIN", "CONFIGURED", "Deployable: no", "no token, mint, liquidity, contract or fee routing exists", "DEMO DATA", "Server validation passed"]) expect(out, s).toContain(s);
     expect(out.toLowerCase()).not.toContain("immutable");
-    expect(html(<LaunchSummary launch={l} />)).toContain("Not reviewed yet.");
+    expect(html(<LaunchSummary launch={l} />)).toContain("Not validated yet.");
   });
-  it("failed review shows server errors", async () => {
+  it("failed validation shows server errors and stays DRAFT", async () => {
     const c = createApiClient({ mode: "mock" });
     const l = await c.createLaunch(toLaunchRequest(filled, { creatorAddress: creator, reserveAddress: creator, charityId: DEMO_IDS.charities.c4 }));
-    const out = html(<LaunchSummary launch={await c.reviewLaunch(l.id)} />);
-    expect(out).toContain("REVIEW FAILED");
+    const out = html(<LaunchSummary launch={await c.configureLaunch(l.id)} />);
+    expect(out).toContain("DRAFT");
+    expect(out).toContain("Server validation found problems");
     expect(out).toContain("Charity is not verified");
   });
   it("empty launch list is an empty state", () => {

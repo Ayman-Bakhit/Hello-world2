@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { cleanText } from "../give";
 import { CHARITY_VERIFICATION_STATES, DONATION_PROVENANCES, DONATION_STATUSES, EVIDENCE_SOURCE_TYPES, EVIDENCE_STATUSES, RECEIPT_VERIFICATION_STATES, USD_REFERENCE_SOURCES, safeHttpUrl } from "../give";
-import { validateFeeSplit, percentToBps } from "../feesplit";
+import { isCanonicalFeeSplit, validateFeeSplit, percentToBps } from "../feesplit";
+import { LAUNCH_ACTIONS, LAUNCH_NETWORKS, REACHABLE_LAUNCH_STATUSES, supplyFitsU64 } from "../launchConstants";
 import { parseUsdToCents } from "../money";
 import { RESERVE_BALANCE_SOURCES, RESERVE_RECOMMENDATION_STATUSES, RESERVE_TARGET_SOURCES, RESERVE_TAX_SOURCES } from "../reserve";
 
@@ -762,12 +764,22 @@ export const FeeSplitSchema = z
   });
 export type FeeSplitInput = z.infer<typeof FeeSplitSchema>;
 
+/** Plain text only: no control or bidi characters, no collapsed-whitespace tricks, no angle brackets. Metadata is untrusted. */
+const plainText = (max: number, min = 0) =>
+  z.string().max(max).refine((v) => v === cleanText(v, max) && !/[<>]/.test(v) && v.length >= min, min > 0 ? `plain text, ${min} to ${max} characters, no control characters or angle brackets` : `plain text up to ${max} characters, no control characters or angle brackets`);
+const optionalUrl = (https: boolean) => z.string().max(500).refine((u) => safeHttpUrl(u, { httpsOnly: https }) !== null, https ? "must be an https URL" : "must be an http(s) URL").nullish().transform((v) => v ?? null);
+
 export const LaunchConfigSchema = z.strictObject({
-  name: z.string().trim().min(1).max(32),
+  name: plainText(32, 1),
   symbol: z.string().regex(/^[A-Z0-9]{2,10}$/, "2 to 10 characters, A-Z and 0-9"),
-  description: z.string().max(280).default(""),
+  description: plainText(280).default(""),
   totalSupply: z.string().regex(/^[1-9]\d{0,29}$/, "positive whole number"),
   decimals: z.number().int().min(0).max(9),
+  network: z.enum(LAUNCH_NETWORKS).default("devnet"),
+  /** USER-PROVIDED references. Never fetched by the server; never "verified metadata". */
+  imageUri: optionalUrl(true).default(null),
+  website: optionalUrl(false).default(null),
+  socials: z.strictObject({ twitter: optionalUrl(true), telegram: optionalUrl(true), discord: optionalUrl(true), github: optionalUrl(true) }).default({ twitter: null, telegram: null, discord: null, github: null }),
   creatorAllocationPercent: z.string().refine((s) => { try { return percentToBps(s) <= 10_000; } catch { return false; } }, "percent with at most 2 decimals, 0 to 100"),
   creatorWallet: z.string().min(20).max(64),
   mintAuthority: z.enum(["disabled", "creator"]).default("disabled"),
@@ -778,39 +790,125 @@ export const LaunchConfigSchema = z.strictObject({
     supplyPercentage: z.string().refine((s) => { try { const b = percentToBps(s); return b > 0 && b <= 10_000; } catch { return false; } }, "percent above 0 and at most 100"),
     lockDays: z.number().int().min(0).max(3650),
   }),
-  feeSplit: FeeSplitSchema,
+  /** Must be exactly the canonical 60/15/15/10 split in this version (validated by the shared fee-split code). */
+  feeSplit: FeeSplitSchema.refine((v) => isCanonicalFeeSplit(v), { message: "fee split must be exactly creator 6000, taxReserve 1500, charity 1500, protocol 1000 basis points in this version" }),
   charityConfiguration: z.strictObject({ charityId: Uuid }),
+  /** A LAUNCH FEE allocation. Unrelated to the user's personal Tax Reserve target or balance. */
   taxReserveConfiguration: z.strictObject({
     destinationType: z.literal("creator_controlled"),
     destinationAddress: z.string().min(20).max(64),
   }),
+}).superRefine((v, ctx) => {
+  if (!supplyFitsU64(v.totalSupply, v.decimals)) ctx.addIssue({ code: "custom", path: ["totalSupply"], message: "total supply scaled by decimals must fit an unsigned 64-bit integer (18446744073709551615)" });
 });
 export type LaunchConfig = z.infer<typeof LaunchConfigSchema>;
+
+const Fingerprint = z.string().regex(/^[0-9a-f]{64}$/);
+const BucketSchema = z.enum(["creator", "taxReserve", "charity", "protocol"]);
+export const LaunchAllocation = z.object({ bucket: BucketSchema, label: z.string(), bps: z.number().int(), percent: z.string(), note: z.string() });
+export const LaunchCharitySnapshot = z.object({
+  id: Uuid, name: z.string(), verificationState: CharityVerificationStateSchema, verificationSource: EvidenceSourceTypeSchema.nullable(), lastReviewedAt: Iso.nullable(), dataSource: DataSource,
+});
+export type LaunchCharitySnapshot = z.infer<typeof LaunchCharitySnapshot>;
 
 export const LaunchReview = z.object({
   passed: z.boolean(),
   errors: z.array(z.object({ field: z.string(), message: z.string() })),
   warnings: z.array(z.string()),
-  /** What a $1,000.00 fee would be split into under the configured split. */
+  /** What a $1,000.00 fee would be split into under the configured split (an illustration; nothing is paid). */
   moneyFlowExampleCents: z.object({ creator: Cents, taxReserve: Cents, charity: Cents, protocol: Cents }),
   feeSplitLabel: z.literal("Configured fee split"),
   feeSplitEnforcement: z.literal("not_enforced"),
   deployable: z.literal(false),
   reviewedAt: Iso,
+  /** The configuration this review was run against. */
+  fingerprint: Fingerprint,
+  /** The selected charity as the registry said at review time. Null when it does not exist. */
+  charity: LaunchCharitySnapshot.nullable(),
+  allocations: z.array(LaunchAllocation),
 });
 export type LaunchReview = z.infer<typeof LaunchReview>;
 
+export const LaunchStatusSchema = z.enum(REACHABLE_LAUNCH_STATUSES);
+export const LaunchDeployment = z.object({ status: z.literal("not_deployed"), mintAddress: z.null(), transactionSignature: z.null(), contractAddress: z.null() });
+export const LaunchMetadataProvenance = z.object({ source: z.literal("USER_PROVIDED"), verifiedOnChain: z.literal(false) });
+
 export const Launch = z.object({
   id: Uuid,
-  status: z.enum(["draft", "review_passed", "review_failed"]),
+  status: LaunchStatusSchema,
+  statusMeaning: z.string(),
   config: LaunchConfigSchema,
   review: LaunchReview.nullable(),
-  deployment: z.object({ status: z.literal("not_deployed"), contractAddress: z.null() }),
+  /** Hash of the canonical configuration. A fingerprint of a configuration, not a blockchain proof. */
+  fingerprint: Fingerprint,
+  revision: z.number().int().min(1),
+  publicVisible: z.boolean(),
+  readyAt: Iso.nullable(),
+  deployment: LaunchDeployment,
+  metadata: LaunchMetadataProvenance,
   createdAt: Iso,
   updatedAt: Iso,
   dataSource: DataSource,
 });
 export type Launch = z.infer<typeof Launch>;
+
+/** Reason text is optional, plain and bounded. */
+const reason = plainText(200).optional();
+export const LaunchUpdateRequest = LaunchConfigSchema;
+export const LaunchActionRequest = z.strictObject({ reason });
+export const LaunchReadyRequest = z.strictObject({
+  /** Must equal the launch's current fingerprint: proves the user confirmed exactly this configuration. */
+  fingerprint: Fingerprint,
+  confirmed: z.literal(true, { error: "explicit confirmation is required" }),
+  publish: z.boolean().default(false),
+});
+
+export const LaunchRevision = z.object({
+  seq: z.number().int().min(1),
+  action: z.enum(LAUNCH_ACTIONS),
+  statusAfter: LaunchStatusSchema,
+  fingerprint: Fingerprint,
+  reason: z.string().nullable(),
+  createdAt: Iso,
+  prevHash: z.string().nullable(),
+  rowHash: z.string(),
+});
+export const LaunchHistory = z.object({
+  launchId: Uuid,
+  revisions: z.array(LaunchRevision),
+  /** True when every row's hash and chain link recompute. Tamper-evident only; this is not a blockchain proof. */
+  historyIntact: z.boolean(),
+  note: z.string(),
+});
+export type LaunchHistory = z.infer<typeof LaunchHistory>;
+
+/** Public view of a READY, published configuration. No wallet addresses, user ids, sessions or internal notes. */
+export const PublicLaunch = z.object({
+  id: Uuid,
+  status: LaunchStatusSchema,
+  statusMeaning: z.string(),
+  name: z.string(),
+  symbol: z.string(),
+  description: z.string(),
+  network: z.enum(LAUNCH_NETWORKS),
+  creator: z.string(),
+  totalSupply: z.string(),
+  decimals: z.number().int(),
+  feeSplit: z.object({ creator: z.number().int(), taxReserve: z.number().int(), charity: z.number().int(), protocol: z.number().int() }),
+  allocations: z.array(LaunchAllocation),
+  feeSplitLabel: z.literal("Configured fee split"),
+  feeSplitEnforcement: z.literal("not_enforced"),
+  charity: LaunchCharitySnapshot.nullable(),
+  fingerprint: Fingerprint,
+  metadata: LaunchMetadataProvenance.extend({ imageUri: z.string().nullable(), website: z.string().nullable() }),
+  deployment: LaunchDeployment,
+  labels: z.array(z.string()),
+  readyAt: Iso.nullable(),
+  dataSource: DataSource,
+});
+export type PublicLaunch = z.infer<typeof PublicLaunch>;
+export const PublicLaunchList = z.object({ launches: z.array(PublicLaunch), pagination: z.object({ limit: z.number().int(), offset: z.number().int(), total: z.number().int() }) });
+export type PublicLaunchList = z.infer<typeof PublicLaunchList>;
 export const LaunchList = z.object({ launches: z.array(Launch), pagination: z.object({ limit: z.number().int(), offset: z.number().int(), total: z.number().int() }) });
 export const PageQuery = z.strictObject({
   limit: z.coerce.number().int().min(1).max(100).default(25),

@@ -12,6 +12,7 @@ const id = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12,
 export const DEMO_IDS = {
   user: id(0x100),
   admin: id(0x101),
+  launch: id(0x801),
   wallets: { trading: id(1), creator: id(2), cold: id(3) },
   charities: { c1: id(0x201), c2: id(0x202), c3: id(0x203), c4: id(0x204) },
   charityWallets: { c1: id(0x301), c2: id(0x302), c3: id(0x303), c4: id(0x304) },

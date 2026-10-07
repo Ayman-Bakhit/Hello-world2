@@ -115,3 +115,16 @@ transactions + transaction_asset_deltas (Slice 5, derived from immutable raw_tra
                         Tax Center / Tax Reserve screens (status, method, requirements, unresolved, missing data)
 ```
 Scope is the user (all their real wallets pooled per asset), matching the existing engine. Demo and real never mix: demo wallets get fixtures labeled DEMO DATA, real wallets get only derived data or `UNAVAILABLE`. Fixture-backed: the calculation logic and all test data. Dependent on future live verification: the indexed transactions, a real historical price source, and (later) user-supplied cost basis. No money movement exists: the reserve view exposes an estimate and a stored target only.
+
+## Launch configuration foundation (Slice 11): configuration only
+```
+creator (session) -> launch configuration (DRAFT)
+  -> server validation (shared schema + registry + wallet ownership) -> CONFIGURED
+  -> submit for review (fingerprint + charity registry state recorded) -> REVIEW
+  -> explicit confirmation of that exact fingerprint -> READY (ready for a FUTURE deployment flow)
+  -> optional public read-only view
+```
+- One transition function (`planLaunchAction`) is shared by the API (which persists it under a row lock) and mock mode (in memory), so both behave identically. A client never supplies a status.
+- The fee split is a fixed, server-validated configuration (60/15/15/10); the launch tax reserve allocation is separate from the user's personal Tax Reserve (Slice 10); the selected charity comes from the Slice 9 registry; nothing here moves money or touches a chain.
+- `launchFingerprint` + the hash-chained `launch_configuration_revisions` give auditability and the anchor a future deployment slice compares against. They are not blockchain proofs.
+- Deployment, minting, liquidity, fee routing, payouts and custody are explicitly out of scope and undecided (docs/LAUNCHPAD.md).

@@ -51,9 +51,10 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 | `GET /api/donations/by-id/:id`, `GET /api/receipts/:id` | session + owner (404 otherwise) | db | db-backed |
 | `POST /api/donations/plan` | session + owner | none | stateless review; persists nothing; `transfersEnabled:false` |
 | `POST /api/donations` | removed in Slice 9 | | 404: there is no donation creation endpoint |
-| `POST /api/launches` | session | db | production-capable (config only) |
-| `GET /api/launches`, `GET /api/launches/:id` | session + owner | db | production-capable |
-| `POST /api/launches/:id/review` | session + owner | db | production-capable (validation only; never deployable) |
+| `POST /api/launches`, `PUT /api/launches/:id` | session + owner | db | configuration only; always returns the launch to DRAFT |
+| `GET /api/launches`, `GET /api/launches/:id`, `GET /api/launches/:id/history` | session + owner | db | production-capable |
+| `POST /api/launches/:id/configure`, `/review`, `/ready`, `/cancel` | session + owner | db | named lifecycle actions; the server decides the status |
+| `GET /api/public/launches`, `GET /api/public/launches/:id` | public | db | READY and published configurations only |
 | `GET /api/tokens` | public | demo | **demo** |
 | `GET /api/tokens/:id/proof`, `GET /api/proof/:id` | public | demo | **demo** |
 | `GET /api/discover` | public | demo | **demo** (filter/sort logic is real) |
@@ -175,24 +176,23 @@ Computed by the shared tax engine from synthetic events. Disclaimer: "Estimated 
 `POST /api/donations/plan` body `{ "walletId": uuid, "charityId": uuid, "asset": "USDC", "amount": "25.50" }` (strict) -> `200 DonationPlanResponse`
 - Stateless review: persists nothing, creates no transaction, asks for no signature. Always `transfersEnabled:false`, `persisted:false`, `disabledReason:"Donation transfers are not enabled in this beta."`. Includes charity eligibility (VERIFIED and a verified wallet that supports the asset) with the blocked reason, exact `quantity`, `usdReferenceCents` (assumes 1 USDC = 1 USD, labeled "not a market quote"), a fee disclosure and signing note, and the qualified tax note.
 - `POST /api/donations` (create) no longer exists. Tax note: "Potentially deductible charitable contribution. Consult a tax professional. Tax treatment depends on your circumstances and applicable law."
-### Launches (db)
-`POST /api/launches` body:
+### Launches (db) - Slice 11 (configuration only)
+`POST /api/launches` and `PUT /api/launches/:id` take the SAME strict body (unknown fields, including `status`, `userId`, `fingerprint`, `deployment`, `mintAddress`, are `400`):
 ```json
-{
-  "name": "Example Token", "symbol": "EXMPL", "description": "", "totalSupply": "1000000000", "decimals": 6,
-  "creatorAllocationPercent": "8", "creatorWallet": "<one of your wallet addresses>",
-  "mintAuthority": "disabled", "freezeAuthority": "disabled", "updateAuthority": "creator",
+{ "name": "Example Token", "symbol": "EXMPL", "description": "...", "totalSupply": "1000000000", "decimals": 6, "network": "devnet",
+  "imageUri": "https://...", "website": "https://...", "socials": { "twitter": null, "telegram": null, "discord": null, "github": null },
+  "creatorAllocationPercent": "8", "creatorWallet": "<your wallet address>", "mintAuthority": "disabled", "freezeAuthority": "disabled", "updateAuthority": "creator",
   "liquidityConfiguration": { "initialLiquidityUsdc": "50000", "supplyPercentage": "40", "lockDays": 30 },
   "feeSplit": { "creator": 6000, "taxReserve": 1500, "charity": 1500, "protocol": 1000 },
-  "charityConfiguration": { "charityId": "<uuid>" },
-  "taxReserveConfiguration": { "destinationType": "creator_controlled", "destinationAddress": "<your wallet address>" }
-}
+  "charityConfiguration": { "charityId": "<registry uuid>" },
+  "taxReserveConfiguration": { "destinationType": "creator_controlled", "destinationAddress": "<your wallet address>" } }
 ```
-→ `201 Launch { id, status:"draft", config, review:null, deployment:{status:"not_deployed",contractAddress:null}, createdAt, updatedAt, dataSource:"database" }`
-- `feeSplit`: integer basis points, validated by the shared `validateFeeSplit` (exactly 10000). Floats, negatives, strings, extra or missing keys are rejected. The DB also has a CHECK (`launch_fee_split_is_10000_bps`).
-- `creatorWallet` must be one of your registered wallets (`422 WALLET_NOT_OWNED`). Max 50 configurations per account.
-- `GET /api/launches?limit&offset`, `GET /api/launches/:id`: your own only.
-- `POST /api/launches/:id/review`: re-validates server-side (fee split, wallet ownership, charity verified with a verified wallet, supply not oversubscribed), stores the result, sets `review_passed` or `review_failed`. Response includes `review.errors[]`, `warnings[]`, a $1,000 money-flow example, `feeSplitLabel:"Configured fee split"`, `feeSplitEnforcement:"not_enforced"`, `deployable:false`. Nothing is deployed and the word "immutable" is never used.
+- `feeSplit` must equal 6000/1500/1500/1000 exactly (a split that totals 10000 but differs is `400`). `totalSupply` is a positive integer string that, scaled by decimals, fits a u64. Text is plain (no control characters or angle brackets); URLs are https (website: http or https), never fetched. Wallets must be yours (`422 WALLET_NOT_OWNED`); the charity must be a registry id (`422 CHARITY_NOT_FOUND`); `409 LIMIT_REACHED` beyond `MAX_LAUNCHES_PER_USER`.
+- Response `Launch`: `{ id, status: DRAFT|CONFIGURED|REVIEW|READY|CANCELLED, statusMeaning, config, review|null, fingerprint, revision, publicVisible, readyAt, deployment:{status:"not_deployed",mintAddress:null,transactionSignature:null,contractAddress:null}, metadata:{source:"USER_PROVIDED",verifiedOnChain:false}, createdAt, updatedAt, dataSource }`. `fingerprint` is derived from the stored configuration (sha256, canonical). `review` carries `passed, errors, warnings, moneyFlowExampleCents (an illustration), fingerprint, charity:{ name, verificationState, verificationSource, lastReviewedAt, dataSource }, allocations`.
+- `POST /api/launches/:id/configure` (DRAFT -> CONFIGURED when validation passes; otherwise stays DRAFT with the errors), `/review` (CONFIGURED -> REVIEW), `/ready` body `{ "fingerprint": "<current>", "confirmed": true, "publish": false }` (REVIEW -> READY; `409 FINGERPRINT_MISMATCH` otherwise), `/cancel` body `{ "reason"?: string }`. An action not available from the current status is `409 INVALID_LAUNCH_TRANSITION`; a configuration that changed meanwhile is `409 LAUNCH_CHANGED`. All are `no-store`, write-rate-limited and owner-scoped (foreign and unknown ids are the same 404).
+- `GET /api/launches/:id/history` -> `{ launchId, revisions:[{ seq, action, statusAfter, fingerprint, reason, createdAt, prevHash, rowHash }], historyIntact, note }` (owner only).
+- `GET /api/public/launches?limit&offset` and `GET /api/public/launches/:id` -> `PublicLaunch`: `{ id, status, statusMeaning, name, symbol, description, network, creator (abbreviated), totalSupply, decimals, feeSplit, allocations, feeSplitLabel, feeSplitEnforcement:"not_enforced", charity (current registry state), fingerprint, metadata, deployment, labels:["CONFIGURED","NOT DEPLOYED","NOT VERIFIED ON-CHAIN"], readyAt, dataSource }`. No session needed; no user, full wallet address, reserve destination or review internals.
+- There is no deploy, mint, liquidity, distribution, payout, donation or transfer endpoint, and no DELETE.
 
 ### Tokens, proof (demo, public)
 `GET /api/tokens` → summaries. `GET /api/tokens/:id/proof` and `GET /api/proof/:id` →

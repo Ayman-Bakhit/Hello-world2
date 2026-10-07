@@ -17,9 +17,9 @@ export function LaunchScreen(): ReactNode {
     <div>
       <PageHeader
         eyebrow="Launch"
-        title="Launch without hiding where the money goes."
-        subtitle="Define your fee split. Publish it. Let everyone verify it. This build is PREPARE LAUNCH only: configurations are saved and reviewed, nothing is deployed."
-        actions={<ButtonLink href="#wizard" variant="primary">PREPARE LAUNCH</ButtonLink>}
+        title="Configure a launch without hiding where the money goes."
+        subtitle="Configure a launch, review it and mark it ready. This build records configuration only: nothing is deployed, no token or liquidity is created, and no funds move."
+        actions={<><ButtonLink href="#wizard" variant="primary">CONFIGURE LAUNCH</ButtonLink><ButtonLink href="/launches" variant="secondary">PUBLIC CONFIGURATIONS</ButtonLink></>}
       />
       <ResourceView resource={charities} loadingLabel="Loading charities">
         {(list) => <LaunchWizard charities={list.map(charityFromApi)} />}
@@ -33,7 +33,7 @@ export function LaunchConfigurationScreen(): ReactNode {
   const charities = useResource("launch-charities-config", () => api.getCharities());
   return (
     <div>
-      <PageHeader eyebrow="Launch" title="Launch configuration" subtitle="Define exactly where creator fees go. The four shares must total exactly 100% (10,000 basis points). Preparation only: nothing is deployed." />
+      <PageHeader eyebrow="Launch" title="Launch configuration" subtitle="Where launch fees are configured to go. The split is fixed at 60/15/15/10 in this version and is a validated configuration, not an on-chain rule. Nothing is deployed." />
       <ResourceView resource={charities} loadingLabel="Loading charities">
         {(list) => <ConfigurationWorkbench charities={list.map(charityFromApi)} />}
       </ResourceView>

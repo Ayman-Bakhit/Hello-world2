@@ -1,4 +1,4 @@
-import type { Charity, CharityEvidenceResponse, Donation, Launch, LaunchConfig, LaunchReview, Receipt, Wallet } from "@project-name/shared";
+import type { Charity, CharityEvidenceResponse, Donation, Receipt, Wallet } from "@project-name/shared";
 import { DONATION_TAX_NOTE, GIVE_COPY, cleanText, safeHttpUrl, type StoredTarget } from "@project-name/shared";
 import type { Pool } from "./pool";
 
@@ -247,47 +247,3 @@ export async function upsertTaxReserveTarget(pool: Pool, userId: string, t: Omit
   }
 }
 
-// ---------- launches ----------
-const launchOf = (r: Record<string, unknown>): Launch => ({
-  id: r.id as string,
-  status: r.status as Launch["status"],
-  config: r.config as LaunchConfig,
-  review: (r.review as LaunchReview | null) ?? null,
-  deployment: { status: "not_deployed", contractAddress: null },
-  createdAt: iso(r.created_at as Date),
-  updatedAt: iso(r.updated_at as Date),
-  dataSource: r.data_source as Launch["dataSource"],
-});
-
-export const MAX_LAUNCH_DRAFTS_PER_USER = 50;
-
-export async function countLaunches(pool: Pool, userId: string): Promise<number> {
-  return Number((await pool.query("SELECT count(*) FROM launch_configurations WHERE creator_user_id = $1", [userId])).rows[0].count);
-}
-
-export async function insertLaunch(pool: Pool, userId: string, walletId: string, config: LaunchConfig): Promise<Launch> {
-  const r = await pool.query(
-    "INSERT INTO launch_configurations (creator_user_id, creator_wallet_id, name, symbol, config) VALUES ($1,$2,$3,$4,$5) RETURNING *",
-    [userId, walletId, config.name, config.symbol, JSON.stringify(config)],
-  );
-  return launchOf(r.rows[0]);
-}
-
-export async function listLaunches(pool: Pool, userId: string, limit: number, offset: number): Promise<{ launches: Launch[]; total: number }> {
-  const total = await countLaunches(pool, userId);
-  const r = await pool.query("SELECT * FROM launch_configurations WHERE creator_user_id = $1 ORDER BY created_at DESC, id LIMIT $2 OFFSET $3", [userId, limit, offset]);
-  return { launches: r.rows.map(launchOf), total };
-}
-
-export async function getLaunch(pool: Pool, userId: string, id: string): Promise<Launch | null> {
-  const r = await pool.query("SELECT * FROM launch_configurations WHERE id = $1 AND creator_user_id = $2", [id, userId]);
-  return r.rows[0] ? launchOf(r.rows[0]) : null;
-}
-
-export async function saveLaunchReview(pool: Pool, userId: string, id: string, review: LaunchReview): Promise<Launch | null> {
-  const r = await pool.query(
-    "UPDATE launch_configurations SET review = $3, status = $4, updated_at = now() WHERE id = $1 AND creator_user_id = $2 RETURNING *",
-    [id, userId, JSON.stringify(review), review.passed ? "review_passed" : "review_failed"],
-  );
-  return r.rows[0] ? launchOf(r.rows[0]) : null;
-}

@@ -14,6 +14,17 @@ export type FeeSplitError =
   | { code: "NEGATIVE"; bucket: FeeBucket }
   | { code: "SUM_MISMATCH"; sum: number };
 
+/**
+ * The canonical MVP launch split: creator 60%, tax reserve 15%, charity 15%, protocol 10% (6000/1500/1500/1000 bps).
+ * In this version a launch configuration must equal it exactly (the server enforces that). It is a validated
+ * CONFIGURATION: nothing enforces it on-chain.
+ */
+export const CANONICAL_FEE_SPLIT: Readonly<FeeSplitBps> = Object.freeze({ creator: 6000, taxReserve: 1500, charity: 1500, protocol: 1000 });
+
+export function isCanonicalFeeSplit(split: FeeSplitBps): boolean {
+  return validateFeeSplit(split).length === 0 && FEE_BUCKETS.every((b) => split[b] === CANONICAL_FEE_SPLIT[b]);
+}
+
 export function validateFeeSplit(split: FeeSplitBps): FeeSplitError[] {
   const errors: FeeSplitError[] = [];
   let sum = 0;

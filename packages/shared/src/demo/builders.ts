@@ -230,7 +230,7 @@ export function buildDiscover(q: DiscoverQuery): DiscoverResponse {
 
 // ---------- charities / donations (used by the web client's mock mode; the API serves the same shapes from the database) ----------
 import type { Charity, CharityEvidenceResponse, DonationDetail, DonationPlanResponse, DonationsResponse, Receipt } from "../api/schemas";
-import { DEMO_CHARITIES, DEMO_DONATIONS, DEMO_EVIDENCE, DEMO_RECEIPT } from "./fixtures";
+import { DEMO_CHARITIES, DEMO_DONATIONS, DEMO_EVIDENCE, DEMO_IDS, DEMO_RECEIPT } from "./fixtures";
 import { GIVE_COPY, type CharityVerificationState } from "../give";
 
 const USDC_DECIMALS = 6;
@@ -325,4 +325,30 @@ export function buildDonationPlan(a: {
     transfersEnabled: false, disabledReason: GIVE_COPY.transfersDisabled, persisted: false,
     dataSource: a.walletDataSource, verifiedOnChain: false,
   };
+}
+
+// ---------- demo launch (mock mode only; labeled DEMO DATA, NOT DEPLOYED, NOT VERIFIED ON-CHAIN) ----------
+import { LaunchConfigSchema, type Launch, type PublicLaunch } from "../api/schemas";
+import { launchFingerprint, toPublicLaunch, STATUS_MEANING } from "../launchModel";
+
+const DEMO_LAUNCH_CONFIG = () => LaunchConfigSchema.parse({
+  name: "Harbor Demo Launch", symbol: "HRBRD", description: "Fictional demo configuration. Nothing is deployed.", totalSupply: "1000000000", decimals: 6, network: "devnet",
+  creatorAllocationPercent: "8", creatorWallet: DEMO_WALLETS[1]!.address,
+  liquidityConfiguration: { initialLiquidityUsdc: "50000", supplyPercentage: "40", lockDays: 30 },
+  feeSplit: { creator: 6000, taxReserve: 1500, charity: 1500, protocol: 1000 }, charityConfiguration: { charityId: DEMO_IDS.charities.c1 },
+  taxReserveConfiguration: { destinationType: "creator_controlled", destinationAddress: DEMO_WALLETS[1]!.address },
+});
+
+export function buildDemoLaunch(): Launch {
+  const config = DEMO_LAUNCH_CONFIG();
+  return {
+    id: DEMO_IDS.launch, status: "READY", statusMeaning: STATUS_MEANING.READY, config, review: null, fingerprint: launchFingerprint(config), revision: 5, publicVisible: true,
+    readyAt: "2026-01-01T00:00:00.000Z", deployment: { status: "not_deployed", mintAddress: null, transactionSignature: null, contractAddress: null },
+    metadata: { source: "USER_PROVIDED", verifiedOnChain: false }, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", dataSource: "demo",
+  };
+}
+
+export function buildDemoPublicLaunch(): PublicLaunch {
+  const c = buildCharityList().find((x) => x.id === DEMO_IDS.charities.c1)!;
+  return toPublicLaunch(buildDemoLaunch(), { id: c.id, name: c.name, verificationState: c.verificationState, verificationSource: c.verificationSource, lastReviewedAt: c.lastReviewedAt, dataSource: c.dataSource });
 }

@@ -1,10 +1,12 @@
-import { percentToBps, splitAmount, validateFeeSplit } from "./feesplit";
-import type { LaunchConfig, LaunchReview } from "./api/schemas";
+import { isCanonicalFeeSplit, percentToBps, splitAmount, validateFeeSplit } from "./feesplit";
+import type { LaunchCharitySnapshot, LaunchConfig, LaunchReview } from "./api/schemas";
+import { launchAllocations, launchFingerprint } from "./launchModel";
 
 export interface ReviewContext {
   /** Public addresses of wallets the actor has registered. */
   ownedWalletAddresses: string[];
-  charity: { verified: boolean; hasVerifiedWallet: boolean } | null;
+  /** The registry record for the selected charity, as it is NOW. `verified` means the registry state is VERIFIED. */
+  charity: { verified: boolean; hasVerifiedWallet: boolean; snapshot: LaunchCharitySnapshot } | null;
   now: Date;
 }
 
@@ -23,9 +25,13 @@ export function reviewLaunchConfig(c: LaunchConfig, ctx: ReviewContext): LaunchR
   if (!ctx.ownedWalletAddresses.includes(c.taxReserveConfiguration.destinationAddress)) {
     errors.push({ field: "taxReserveConfiguration.destinationAddress", message: "Tax reserve destination must be a wallet you control." });
   }
-  if (!ctx.charity) errors.push({ field: "charityConfiguration.charityId", message: "Charity not found." });
-  else if (!ctx.charity.verified) errors.push({ field: "charityConfiguration.charityId", message: "Charity is not verified." });
+  if (!isCanonicalFeeSplit(c.feeSplit)) errors.push({ field: "feeSplit", message: "The fee split must be exactly 60/15/15/10 (6000/1500/1500/1000 basis points) in this version." });
+  if (!ctx.charity) errors.push({ field: "charityConfiguration.charityId", message: "Charity not found in the registry." });
+  else if (!ctx.charity.verified) errors.push({ field: "charityConfiguration.charityId", message: `Charity is not verified (registry status ${ctx.charity.snapshot.verificationState.replace("_", " ")}).` });
   else if (!ctx.charity.hasVerifiedWallet) errors.push({ field: "charityConfiguration.charityId", message: "Charity has no verified wallet." });
+  if (ctx.charity && (ctx.charity.snapshot.verificationSource === "FIXTURE" || ctx.charity.snapshot.dataSource === "demo")) {
+    warnings.push("This charity's verification rests on a labeled fixture. It is not a real-world verification.");
+  }
 
   const alloc = percentToBps(c.creatorAllocationPercent);
   const liq = percentToBps(c.liquidityConfiguration.supplyPercentage);
@@ -36,6 +42,7 @@ export function reviewLaunchConfig(c: LaunchConfig, ctx: ReviewContext): LaunchR
   if (c.liquidityConfiguration.lockDays === 0) warnings.push("No liquidity lock configured.");
   if (alloc > 2_000) warnings.push("Creator allocation above 20% of supply.");
   warnings.push("No contract exists: this is a configured fee split, not enforced on-chain.");
+  if ((c.network ?? "devnet") === "mainnet-beta") warnings.push("Network mainnet-beta is recorded as configuration only. Nothing is deployed to any network.");
 
   const flow = errors.some((e) => e.field === "feeSplit")
     ? { creator: 0n, taxReserve: 0n, charity: 0n, protocol: 0n }
@@ -50,5 +57,8 @@ export function reviewLaunchConfig(c: LaunchConfig, ctx: ReviewContext): LaunchR
     feeSplitEnforcement: "not_enforced",
     deployable: false,
     reviewedAt: ctx.now.toISOString(),
+    fingerprint: launchFingerprint(c),
+    charity: ctx.charity ? ctx.charity.snapshot : null,
+    allocations: launchAllocations(c.feeSplit),
   };
 }

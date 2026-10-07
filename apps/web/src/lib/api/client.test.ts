@@ -107,7 +107,7 @@ describe("mock mode: stored-data stand-ins behave like the API", () => {
     expect((await c.getTaxReserve(W)).userTarget.targetAmountCents).toBe("1000000");
     expect(r.funding.custody).toBe("none");
   });
-  it("launch configurations: invalid fee split rejected, valid saved and reviewed, never deployable", async () => {
+  it("launch configurations: non-canonical fee split rejected, DRAFT -> CONFIGURED -> REVIEW -> READY, never deployed", async () => {
     const c = createApiClient({ mode: "mock" });
     const creator = DEMO_WALLETS[1]!.address;
     const cfg = {
@@ -118,19 +118,42 @@ describe("mock mode: stored-data stand-ins behave like the API", () => {
       taxReserveConfiguration: { destinationType: "creator_controlled", destinationAddress: creator },
     };
     await expect(c.createLaunch({ ...cfg, feeSplit: { ...cfg.feeSplit, creator: 6001 } })).rejects.toMatchObject({ status: 400 });
+    await expect(c.createLaunch({ ...cfg, feeSplit: { creator: 5000, taxReserve: 2500, charity: 1500, protocol: 1000 } })).rejects.toMatchObject({ status: 400 }); // totals 10000 but not canonical
     expect((await c.getLaunches()).launches).toHaveLength(0);
     const l = await c.createLaunch(cfg);
-    expect(l).toMatchObject({ status: "draft", deployment: { status: "not_deployed", contractAddress: null }, dataSource: "demo" });
-    const r = await c.reviewLaunch(l.id);
-    expect(r.status).toBe("review_passed");
-    expect(r.review).toMatchObject({ deployable: false, feeSplitLabel: "Configured fee split", feeSplitEnforcement: "not_enforced" });
+    expect(l).toMatchObject({ status: "DRAFT", deployment: { status: "not_deployed", mintAddress: null, transactionSignature: null, contractAddress: null }, dataSource: "demo", metadata: { source: "USER_PROVIDED", verifiedOnChain: false } });
+    await expect(c.reviewLaunch(l.id)).rejects.toMatchObject({ status: 409, code: "INVALID_LAUNCH_TRANSITION" }); // cannot skip validation
+    const conf = await c.configureLaunch(l.id);
+    expect(conf.status).toBe("CONFIGURED");
+    expect(conf.review).toMatchObject({ deployable: false, feeSplitLabel: "Configured fee split", feeSplitEnforcement: "not_enforced", fingerprint: l.fingerprint });
+    const rv = await c.reviewLaunch(l.id);
+    expect(rv.status).toBe("REVIEW");
+    await expect(c.readyLaunch(l.id, { fingerprint: "0".repeat(64), confirmed: true, publish: false })).rejects.toMatchObject({ status: 409, code: "FINGERPRINT_MISMATCH" });
+    const ready = await c.readyLaunch(l.id, { fingerprint: rv.fingerprint, confirmed: true, publish: true });
+    expect(ready).toMatchObject({ status: "READY", publicVisible: true, deployment: { status: "not_deployed" } });
+    expect((await c.getPublicLaunch(l.id)).labels).toEqual(expect.arrayContaining(["CONFIGURED", "NOT DEPLOYED", "NOT VERIFIED ON-CHAIN", "DEMO DATA"]));
+    const edited = await c.updateLaunch(l.id, { ...cfg, name: "Renamed" });
+    expect(edited).toMatchObject({ status: "DRAFT", review: null, publicVisible: false });
+    expect(edited.fingerprint).not.toBe(l.fingerprint);
+    await expect(c.getPublicLaunch(l.id)).rejects.toMatchObject({ status: 404 });
+    const h = await c.getLaunchHistory(l.id);
+    expect(h.revisions.map((r) => r.action)).toEqual(["create", "configure", "review", "ready", "update"]);
+    expect(h.revisions[1]!.prevHash).toBe(h.revisions[0]!.rowHash);
     expect((await c.getLaunch(l.id)).id).toBe(l.id);
     expect((await c.getLaunches()).launches).toHaveLength(1);
     await expect(c.getLaunch("00000000-0000-4000-8000-0000000000aa")).rejects.toMatchObject({ status: 404 });
-    // unverified charity fails review, as on the server
+    // an unverified charity fails validation, as on the server, and the launch stays DRAFT
     const bad = await c.createLaunch({ ...cfg, charityConfiguration: { charityId: DEMO_IDS.charities.c4 } });
-    expect((await c.reviewLaunch(bad.id)).status).toBe("review_failed");
+    const failed = await c.configureLaunch(bad.id);
+    expect(failed.status).toBe("DRAFT");
+    expect(failed.review?.passed).toBe(false);
+    const cancelled = await c.cancelLaunch(bad.id);
+    expect(cancelled.status).toBe("CANCELLED");
+    await expect(c.configureLaunch(bad.id)).rejects.toMatchObject({ status: 409 });
+    // mock mode lists the labeled demo launch publicly
+    expect((await c.getPublicLaunches()).launches.some((x) => x.dataSource === "demo" && x.labels.includes("DEMO DATA"))).toBe(true);
   });
+
 });
 
 describe("api mode: new endpoints and status handling", () => {
@@ -150,7 +173,7 @@ describe("api mode: new endpoints and status handling", () => {
     const created = await mock.createLaunch({
       name: "A", symbol: "AA", totalSupply: "1", decimals: 0, creatorAllocationPercent: "1", creatorWallet: DEMO_WALLETS[0]!.address,
       liquidityConfiguration: { initialLiquidityUsdc: "1", supplyPercentage: "1", lockDays: 0 },
-      feeSplit: { creator: 10000, taxReserve: 0, charity: 0, protocol: 0 }, charityConfiguration: { charityId: DEMO_IDS.charities.c1 },
+      feeSplit: { creator: 6000, taxReserve: 1500, charity: 1500, protocol: 1000 }, charityConfiguration: { charityId: DEMO_IDS.charities.c1 },
       taxReserveConfiguration: { destinationType: "creator_controlled", destinationAddress: DEMO_WALLETS[0]!.address },
     });
     const c = createApiClient({ mode: "api", baseUrl: "http://api.test", getToken: () => null, fetchImpl: (async () => res(created, 201)) as unknown as typeof fetch });

@@ -11,7 +11,7 @@ export class ApiClientError extends Error {
 export interface RequestOptions {
   baseUrl: string;
   fetchImpl: typeof fetch;
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT";
   path: string;
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
