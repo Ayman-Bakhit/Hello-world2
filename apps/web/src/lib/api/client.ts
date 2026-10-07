@@ -1,5 +1,5 @@
 import {
-  CharityList, DEMO_CHARITIES, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
+  CharityEvidenceResponse, CharityList, DEMO_CHARITIES, DonationDetail, DonationPlanResponse, Receipt, buildCharityEvidence, buildDonationDetail, buildDonationPlan, buildReceipt, parseUsdToCents, DEMO_WALLETS, DiscoverQuery, DiscoverResponse, DonationsResponse, Launch, LaunchConfigSchema,
   LaunchList, PortfolioResponse, SetTaxReserveTargetRequest, StartSyncResponse, SyncStatusResponse, TaxCalculateResponse, TaxDetailsResponse, TaxReportResponse, buildDemoTaxReport, reportToCsv, reportToJson, exportFilename, ManualBasisDetail, ManualBasisList, ManualBasisView,
   type CreateManualBasisRequest, type ReviseManualBasisRequest, type VoidManualBasisRequest, TaxReserveResponse, TaxResponse, TokenList, TokenProof,
   TransactionsResponse, WEB_MOCK_ID_MAP, WalletList, buildCharityList, buildDiscover, buildDonations, buildPortfolio,
@@ -61,7 +61,7 @@ export function createApiClient(opts: ClientOptions = {}) {
     const charity = DEMO_CHARITIES.find((c) => c.id === config.charityConfiguration.charityId);
     return reviewLaunchConfig(config, {
       ownedWalletAddresses: DEMO_WALLETS.map((w) => w.address),
-      charity: charity ? { verified: charity.verification === "verified", hasVerifiedWallet: charity.wallet.verification === "verified" } : null,
+      charity: charity ? { verified: charity.state === "VERIFIED", hasVerifiedWallet: charity.wallet.verification === "verified" } : null,
       now: new Date(),
     });
   };
@@ -209,6 +209,24 @@ export function createApiClient(opts: ClientOptions = {}) {
     getCharities: async (): Promise<Charity[]> =>
       mode === "api" ? (await http(CharityList, "/api/charities")).charities : buildCharityList(),
 
+    getCharityEvidence: async (charityId: string): Promise<CharityEvidenceResponse> =>
+      mode === "api" ? http(CharityEvidenceResponse, `/api/charities/${encodeURIComponent(charityId)}/evidence`) : need(buildCharityEvidence(charityId), "Charity"),
+
+    getDonation: async (donationId: string): Promise<DonationDetail> =>
+      mode === "api" ? http(DonationDetail, `/api/donations/by-id/${encodeURIComponent(donationId)}`) : need(buildDonationDetail(donationId), "Donation"),
+
+    getReceipt: async (receiptId: string): Promise<Receipt> =>
+      mode === "api" ? http(Receipt, `/api/receipts/${encodeURIComponent(receiptId)}`) : need(buildReceipt(receiptId), "Receipt"),
+
+    /** Stateless review of a planned donation. Nothing is stored, signed or sent, in either mode. */
+    planDonation: async (req: { walletId: string; charityId: string; amount: string }): Promise<DonationPlanResponse> => {
+      if (mode === "api") return send(DonationPlanResponse, "/api/donations/plan", { ...req, asset: "USDC" });
+      const cents = parseUsdToCents(req.amount);
+      if (cents === null || cents <= 0n) throw new ApiClientError(400, "VALIDATION_ERROR", "Request validation failed", { amount: ["invalid amount"] });
+      const c = need(buildCharityList().find((x) => x.id === req.charityId) ?? null, "Charity");
+      return buildDonationPlan({ walletId: mockId(req.walletId), charity: c, hasVerifiedWalletForAsset: c.wallets.some((w) => w.verificationStatus === "verified"), amountUsdCents: cents, walletDataSource: "demo" });
+    },
+
     getDonations: async (walletId: string): Promise<DonationsResponse> =>
       mode === "api" ? http(DonationsResponse, `/api/donations/${encodeURIComponent(walletId)}`) : need(buildDonations(mockId(walletId)), "Donations"),
 
@@ -237,4 +255,4 @@ export function createApiClient(opts: ClientOptions = {}) {
 
 /** Default client, configured from NEXT_PUBLIC_API_MODE / NEXT_PUBLIC_API_BASE_URL. */
 export const api = createApiClient();
-export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;
+export const { getWallets, getWalletSync, startWalletSync, getTransactions, getTokens, setTaxReserveTarget, createLaunch, reviewLaunch, getPortfolio, getTaxEstimate, getTaxDetails, getTaxReserve, getTaxReport, exportTaxReport, calculateTax, calculateTaxReserve, listManualBasis, createManualBasis, getManualBasis, reviseManualBasis, voidManualBasis, getCharities, getCharityEvidence, getDonation, getReceipt, planDonation, getDonations, getLaunches, getLaunch, getTokenProof, getDiscover } = api;

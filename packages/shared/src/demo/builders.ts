@@ -251,28 +251,100 @@ export function buildDiscover(q: DiscoverQuery): DiscoverResponse {
 }
 
 // ---------- charities / donations (used by the web client's mock mode; the API serves the same shapes from the database) ----------
-import type { Charity, DonationsResponse } from "../api/schemas";
-import { DEMO_CHARITIES, DEMO_DONATIONS } from "./fixtures";
+import type { Charity, CharityEvidenceResponse, DonationDetail, DonationPlanResponse, DonationsResponse, Receipt } from "../api/schemas";
+import { DEMO_CHARITIES, DEMO_DONATIONS, DEMO_EVIDENCE, DEMO_RECEIPT } from "./fixtures";
+import { GIVE_COPY, type CharityVerificationState } from "../give";
+
+const USDC_DECIMALS = 6;
+const demoQuantity = (cents: bigint) => (cents * 10n ** BigInt(USDC_DECIMALS - 2)).toString();
 
 export function buildCharityList(): Charity[] {
-  return DEMO_CHARITIES.map((c) => ({
-    id: c.id, name: c.name, description: c.description, website: c.website, country: c.country, category: c.category,
-    verificationStatus: c.verification, legalEntityIdentifier: c.legalEntityIdentifier,
-    wallets: [{ id: c.wallet.id, chain: "solana" as const, address: c.wallet.address, verificationStatus: c.wallet.verification, supportedAssets: ["USDC"] }],
-    dataSource: "demo" as const, createdAt: "2026-01-01T00:00:00.000Z",
-  }));
+  return DEMO_CHARITIES.map((c) => {
+    const ev = DEMO_EVIDENCE.filter((e) => e.charityId === c.id);
+    const last = ev.map((e) => e.checkedAt).sort().at(-1) ?? null;
+    return {
+      id: c.id, slug: c.slug, name: c.name, description: c.description, website: c.website, logoUrl: null, country: c.country, category: c.category,
+      verificationState: c.state, verificationSource: c.state === "VERIFIED" ? ("FIXTURE" as const) : null,
+      lastReviewedAt: last ? new Date(last).toISOString() : null, evidenceCount: ev.length,
+      legalEntityIdentifier: c.legalEntityIdentifier,
+      wallets: [{ id: c.wallet.id, chain: "solana" as const, address: c.wallet.address, verificationStatus: c.wallet.verification, supportedAssets: ["USDC"] }],
+      dataSource: "demo" as const, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+  });
 }
+
+export const CHARITY_EVIDENCE_CAVEAT = "Evidence lists what was checked and when. It is not a guarantee about the organization, and a website alone does not prove legitimacy.";
+
+export function buildCharityEvidence(charityId: string): CharityEvidenceResponse | null {
+  const c = buildCharityList().find((x) => x.id === charityId);
+  if (!c) return null;
+  return {
+    charityId, verificationState: c.verificationState, verificationSource: c.verificationSource, lastReviewedAt: c.lastReviewedAt,
+    evidence: DEMO_EVIDENCE.filter((e) => e.charityId === charityId).map((e) => ({
+      id: e.id, sourceType: "FIXTURE" as const, sourceRef: "demo-fixture", sourceUrl: null, status: e.status,
+      checkedAt: new Date(e.checkedAt).toISOString(), reviewedBy: "NOT_RECORDED" as const, publicSummary: e.publicSummary, dataSource: "demo" as const,
+    })),
+    caveat: CHARITY_EVIDENCE_CAVEAT, dataSource: "demo",
+  };
+}
+
+const demoReceiptView = (): Receipt => ({
+  id: DEMO_RECEIPT.id, donationId: DEMO_RECEIPT.donationId, receiptReference: DEMO_RECEIPT.receiptReference, charityReceiptReference: null,
+  issuedAt: new Date(DEMO_RECEIPT.issuedAt).toISOString(), documentUrl: null, receiptHash: null, verificationState: "UNVERIFIED",
+  provenanceNote: "Fixture receipt for development.", labels: [GIVE_COPY.demoReceipt, GIVE_COPY.fixtureData, GIVE_COPY.notTaxReceipt],
+  caveat: GIVE_COPY.receiptCaveat, dataSource: "demo",
+});
+
+const demoDonation = (d: (typeof DEMO_DONATIONS)[number]): DonationsResponse["donations"][number] => {
+  const c = DEMO_CHARITIES.find((x) => x.id === d.charityId)!;
+  const hasReceipt = d.id === DEMO_RECEIPT.donationId;
+  return {
+    id: d.id, walletId: d.walletId, charityId: d.charityId, asset: "USDC", quantity: demoQuantity(d.amountCents), assetDecimals: USDC_DECIMALS,
+    usdReferenceCents: d.amountCents.toString(), usdReferenceSource: "FIXTURE", status: "demo" as const, transactionSignature: null, donatedAt: null,
+    receiptId: hasReceipt ? DEMO_RECEIPT.id : null, receiptStatus: hasReceipt ? ("UNVERIFIED" as const) : null, destinationAddress: c.wallet.address,
+    provenance: "DEMO_FIXTURE" as const, createdAt: d.createdAt, dataSource: "demo" as const, taxNote: DONATION_TAX_NOTE,
+  };
+};
 
 export function buildDonations(walletId: string): DonationsResponse | null {
   if (!isDemoWallet(walletId)) return null;
-  const donations = DEMO_DONATIONS.filter((d) => d.walletId === walletId).map((d) => {
-    const c = DEMO_CHARITIES.find((x) => x.id === d.charityId)!;
-    return {
-      id: d.id, walletId: d.walletId, charityId: d.charityId, asset: "USDC", amountUsdCents: d.amountCents.toString(),
-      status: "demo" as const, transactionSignature: null, receiptReference: null, destinationAddress: c.wallet.address,
-      createdAt: d.createdAt, dataSource: "demo" as const, taxNote: DONATION_TAX_NOTE,
-    };
-  });
-  const demoTotal = donations.reduce((s, d) => s + BigInt(d.amountUsdCents), 0n);
+  const donations = DEMO_DONATIONS.filter((d) => d.walletId === walletId).map(demoDonation);
+  const demoTotal = donations.reduce((s, d) => s + BigInt(d.usdReferenceCents ?? "0"), 0n);
   return { walletId, donations, confirmedTotalCents: "0", demoTotalCents: demoTotal.toString(), taxNote: DONATION_TAX_NOTE, ...DEMO_PROVENANCE };
+}
+
+export function buildDonationDetail(donationId: string): DonationDetail | null {
+  const d = DEMO_DONATIONS.find((x) => x.id === donationId);
+  if (!d) return null;
+  return { donation: demoDonation(d), receipt: d.id === DEMO_RECEIPT.donationId ? demoReceiptView() : null };
+}
+
+export function buildReceipt(receiptId: string): Receipt | null {
+  return receiptId === DEMO_RECEIPT.id ? demoReceiptView() : null;
+}
+
+/**
+ * Pure review of a planned donation, shared by the API and mock mode. Nothing is stored, signed or sent.
+ * A charity is eligible only when VERIFIED; a fixture verification is flagged and is never presented as real-world.
+ */
+export function buildDonationPlan(a: {
+  walletId: string; charity: Pick<Charity, "id" | "name" | "verificationState" | "verificationSource" | "dataSource">;
+  hasVerifiedWalletForAsset: boolean; amountUsdCents: bigint; walletDataSource: "demo" | "database" | "chain";
+}): DonationPlanResponse {
+  const state: CharityVerificationState = a.charity.verificationState;
+  const eligible = state === "VERIFIED" && a.hasVerifiedWalletForAsset;
+  const blockedReason = eligible ? null
+    : state !== "VERIFIED" ? `This charity's verification status is ${state.replace("_", " ")}.`
+    : "This charity has no verified wallet that supports this asset.";
+  return {
+    walletId: a.walletId,
+    charity: { ...a.charity, eligible, blockedReason },
+    asset: "USDC", quantity: demoQuantity(a.amountUsdCents), assetDecimals: USDC_DECIMALS,
+    usdReferenceCents: a.amountUsdCents.toString(), usdReferenceSource: "USER_ENTERED_USDC_PAR",
+    usdReferenceNote: `${GIVE_COPY.usdReference} Assumes 1 USDC = 1 USD; this is not a market quote.`,
+    feeDisclosure: "A future transfer would pay a Solana network fee from your wallet. No fee is estimated here and none is charged now.",
+    taxNote: DONATION_TAX_NOTE, signingNote: GIVE_COPY.futureSigning,
+    transfersEnabled: false, disabledReason: GIVE_COPY.transfersDisabled, persisted: false,
+    dataSource: a.walletDataSource, verifiedOnChain: false,
+  };
 }

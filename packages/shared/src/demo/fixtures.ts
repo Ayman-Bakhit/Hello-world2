@@ -115,15 +115,26 @@ export const DEMO_DEFAULT_TARGET = { targetType: "percentage" as const, percentB
 // ---------- charities / donations ----------
 export interface DemoCharity {
   id: string; name: string; description: string; website: string | null; country: string; category: string;
-  verification: "verified" | "pending"; legalEntityIdentifier: string | null;
+  slug: string; state: "VERIFIED" | "PENDING_REVIEW"; legalEntityIdentifier: string | null;
   wallet: { id: string; address: string; verification: "verified" | "pending" };
 }
 export const DEMO_CHARITIES: DemoCharity[] = [
-  { id: DEMO_IDS.charities.c1, name: "Open Water Initiative (demo)", description: "Fictional demo charity funding community water systems.", website: null, country: "US", category: "Clean water", verification: "verified", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c1, address: "DEMOcharityWater111111111111", verification: "verified" } },
-  { id: DEMO_IDS.charities.c2, name: "Clear Sky Education Fund (demo)", description: "Fictional demo charity for scholarships and classroom grants.", website: null, country: "US", category: "Education", verification: "verified", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c2, address: "DEMOcharityEducation1111111", verification: "verified" } },
-  { id: DEMO_IDS.charities.c3, name: "Harvest Table Network (demo)", description: "Fictional demo charity coordinating regional food banks.", website: null, country: "CA", category: "Hunger relief", verification: "verified", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c3, address: "DEMOcharityHunger11111111111", verification: "verified" } },
-  { id: DEMO_IDS.charities.c4, name: "Reforest Together (demo)", description: "Fictional demo charity. Pending review: cannot receive donations.", website: null, country: "US", category: "Environment", verification: "pending", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c4, address: "DEMOcharityForest11111111111", verification: "pending" } },
+  { id: DEMO_IDS.charities.c1, name: "Open Water Initiative (demo)", description: "Fictional demo charity funding community water systems.", website: null, country: "US", category: "Clean water", slug: "open-water-initiative-demo", state: "VERIFIED", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c1, address: "DEMOcharityWater111111111111", verification: "verified" } },
+  { id: DEMO_IDS.charities.c2, name: "Clear Sky Education Fund (demo)", description: "Fictional demo charity for scholarships and classroom grants.", website: null, country: "US", category: "Education", slug: "clear-sky-education-fund-demo", state: "VERIFIED", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c2, address: "DEMOcharityEducation1111111", verification: "verified" } },
+  { id: DEMO_IDS.charities.c3, name: "Harvest Table Network (demo)", description: "Fictional demo charity coordinating regional food banks.", website: null, country: "CA", category: "Hunger relief", slug: "harvest-table-network-demo", state: "VERIFIED", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c3, address: "DEMOcharityHunger11111111111", verification: "verified" } },
+  { id: DEMO_IDS.charities.c4, name: "Reforest Together (demo)", description: "Fictional demo charity. Pending review: cannot receive donations.", website: null, country: "US", category: "Environment", slug: "reforest-together-demo", state: "PENDING_REVIEW", legalEntityIdentifier: null, wallet: { id: DEMO_IDS.charityWallets.c4, address: "DEMOcharityForest11111111111", verification: "pending" } },
 ];
+/** Fixture verification evidence. Always source FIXTURE: it can never be mistaken for a real-world check. */
+export interface DemoEvidence { id: string; charityId: string; status: "SUPPORTS" | "INCONCLUSIVE"; checkedAt: string; publicSummary: string }
+export const DEMO_EVIDENCE: DemoEvidence[] = [
+  { id: id(0x601), charityId: DEMO_IDS.charities.c1, status: "SUPPORTS", checkedAt: "2026-01-01T00:00:00Z", publicSummary: "Fixture record for development. This is not a real-world verification." },
+  { id: id(0x602), charityId: DEMO_IDS.charities.c2, status: "SUPPORTS", checkedAt: "2026-01-01T00:00:00Z", publicSummary: "Fixture record for development. This is not a real-world verification." },
+  { id: id(0x603), charityId: DEMO_IDS.charities.c3, status: "SUPPORTS", checkedAt: "2026-01-01T00:00:00Z", publicSummary: "Fixture record for development. This is not a real-world verification." },
+  { id: id(0x604), charityId: DEMO_IDS.charities.c4, status: "INCONCLUSIVE", checkedAt: "2026-02-01T00:00:00Z", publicSummary: "Fixture record: review not completed. This is not a real-world verification." },
+];
+/** One fixture receipt, attached to the first fixture donation. It is not a tax receipt. */
+export const DEMO_RECEIPT = { id: id(0x701), donationId: id(0x501), receiptReference: "DEMO-RECEIPT-0001", issuedAt: "2026-09-22T16:30:00Z" } as const;
+
 export interface DemoDonation { id: string; charityId: string; walletId: string; amountCents: bigint; createdAt: string }
 /** Seeded as status 'demo' (never 'confirmed': no verifiable transaction exists). */
 export const DEMO_DONATIONS: DemoDonation[] = [

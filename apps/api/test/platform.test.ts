@@ -28,13 +28,13 @@ describe("structured errors", () => {
     expect(ApiErrorBody.parse(r.json()).error.code).toBe("NOT_FOUND");
   });
   it("malformed JSON -> 400 BAD_REQUEST, not a stack trace", async () => {
-    const r = await ctx.app.inject({ method: "POST", url: "/api/donations", headers: { ...bearer(ctx.demoToken), "content-type": "application/json" }, payload: "{not json" });
+    const r = await ctx.app.inject({ method: "POST", url: "/api/donations/plan", headers: { ...bearer(ctx.demoToken), "content-type": "application/json" }, payload: "{not json" });
     expect(r.statusCode).toBe(400);
     expect(ApiErrorBody.parse(r.json()).error.code).toBe("BAD_REQUEST");
     expect(r.body).not.toContain("at ");
   });
   it("oversized body is rejected", async () => {
-    const r = await ctx.app.inject({ method: "POST", url: "/api/donations", headers: { ...bearer(ctx.demoToken), "content-type": "application/json" }, payload: JSON.stringify({ pad: "x".repeat(70_000) }) });
+    const r = await ctx.app.inject({ method: "POST", url: "/api/donations/plan", headers: { ...bearer(ctx.demoToken), "content-type": "application/json" }, payload: JSON.stringify({ pad: "x".repeat(70_000) }) });
     expect(r.statusCode).toBe(413);
     expect(ApiErrorBody.safeParse(r.json()).success).toBe(true);
   });
@@ -58,7 +58,7 @@ describe("http hardening", () => {
     expect(ok.headers["access-control-allow-origin"]).toBe("http://localhost:3000");
     const bad = await ctx.app.inject({ url: "/health", headers: { origin: "https://evil.example" } });
     expect(bad.headers["access-control-allow-origin"]).toBeUndefined();
-    const pre = await ctx.app.inject({ method: "OPTIONS", url: "/api/donations", headers: { origin: "https://evil.example", "access-control-request-method": "POST" } });
+    const pre = await ctx.app.inject({ method: "OPTIONS", url: "/api/donations/plan", headers: { origin: "https://evil.example", "access-control-request-method": "POST" } });
     expect(pre.headers["access-control-allow-origin"]).toBeUndefined();
   });
   it("rate limits with a structured 429", async () => {

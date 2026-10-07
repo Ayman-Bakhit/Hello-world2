@@ -1,5 +1,5 @@
-import type { Charity, Donation, Launch, LaunchConfig, LaunchReview, Wallet } from "@project-name/shared";
-import { DONATION_TAX_NOTE, type StoredTarget } from "@project-name/shared";
+import type { Charity, CharityEvidenceResponse, Donation, Launch, LaunchConfig, LaunchReview, Receipt, Wallet } from "@project-name/shared";
+import { DONATION_TAX_NOTE, GIVE_COPY, cleanText, safeHttpUrl, type StoredTarget } from "@project-name/shared";
 import type { Pool } from "./pool";
 
 /**
@@ -46,43 +46,74 @@ export async function walletByAddress(pool: Pool, userId: string, address: strin
   return r.rows[0] ? walletOf(r.rows[0]) : null;
 }
 
-// ---------- charities ----------
+// ---------- charities (registry) ----------
+// Public projection only: verification_notes (admin-only) and evidence.verifier_user_id / internal_notes are never selected here.
 const CHARITY_SQL = `
-  SELECT c.*, COALESCE(json_agg(json_build_object(
-    'id', w.id, 'chain', w.chain, 'address', w.address,
-    'verificationStatus', w.verification_status, 'supportedAssets', w.supported_assets
-  ) ORDER BY w.address) FILTER (WHERE w.id IS NOT NULL), '[]') AS wallets
-  FROM charities c LEFT JOIN charity_wallets w ON w.charity_id = c.id`;
+  SELECT c.id, c.slug, c.name, c.description, c.website, c.logo_url, c.country, c.category, c.verification_state, c.verification_source,
+         c.legal_entity_identifier, c.data_source, c.created_at, c.updated_at,
+         (SELECT count(*)::int FROM charity_verification_evidence e WHERE e.charity_id = c.id) AS evidence_count,
+         (SELECT max(e.checked_at) FROM charity_verification_evidence e WHERE e.charity_id = c.id) AS last_reviewed_at,
+         COALESCE((SELECT json_agg(json_build_object(
+           'id', w.id, 'chain', w.chain, 'address', w.address, 'verificationStatus', w.verification_status, 'supportedAssets', w.supported_assets
+         ) ORDER BY w.address) FROM charity_wallets w WHERE w.charity_id = c.id), '[]') AS wallets
+  FROM charities c`;
 
 const charityOf = (r: Record<string, unknown>): Charity => ({
   id: r.id as string,
-  name: r.name as string,
-  description: (r.description as string | null) ?? null,
-  website: (r.website as string | null) ?? null,
+  slug: r.slug as string,
+  name: cleanText(r.name as string, 200),
+  description: r.description ? cleanText(r.description as string, 1000) : null,
+  // metadata is untrusted: anything that is not a plain http(s) / https URL is dropped, never passed through
+  website: safeHttpUrl(r.website as string | null),
+  logoUrl: safeHttpUrl(r.logo_url as string | null, { httpsOnly: true }),
   country: (r.country as string | null)?.trim() ?? null,
-  category: (r.category as string | null) ?? null,
-  verificationStatus: r.verification_status as Charity["verificationStatus"],
+  category: r.category ? cleanText(r.category as string, 100) : null,
+  verificationState: r.verification_state as Charity["verificationState"],
+  verificationSource: (r.verification_source as Charity["verificationSource"]) ?? null,
+  lastReviewedAt: r.last_reviewed_at ? iso(r.last_reviewed_at as Date) : null,
+  evidenceCount: Number(r.evidence_count),
   legalEntityIdentifier: (r.legal_entity_identifier as string | null) ?? null,
   wallets: r.wallets as Charity["wallets"],
   dataSource: r.data_source as Charity["dataSource"],
   createdAt: iso(r.created_at as Date),
+  updatedAt: iso(r.updated_at as Date),
 });
 
 export async function listCharities(pool: Pool, verifiedOnly?: boolean): Promise<Charity[]> {
-  const where = verifiedOnly === undefined ? "" : verifiedOnly ? "WHERE c.verification_status = 'verified'" : "WHERE c.verification_status <> 'verified'";
-  const r = await pool.query(`${CHARITY_SQL} ${where} GROUP BY c.id ORDER BY c.name`);
+  const where = verifiedOnly === undefined ? "" : verifiedOnly ? "WHERE c.verification_state = 'VERIFIED'" : "WHERE c.verification_state <> 'VERIFIED'";
+  const r = await pool.query(`${CHARITY_SQL} ${where} ORDER BY c.name`);
   return r.rows.map(charityOf);
 }
 
 export async function getCharity(pool: Pool, id: string): Promise<Charity | null> {
-  const r = await pool.query(`${CHARITY_SQL} WHERE c.id = $1 GROUP BY c.id`, [id]);
+  const r = await pool.query(`${CHARITY_SQL} WHERE c.id = $1`, [id]);
   return r.rows[0] ? charityOf(r.rows[0]) : null;
 }
 
-/** A charity can receive funds only if the org AND the wallet are verified and the wallet supports the asset. */
+/** Public evidence view. No internal notes, no verifier identity (only whether an admin was recorded). */
+export async function listCharityEvidence(pool: Pool, charityId: string): Promise<CharityEvidenceResponse["evidence"]> {
+  const r = await pool.query(
+    `SELECT id, source_type, source_ref, source_url, status, checked_at, (verifier_user_id IS NOT NULL) AS has_verifier, public_summary, data_source
+     FROM charity_verification_evidence WHERE charity_id = $1 ORDER BY checked_at DESC, id`,
+    [charityId],
+  );
+  return r.rows.map((e) => ({
+    id: e.id as string,
+    sourceType: e.source_type as CharityEvidenceResponse["evidence"][number]["sourceType"],
+    sourceRef: cleanText(e.source_ref as string, 500),
+    sourceUrl: safeHttpUrl(e.source_url as string | null),
+    status: e.status as CharityEvidenceResponse["evidence"][number]["status"],
+    checkedAt: iso(e.checked_at as Date),
+    reviewedBy: e.has_verifier ? ("ADMIN" as const) : ("NOT_RECORDED" as const),
+    publicSummary: cleanText(e.public_summary as string, 500),
+    dataSource: e.data_source as Charity["dataSource"],
+  }));
+}
+
+/** A charity can receive funds only if the org is VERIFIED AND the wallet is verified and supports the asset. */
 export async function getDonatableCharityWallet(pool: Pool, charityId: string, asset: string) {
   const r = await pool.query(
-    `SELECT w.id, w.address, c.verification_status AS charity_status, w.verification_status AS wallet_status, $2 = ANY(w.supported_assets) AS supports
+    `SELECT w.id, w.address, c.verification_state AS charity_state, w.verification_status AS wallet_status, $2 = ANY(w.supported_assets) AS supports
      FROM charities c JOIN charity_wallets w ON w.charity_id = c.id WHERE c.id = $1 ORDER BY (w.verification_status = 'verified') DESC LIMIT 1`,
     [charityId, asset],
   );
@@ -91,55 +122,84 @@ export async function getDonatableCharityWallet(pool: Pool, charityId: string, a
   return {
     id: row.id as string,
     address: row.address as string,
-    verified: row.charity_status === "verified" && row.wallet_status === "verified" && row.supports === true,
+    verified: row.charity_state === "VERIFIED" && row.wallet_status === "verified" && row.supports === true,
   };
 }
 
-// ---------- donations ----------
+// ---------- donations (records, not transfers) and receipts ----------
 const donationOf = (r: Record<string, unknown>): Donation => ({
   id: r.id as string,
   walletId: r.source_wallet_id as string,
   charityId: r.charity_id as string,
   asset: r.symbol as string,
-  amountUsdCents: String(r.usd_value_cents),
+  quantity: String(r.amount),
+  assetDecimals: Number(r.decimals),
+  usdReferenceCents: r.usd_value_cents === null ? null : String(r.usd_value_cents),
+  usdReferenceSource: (r.usd_reference_source as Donation["usdReferenceSource"]) ?? null,
   status: r.status as Donation["status"],
   transactionSignature: (r.signature as string | null) ?? null,
-  receiptReference: (r.receipt_reference as string | null) ?? null,
+  donatedAt: r.donated_at ? iso(r.donated_at as Date) : null,
+  receiptId: (r.receipt_id as string | null) ?? null,
+  receiptStatus: (r.receipt_state as Donation["receiptStatus"]) ?? null,
   destinationAddress: r.destination as string,
+  provenance: r.provenance as Donation["provenance"],
   createdAt: iso(r.created_at as Date),
   dataSource: r.data_source as Donation["dataSource"],
   taxNote: DONATION_TAX_NOTE,
 });
 
 const DONATION_SQL = `
-  SELECT d.*, a.symbol, cw.address AS destination, rt.signature, dr.receipt_reference
+  SELECT d.*, a.symbol, a.decimals, cw.address AS destination, rt.signature, dr.id AS receipt_id, dr.verification_state AS receipt_state
   FROM donations d
   JOIN assets a ON a.id = d.asset_id
   JOIN charity_wallets cw ON cw.id = d.charity_wallet_id
   LEFT JOIN raw_transactions rt ON rt.id = d.raw_transaction_id
   LEFT JOIN donation_receipts dr ON dr.donation_id = d.id`;
 
+/** Every donation read filters by user_id: that filter IS the authorization boundary. Non-owners get null/[] (the route answers 404). */
 export async function listDonations(pool: Pool, userId: string, walletId: string): Promise<Donation[]> {
   const r = await pool.query(`${DONATION_SQL} WHERE d.user_id = $1 AND d.source_wallet_id = $2 ORDER BY d.created_at DESC, d.id`, [userId, walletId]);
   return r.rows.map(donationOf);
 }
 
-export async function createDemoDonation(
-  pool: Pool,
-  a: { userId: string; walletId: string; charityId: string; charityWalletId: string; assetSymbol: string; usdCents: bigint },
-): Promise<Donation> {
-  const asset = await pool.query("SELECT id, decimals FROM assets WHERE symbol = $1 AND chain = 'solana' ORDER BY (address LIKE 'DEMO%') DESC LIMIT 1", [a.assetSymbol]);
-  const row = asset.rows[0];
-  if (!row) throw new Error(`asset ${a.assetSymbol} is not configured`);
-  // USDC: 6 decimals, 1 cent = 10,000 base units.
-  const baseUnits = a.usdCents * 10n ** BigInt(Number(row.decimals) - 2);
-  const ins = await pool.query(
-    `INSERT INTO donations (user_id, charity_id, charity_wallet_id, source_wallet_id, asset_id, amount, usd_value_cents, status, data_source)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,'demo','demo') RETURNING id`,
-    [a.userId, a.charityId, a.charityWalletId, a.walletId, row.id, baseUnits.toString(), a.usdCents.toString()],
+export async function getOwnedDonation(pool: Pool, userId: string, donationId: string): Promise<Donation | null> {
+  const r = await pool.query(`${DONATION_SQL} WHERE d.id = $1 AND d.user_id = $2`, [donationId, userId]);
+  return r.rows[0] ? donationOf(r.rows[0]) : null;
+}
+
+const receiptOf = (r: Record<string, unknown>): Receipt => {
+  const demo = r.data_source === "demo";
+  return {
+    id: r.id as string,
+    donationId: r.donation_id as string,
+    receiptReference: cleanText(r.receipt_reference as string, 200),
+    charityReceiptReference: r.charity_receipt_reference ? cleanText(r.charity_receipt_reference as string, 200) : null,
+    issuedAt: iso(r.issued_at as Date),
+    documentUrl: safeHttpUrl(r.document_url as string | null, { httpsOnly: true }),
+    receiptHash: (r.receipt_hash as string | null) ?? null,
+    verificationState: r.verification_state as Receipt["verificationState"],
+    provenanceNote: r.provenance_note ? cleanText(r.provenance_note as string, 500) : null,
+    labels: demo ? [GIVE_COPY.demoReceipt, GIVE_COPY.fixtureData, GIVE_COPY.notTaxReceipt] : [],
+    caveat: GIVE_COPY.receiptCaveat,
+    dataSource: r.data_source as Receipt["dataSource"],
+  };
+};
+
+/** Receipts are reachable only through the owning user's donation. */
+export async function getOwnedReceipt(pool: Pool, userId: string, receiptId: string): Promise<Receipt | null> {
+  const r = await pool.query(
+    "SELECT dr.* FROM donation_receipts dr JOIN donations d ON d.id = dr.donation_id WHERE dr.id = $1 AND d.user_id = $2",
+    [receiptId, userId],
   );
-  const r = await pool.query(`${DONATION_SQL} WHERE d.id = $1`, [ins.rows[0].id]);
-  return donationOf(r.rows[0]);
+  return r.rows[0] ? receiptOf(r.rows[0]) : null;
+}
+
+export async function getOwnedReceiptForDonation(pool: Pool, userId: string, donationId: string): Promise<Receipt | null> {
+  const r = await pool.query(
+    "SELECT dr.* FROM donation_receipts dr JOIN donations d ON d.id = dr.donation_id WHERE dr.donation_id = $1 AND d.user_id = $2",
+    [donationId, userId],
+  );
+  return r.rows[0] ? receiptOf(r.rows[0]) : null;
 }
 
 // ---------- tax reserve target ----------

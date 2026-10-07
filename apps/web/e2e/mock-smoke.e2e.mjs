@@ -52,7 +52,17 @@ for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile",
 
   await go("/give");
   t = await main();
-  check(`${label} give: demo donation records are not presented as on-chain`, t.includes("DEMO RECORD · NOT ON-CHAIN") && !(await page.locator("table").first().innerText()).includes("CONFIRMED ON-CHAIN") && await page.getByRole("button", { name: "DONATE" }).isDisabled());
+  check(`${label} give: demo donation records are not presented as on-chain`, t.includes("DEMO RECORD · NOT ON-CHAIN") && !(await page.locator("table").first().innerText()).includes("CONFIRMED ON-CHAIN"));
+  check(`${label} give: registry vocabulary, fixture verification labeled`, t.includes("CHARITY REGISTRY") && t.includes("VERIFIED (FIXTURE, NOT REAL-WORLD)") && ["verification source", "last reviewed"].every((l) => t.toLowerCase().includes(l)) && !/\bsafe\b|guarantee/i.test(t));
+  check(`${label} give: demo receipt is labeled and is not a tax receipt`, t.includes("DEMO RECEIPT · NOT A TAX RECEIPT"));
+  await page.getByRole("button", { name: "Details for donation to Open Water Initiative (demo)" }).first().click();
+  await page.getByText("NOT A TAX RECEIPT", { exact: true }).first().waitFor({ timeout: 5000 });
+  t = await main();
+  check(`${label} give: donation detail shows fixture receipt labels and the deductibility caveat`, t.includes("DEMO RECEIPT") && t.includes("FIXTURE DATA") && t.includes("does not prove that a contribution is deductible") && t.includes("None. No transaction exists for this record."));
+  await page.getByLabel("Amount (USDC)").fill("25");
+  await page.getByRole("button", { name: "REVIEW DONATION" }).click();
+  await page.getByText("REVIEW ONLY · NOTHING SENT").waitFor({ timeout: 5000 });
+  check(`${label} give: review only, confirm is disabled, nothing is sent`, await page.getByRole("button", { name: "CONFIRM DONATION" }).isDisabled() && (await main()).includes("Donation transfers are not enabled in this beta."));
 
   await go("/discover");
   await page.getByRole("tab", { name: "Verified Transparency" }).click();

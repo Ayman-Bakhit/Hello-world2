@@ -1,26 +1,31 @@
 import type { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
 import {
-  CreateDonationRequest, CreateDonationResponse, DONATION_TAX_NOTE, DonationsResponse, parseUsdToCents,
+  DONATION_TAX_NOTE, DonationDetail, DonationPlanRequest, DonationPlanResponse, DonationsResponse, Receipt, buildDonationPlan, parseUsdToCents,
 } from "@project-name/shared";
 import { actorOf, requireAuth } from "../auth/plugin";
-import { createDemoDonation, getDonatableCharityWallet, getOwnedWallet, listDonations } from "../db/repos";
+import { getCharity, getDonatableCharityWallet, getOwnedDonation, getOwnedReceipt, getOwnedReceiptForDonation, getOwnedWallet, listDonations } from "../db/repos";
 import { ApiError, notFound } from "../errors";
 import { parse, respond } from "../http/validate";
 import type { Deps } from "./index";
 import { ownedWalletFromParams } from "./walletScope";
 
+const IdParams = z.strictObject({ id: z.string().uuid() });
+
 /**
- * Donations here are RECORDS, not transfers. POST creates a row with status "demo": no transaction is
- * built, signed, or sent, and nothing is ever marked "confirmed" (the DB also forbids confirmed without
- * a recorded transaction). A charity must be verified, with a verified wallet, to be selectable.
+ * Donation RECORDS and receipt references. There is no endpoint that creates a donation, builds a transaction, asks for a
+ * signature or sends funds in this slice. Every read is scoped to the signed-in user in SQL; a foreign or unknown id is a 404.
+ * `plan` is a stateless review: it persists nothing and always reports transfersEnabled: false.
  */
 export const donationRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config }) => {
   const auth = requireAuth(pool, config);
+  const noStore = (reply: { header: (k: string, v: string) => unknown }) => void reply.header("cache-control", "no-store");
 
-  app.get("/api/donations/:walletId", { preHandler: auth }, async (req) => {
+  app.get("/api/donations/:walletId", { preHandler: auth }, async (req, reply) => {
+    noStore(reply);
     const wallet = await ownedWalletFromParams(pool, req);
     const donations = await listDonations(pool, actorOf(req).userId, wallet.id);
-    const sum = (s: string) => donations.filter((d) => d.status === s).reduce((t, d) => t + BigInt(d.amountUsdCents), 0n).toString();
+    const sum = (s: string) => donations.filter((d) => d.status === s).reduce((t, d) => t + BigInt(d.usdReferenceCents ?? "0"), 0n).toString();
     return respond(DonationsResponse, {
       walletId: wallet.id,
       donations,
@@ -32,21 +37,35 @@ export const donationRoutes: FastifyPluginAsync<Deps> = async (app, { pool, conf
     });
   });
 
-  app.post("/api/donations", { preHandler: auth, config: { rateLimit: { max: config.RATE_LIMIT_WRITE_MAX, timeWindow: config.RATE_LIMIT_WINDOW } } }, async (req, reply) => {
-    const body = parse(CreateDonationRequest, req.body);
+  app.get("/api/donations/by-id/:id", { preHandler: auth }, async (req, reply) => {
+    noStore(reply);
+    const { id } = parse(IdParams, req.params);
     const userId = actorOf(req).userId;
-    const wallet = await getOwnedWallet(pool, userId, body.walletId);
-    if (!wallet) throw notFound("Wallet");
-    const usdCents = parseUsdToCents(body.amount);
-    if (usdCents === null) throw new ApiError(400, "VALIDATION_ERROR", "Request validation failed", { amount: ["invalid amount"] });
-    const dest = await getDonatableCharityWallet(pool, body.charityId, body.asset);
-    if (!dest) throw notFound("Charity");
-    if (!dest.verified) throw new ApiError(422, "CHARITY_NOT_VERIFIED", "This charity (or its wallet) is not verified and cannot receive donations.");
+    const donation = await getOwnedDonation(pool, userId, id);
+    if (!donation) throw notFound("Donation");
+    return respond(DonationDetail, { donation, receipt: await getOwnedReceiptForDonation(pool, userId, id) });
+  });
 
-    const donation = await createDemoDonation(pool, { userId, walletId: wallet.id, charityId: body.charityId, charityWalletId: dest.id, assetSymbol: body.asset, usdCents });
-    return reply.code(201).send(respond(CreateDonationResponse, {
-      donation,
-      notice: "Demo record only. No blockchain transaction was created and no funds moved. A donation is never marked confirmed without a verifiable transaction.",
+  app.get("/api/receipts/:id", { preHandler: auth }, async (req, reply) => {
+    noStore(reply);
+    const { id } = parse(IdParams, req.params);
+    const receipt = await getOwnedReceipt(pool, actorOf(req).userId, id);
+    if (!receipt) throw notFound("Receipt");
+    return respond(Receipt, receipt);
+  });
+
+  app.post("/api/donations/plan", { preHandler: auth, config: { rateLimit: { max: config.RATE_LIMIT_WRITE_MAX, timeWindow: config.RATE_LIMIT_WINDOW } } }, async (req, reply) => {
+    noStore(reply);
+    const body = parse(DonationPlanRequest, req.body);
+    const wallet = await getOwnedWallet(pool, actorOf(req).userId, body.walletId);
+    if (!wallet) throw notFound("Wallet");
+    const cents = parseUsdToCents(body.amount);
+    if (cents === null) throw new ApiError(400, "VALIDATION_ERROR", "Request validation failed", { amount: ["invalid amount"] });
+    const charity = await getCharity(pool, body.charityId);
+    if (!charity) throw notFound("Charity");
+    const dest = await getDonatableCharityWallet(pool, charity.id, body.asset);
+    return respond(DonationPlanResponse, buildDonationPlan({
+      walletId: wallet.id, charity, hasVerifiedWalletForAsset: dest?.verified === true, amountUsdCents: cents, walletDataSource: wallet.dataSource,
     }));
   });
 };

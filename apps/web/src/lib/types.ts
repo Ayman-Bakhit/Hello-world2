@@ -1,4 +1,4 @@
-import type { FeeSplitBps, TaxAssumptions } from "@project-name/shared";
+import type { CharityVerificationState, DonationStatusValue, EvidenceSourceType, FeeSplitBps, TaxAssumptions } from "@project-name/shared";
 
 /** Every type here describes DEMO data until the indexer/API replace the mock layer. */
 
@@ -87,7 +87,7 @@ export interface TaxReserve {
   vaultLabel: string;
 }
 
-export type CharityVerification = "verified" | "pending" | "rejected" | "revoked";
+export type CharityVerification = CharityVerificationState;
 
 export interface Charity {
   id: string;
@@ -96,6 +96,12 @@ export interface Charity {
   category: string;
   country: string;
   verification: CharityVerification;
+  /** where the verification rests; FIXTURE means a labeled development fixture, never a real-world check */
+  verificationSource: EvidenceSourceType | null;
+  lastReviewedAt: string | null;
+  evidenceCount: number;
+  /** validated http(s) URL or null. Display-only; a URL says nothing about legitimacy. */
+  website: string | null;
   verificationNote: string;
   /** where the record comes from; 'demo' records are fictional */
   dataSource: "demo" | "database" | "chain";
@@ -107,8 +113,8 @@ export interface Donation {
   assetSymbol: string;
   amountCents: bigint;
   occurredAt: string;
-  /** demo = record only (fictional); confirmed = a verifiable on-chain transaction exists */
-  status: "demo" | "pending" | "confirmed" | "failed";
+  /** demo = fixture record only (fictional); confirmed = a verifiable on-chain transaction exists */
+  status: DonationStatusValue;
   receiptRef: string;
   signature: string;
 }

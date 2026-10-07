@@ -16,7 +16,7 @@ The wallet-scoped routes take `:walletId`; the web app always passes the signed-
 - **`404 NO_LIVE_DATA`**: returned by portfolio, transactions, tax and tax-reserve (GET and POST target) when the wallet is yours but is not a demo wallet. It means "nothing is indexed for this wallet yet" and is how the UI knows to show an empty state. The API never substitutes demo data for a real wallet. A wallet that is foreign or unknown is a plain `404 NOT_FOUND`, which is deliberately distinguishable from "yours but empty".
 - Data labels the UI relies on: `dataSource` (`demo`/`database`/`chain`) and `verifiedOnChain`. Nothing returns `chain` or `verifiedOnChain:true` yet.
 - `GET /api/discover` also accepts `launchedWithinDays` (1-3650; demo tokens are measured against a fixed demo reference time).
-- Donations are read-only for the UI in this slice: it does not call `POST /api/donations` (that would attach demo records to a user's wallet). Launch configurations (`POST /api/launches`, review) ARE used: they are real saved records and deploy nothing.
+- Donations are read-only for the UI: there is no create endpoint (Slice 9 removed the demo-only `POST /api/donations`, which attached demo records to a user's wallet). The UI uses the stateless `POST /api/donations/plan`. Launch configurations (`POST /api/launches`, review) ARE used: they are real saved records and deploy nothing.
 
 ## Endpoint summary
 Capability: **demo** = fixture-backed (not real data). **db** = stored in PostgreSQL. **prod-capable** = logic is real and would not change when real data arrives.
@@ -46,9 +46,11 @@ Capability: **demo** = fixture-backed (not real data). **db** = stored in Postgr
 | `GET/POST /api/wallets/:id/manual-basis` | session + owner | db (USER_PROVIDED) | list / create user-provided cost basis (real wallets only) |
 | `GET /api/wallets/:id/manual-basis/:basisId` | session + owner | db | record + full audit history + `historyIntact` |
 | `POST /api/wallets/:id/manual-basis/:basisId/revisions`, `.../void` | session + owner | db | auditable correction / soft removal. **No DELETE** |
-| `GET /api/charities`, `GET /api/charities/:id` | public | db (`demo` rows) | db-backed |
+| `GET /api/charities`, `GET /api/charities/:id`, `GET /api/charities/:id/evidence` | public (no donor data, no admin-only fields) | db (`demo` rows) | db-backed |
 | `GET /api/donations/:walletId` | session + owner | db | db-backed |
-| `POST /api/donations` | session + owner | db | creates `demo` record only; no transfer |
+| `GET /api/donations/by-id/:id`, `GET /api/receipts/:id` | session + owner (404 otherwise) | db | db-backed |
+| `POST /api/donations/plan` | session + owner | none | stateless review; persists nothing; `transfersEnabled:false` |
+| `POST /api/donations` | removed in Slice 9 | | 404: there is no donation creation endpoint |
 | `POST /api/launches` | session | db | production-capable (config only) |
 | `GET /api/launches`, `GET /api/launches/:id` | session + owner | db | production-capable |
 | `POST /api/launches/:id/review` | session + owner | db | production-capable (validation only; never deployable) |
@@ -137,18 +139,25 @@ Computed by the shared tax engine from synthetic events. Disclaimer: "Estimated 
 ```
 Percent: above 0, at most 100, at most 2 decimals. Amount: at most 2 decimals, above 0. Unknown fields rejected. Writes one row in `tax_reserves`; **moves no money** (tests assert no other table changes). Returns the same body as GET.
 
-### Charities (db, demo rows)
-`GET /api/charities?verified=true|false` → `{ charities:[{ id, name, description, website, country, category, verificationStatus, legalEntityIdentifier, wallets:[{ id, chain, address, verificationStatus, supportedAssets }], dataSource, createdAt }] }`
-`GET /api/charities/:id`. Seed charities are fictional, `dataSource:"demo"`. Real onboarding needs admin verification (not built).
+### Charities (db, demo rows) - Slice 9
+`GET /api/charities?verified=true|false` -> `{ charities:[Charity] }`, `GET /api/charities/:id` -> `Charity`:
+`{ id, slug, name, description, website, logoUrl, country, category, verificationState, verificationSource, lastReviewedAt, evidenceCount, legalEntityIdentifier, wallets:[{ id, chain, address, verificationStatus, supportedAssets }], dataSource, createdAt, updatedAt }`.
+- `verificationState`: `UNVERIFIED | PENDING_REVIEW | VERIFIED | SUSPENDED`. `verificationSource`: `REGISTRY_LOOKUP | OFFICIAL_DOCUMENT | ADMIN_REVIEW | FIXTURE | null`. Seed charities are fictional, `dataSource:"demo"`, verified only by `FIXTURE` evidence.
+- `website` and `logoUrl` are re-validated on output (http(s) / https only, no credentials); anything else is returned as `null`. Names and descriptions have control and bidi characters removed. All of it is untrusted text.
+- `GET /api/charities/:id/evidence` -> `{ charityId, verificationState, verificationSource, lastReviewedAt, evidence:[{ id, sourceType, sourceRef, sourceUrl, status, checkedAt, reviewedBy:"ADMIN|NOT_RECORDED", publicSummary, dataSource }], caveat, dataSource }`. No internal notes, no verifier identity.
+- Public and read-only. Contains no donor, wallet or donation data (tested).
 
-### Donations (db)
-`GET /api/donations/:walletId` → `{ walletId, donations:[{ id, walletId, charityId, asset, amountUsdCents, status, transactionSignature, receiptReference, destinationAddress, createdAt, dataSource, taxNote }], confirmedTotalCents, demoTotalCents, taxNote, dataSource, verifiedOnChain }`
-`POST /api/donations` body `{ "walletId": uuid, "charityId": uuid, "asset": "USDC", "amount": "25.50" }` → `201 { donation, notice }`
-- Creates a row with `status:"demo"`. No transaction is created, signed, or sent. The client cannot choose a status (unknown fields rejected).
-- `confirmed` requires a recorded transaction; the database enforces this (`donations_confirmed_requires_tx`). Nothing in the API can produce `confirmed` yet.
-- Charity and its wallet must be verified and support the asset, else `422 CHARITY_NOT_VERIFIED`.
-- Tax note: "Potentially deductible charitable contribution. Consult a tax professional. Tax treatment depends on your circumstances and applicable law."
-
+### Donations (db) - Slice 9
+`GET /api/donations/:walletId` -> `{ walletId, donations:[Donation], confirmedTotalCents, demoTotalCents, taxNote, dataSource, verifiedOnChain }`
+`Donation = { id, walletId, charityId, asset, quantity, assetDecimals, usdReferenceCents|null, usdReferenceSource|null, status, transactionSignature|null, donatedAt|null, receiptId|null, receiptStatus|null, destinationAddress, provenance, createdAt, dataSource, taxNote }`
+- `status`: `draft | pending | confirmed | failed | cancelled | demo`. `quantity` is an integer string in base units (exact above 2^53). `usdReferenceCents` is a reference value, not the deductible amount.
+- `confirmed` needs an indexed chain transaction of the donor wallet, `dataSource:"chain"`, `provenance:"CHAIN_INDEXED"` and `donatedAt` (database constraints and trigger). Nothing in the API can produce one in this slice; fixture rows are `status:"demo"`, `provenance:"DEMO_FIXTURE"`.
+`GET /api/donations/by-id/:id` -> `{ donation, receipt|null }`. `GET /api/receipts/:id` -> `Receipt = { id, donationId, receiptReference, charityReceiptReference, issuedAt, documentUrl, receiptHash, verificationState, provenanceNote, labels, caveat, dataSource }`.
+- Every read filters by the session's user id in SQL. A foreign, unknown or malformed id gets the same 404 (400 for a malformed uuid); no session is 401. `cache-control: no-store`.
+- Fixture receipts have `labels: ["DEMO RECEIPT","FIXTURE DATA","NOT A TAX RECEIPT"]` and are never VERIFIED. The caveat says a receipt does not prove that a contribution is deductible.
+`POST /api/donations/plan` body `{ "walletId": uuid, "charityId": uuid, "asset": "USDC", "amount": "25.50" }` (strict) -> `200 DonationPlanResponse`
+- Stateless review: persists nothing, creates no transaction, asks for no signature. Always `transfersEnabled:false`, `persisted:false`, `disabledReason:"Donation transfers are not enabled in this beta."`. Includes charity eligibility (VERIFIED and a verified wallet that supports the asset) with the blocked reason, exact `quantity`, `usdReferenceCents` (assumes 1 USDC = 1 USD, labeled "not a market quote"), a fee disclosure and signing note, and the qualified tax note.
+- `POST /api/donations` (create) no longer exists. Tax note: "Potentially deductible charitable contribution. Consult a tax professional. Tax treatment depends on your circumstances and applicable law."
 ### Launches (db)
 `POST /api/launches` body:
 ```json

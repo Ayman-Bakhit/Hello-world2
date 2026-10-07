@@ -26,4 +26,12 @@ export const BANNED_PHRASES = [
   "tax filing ready",
   "guaranteed tax result",
   "verified tax return",
+  "tax write-off",
+  "guaranteed deduction",
+  "guaranteed tax benefit",
+  "deductible donation",
+  "guaranteed legitimate",
+  "guaranteed tax deductible",
+  "irs approved",
+  "safe charity",
 ] as const;

@@ -170,15 +170,20 @@ describe("give: charity information vs actual donation", () => {
   const charities = buildCharityList().map(charityFromApi);
   it("verification and demo status come from the API record", () => {
     const out = html(<CharityDirectory charities={charities} donations={null} />);
-    expect(out).toContain("VERIFIED (DEMO DATA)");
+    expect(out).toContain("VERIFIED (FIXTURE, NOT REAL-WORLD)");
     expect(out).toContain("PENDING REVIEW");
-    expect(out).toContain("Demo record");
+    expect(out).toContain("not a real-world verification");
+    expect(out).toContain("Verification status");
+    expect(out).toContain("Verification source");
+    expect(out).toContain("Last reviewed");
+    expect(out).toContain("Evidence");
   });
-  it("a charity is only 'verified' if the API says so AND a wallet is verified", () => {
+  it("a charity is only 'VERIFIED' if the API says so AND a wallet is verified", () => {
     const base = buildCharityList()[0]!;
-    expect(charityFromApi({ ...base, wallets: base.wallets.map((w) => ({ ...w, verificationStatus: "pending" as const })) }).verification).toBe("pending");
-    expect(charityFromApi({ ...base, verificationStatus: "rejected" }).verification).toBe("rejected");
-    expect(charityFromApi({ ...base, dataSource: "database" }).verificationNote).toMatch(/admin review/);
+    expect(charityFromApi({ ...base, wallets: base.wallets.map((w) => ({ ...w, verificationStatus: "pending" as const })) }).verification).toBe("PENDING_REVIEW");
+    expect(charityFromApi({ ...base, verificationState: "SUSPENDED" }).verification).toBe("SUSPENDED");
+    expect(charityFromApi({ ...base, dataSource: "database", verificationSource: "ADMIN_REVIEW" }).verificationNote).toMatch(/not a guarantee/);
+    expect(charityFromApi(base).verificationNote).toMatch(/not a real-world verification/);
   });
   it("demo donations are DEMO RECORDS, not on-chain, and confirmed total stays $0", () => {
     const d = buildDonations(W)!;

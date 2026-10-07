@@ -24,7 +24,7 @@ export function useStepContext(charities: Charity[]): StepContext {
   const { ready, wallets } = useWallet();
   return {
     walletConnected: ready,
-    verifiedCharityIds: charities.filter((c) => c.verification === "verified").map((c) => c.id),
+    verifiedCharityIds: charities.filter((c) => c.verification === "VERIFIED").map((c) => c.id),
     walletIds: wallets.map((w) => w.id),
   };
 }

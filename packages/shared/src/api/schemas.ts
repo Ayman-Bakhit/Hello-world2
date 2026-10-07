@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CHARITY_VERIFICATION_STATES, DONATION_PROVENANCES, DONATION_STATUSES, EVIDENCE_SOURCE_TYPES, EVIDENCE_STATUSES, RECEIPT_VERIFICATION_STATES, USD_REFERENCE_SOURCES, safeHttpUrl } from "../give";
 import { validateFeeSplit, percentToBps } from "../feesplit";
 
 /**
@@ -556,16 +557,29 @@ export const SetTaxReserveTargetRequest = z.discriminatedUnion("targetType", [
 ]);
 export type SetTaxReserveTargetRequest = z.infer<typeof SetTaxReserveTargetRequest>;
 
-// ---------- charities / donations ----------
+// ---------- charities / donations / receipts (Slice 9: registry, evidence, donation record and receipt are separate) ----------
+/** Charity WALLET verification (a destination address), separate from the organization's verification state. */
 export const VerificationStatus = z.enum(["pending", "verified", "rejected", "revoked"]);
+export const CharityVerificationStateSchema = z.enum(CHARITY_VERIFICATION_STATES);
+export const EvidenceSourceTypeSchema = z.enum(EVIDENCE_SOURCE_TYPES);
+const HttpUrl = z.string().max(500).refine((u) => safeHttpUrl(u) !== null, "must be an http(s) URL");
+const HttpsUrl = z.string().max(500).refine((u) => safeHttpUrl(u, { httpsOnly: true }) !== null, "must be an https URL");
+const QuantityString = z.string().regex(/^\d{1,40}$/, "non-negative integer in base units");
+
+/** Public registry record. Never includes internal verification notes, verifier identity, or any donor information. */
 export const Charity = z.object({
   id: Uuid,
+  slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  website: z.string().nullable(),
+  website: HttpUrl.nullable(),
+  logoUrl: HttpsUrl.nullable(),
   country: z.string().nullable(),
   category: z.string().nullable(),
-  verificationStatus: VerificationStatus,
+  verificationState: CharityVerificationStateSchema,
+  verificationSource: EvidenceSourceTypeSchema.nullable(),
+  lastReviewedAt: Iso.nullable(),
+  evidenceCount: z.number().int().min(0),
   legalEntityIdentifier: z.string().nullable(),
   wallets: z.array(z.object({
     id: Uuid, chain: z.literal("solana"), address: z.string(),
@@ -573,23 +587,54 @@ export const Charity = z.object({
   })),
   dataSource: DataSource,
   createdAt: Iso,
+  updatedAt: Iso,
 });
 export type Charity = z.infer<typeof Charity>;
 export const CharityList = z.object({ charities: z.array(Charity) });
 export const CharitiesQuery = z.strictObject({ verified: z.enum(["true", "false"]).optional() });
 
-/** 'confirmed' requires a verifiable transaction (enforced by a DB constraint). */
-export const DonationStatus = z.enum(["pending", "demo", "confirmed", "failed"]);
+/** One piece of verification evidence, public view: no internal notes, no verifier identity. */
+export const CharityEvidenceItem = z.object({
+  id: Uuid,
+  sourceType: EvidenceSourceTypeSchema,
+  sourceRef: z.string(),
+  sourceUrl: HttpUrl.nullable(),
+  status: z.enum(EVIDENCE_STATUSES),
+  checkedAt: Iso,
+  reviewedBy: z.enum(["ADMIN", "NOT_RECORDED"]),
+  publicSummary: z.string(),
+  dataSource: DataSource,
+});
+export const CharityEvidenceResponse = z.object({
+  charityId: Uuid,
+  verificationState: CharityVerificationStateSchema,
+  verificationSource: EvidenceSourceTypeSchema.nullable(),
+  lastReviewedAt: Iso.nullable(),
+  evidence: z.array(CharityEvidenceItem),
+  caveat: z.string(),
+  dataSource: DataSource,
+});
+export type CharityEvidenceResponse = z.infer<typeof CharityEvidenceResponse>;
+
+/** 'confirmed' requires an indexed on-chain transaction (DB constraint). 'demo' is a labeled fixture record, never a transfer. */
+export const DonationStatus = z.enum(DONATION_STATUSES);
+export const ReceiptVerificationState = z.enum(RECEIPT_VERIFICATION_STATES);
 export const Donation = z.object({
   id: Uuid,
   walletId: Uuid,
   charityId: Uuid,
   asset: z.string(),
-  amountUsdCents: Cents,
+  quantity: QuantityString,
+  assetDecimals: z.number().int().min(0).max(38),
+  usdReferenceCents: Cents.nullable(),
+  usdReferenceSource: z.enum(USD_REFERENCE_SOURCES).nullable(),
   status: DonationStatus,
   transactionSignature: z.string().nullable(),
-  receiptReference: z.string().nullable(),
+  donatedAt: Iso.nullable(),
+  receiptId: Uuid.nullable(),
+  receiptStatus: ReceiptVerificationState.nullable(),
   destinationAddress: z.string(),
+  provenance: z.enum(DONATION_PROVENANCES),
   createdAt: Iso,
   dataSource: DataSource,
   taxNote: z.string(),
@@ -603,13 +648,55 @@ export const DonationsResponse = z.object({
   taxNote: z.string(),
   ...provenance,
 });
-export const CreateDonationRequest = z.strictObject({
+
+/** A receipt is a document reference. It is not a tax receipt unless a charity issued one, and never proof of deductibility. */
+export const Receipt = z.object({
+  id: Uuid,
+  donationId: Uuid,
+  receiptReference: z.string(),
+  charityReceiptReference: z.string().nullable(),
+  issuedAt: Iso,
+  documentUrl: HttpsUrl.nullable(),
+  receiptHash: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+  verificationState: ReceiptVerificationState,
+  provenanceNote: z.string().nullable(),
+  labels: z.array(z.string()),
+  caveat: z.string(),
+  dataSource: DataSource,
+});
+export type Receipt = z.infer<typeof Receipt>;
+export const DonationDetail = z.object({ donation: Donation, receipt: Receipt.nullable() });
+export type DonationDetail = z.infer<typeof DonationDetail>;
+
+/** Stateless review of a planned donation. Nothing is stored, signed or sent. */
+export const DonationPlanRequest = z.strictObject({
   walletId: Uuid,
   charityId: Uuid,
   asset: z.literal("USDC").default("USDC"),
   amount: z.string().regex(/^\d{1,9}(\.\d{1,2})?$/, "USD amount with at most 2 decimals").refine((s) => Number(s) > 0, "must be above 0"),
 });
-export const CreateDonationResponse = z.object({ donation: Donation, notice: z.string() });
+export const DonationPlanResponse = z.object({
+  walletId: Uuid,
+  charity: z.object({
+    id: Uuid, name: z.string(), verificationState: CharityVerificationStateSchema, verificationSource: EvidenceSourceTypeSchema.nullable(),
+    dataSource: DataSource, eligible: z.boolean(), blockedReason: z.string().nullable(),
+  }),
+  asset: z.string(),
+  quantity: QuantityString,
+  assetDecimals: z.number().int().min(0).max(38),
+  usdReferenceCents: Cents,
+  usdReferenceSource: z.literal("USER_ENTERED_USDC_PAR"),
+  usdReferenceNote: z.string(),
+  feeDisclosure: z.string(),
+  taxNote: z.string(),
+  signingNote: z.string(),
+  transfersEnabled: z.literal(false),
+  disabledReason: z.string(),
+  persisted: z.literal(false),
+  dataSource: DataSource,
+  verifiedOnChain: z.literal(false),
+});
+export type DonationPlanResponse = z.infer<typeof DonationPlanResponse>;
 
 // ---------- launches ----------
 const bps = z.number().int().min(0).max(10_000);

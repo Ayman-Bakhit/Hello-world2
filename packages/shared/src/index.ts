@@ -13,3 +13,4 @@ export * from "./chain/parse";
 export * from "./chain/classify";
 export * from "./chain/testing";
 export * from "./taxdata/index";
+export * from "./give";

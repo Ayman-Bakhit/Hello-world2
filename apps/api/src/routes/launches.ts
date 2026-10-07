@@ -49,7 +49,7 @@ export const launchRoutes: FastifyPluginAsync<Deps> = async (app, { pool, config
     const charity = await getCharity(pool, launch.config.charityConfiguration.charityId);
     const review = reviewLaunchConfig(launch.config, {
       ownedWalletAddresses: await ownedAddresses(pool, userId),
-      charity: charity ? { verified: charity.verificationStatus === "verified", hasVerifiedWallet: charity.wallets.some((w) => w.verificationStatus === "verified") } : null,
+      charity: charity ? { verified: charity.verificationState === "VERIFIED", hasVerifiedWallet: charity.wallets.some((w) => w.verificationStatus === "verified") } : null,
       now: new Date(),
     });
     const saved = await saveLaunchReview(pool, userId, id, review);

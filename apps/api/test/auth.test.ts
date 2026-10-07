@@ -11,7 +11,7 @@ afterAll(async () => { await ctx.close(); });
 const PROTECTED: Array<[string, string]> = [
   ["GET", "/api/wallets"], ["GET", `/api/wallets/${W.trading}`], ["GET", `/api/portfolio/${W.trading}`],
   ["GET", `/api/transactions/${W.trading}`], ["GET", `/api/tax/${W.trading}`], ["GET", `/api/tax-reserve/${W.trading}`],
-  ["POST", `/api/tax-reserve/${W.trading}/target`], ["GET", `/api/donations/${W.trading}`], ["POST", "/api/donations"],
+  ["POST", `/api/tax-reserve/${W.trading}/target`], ["GET", `/api/donations/${W.trading}`], ["POST", "/api/donations/plan"], ["GET", "/api/donations/by-id/00000000-0000-4000-8000-000000000501"], ["GET", "/api/receipts/00000000-0000-4000-8000-000000000701"],
   ["GET", "/api/launches"], ["POST", "/api/launches"], ["GET", `/api/launches/${W.trading}`], ["POST", `/api/launches/${W.trading}/review`],
 ];
 const PUBLIC: string[] = ["/health", "/api/auth/status", "/api/auth/session", "/api/charities", "/api/tokens", "/api/tokens/demo/proof", "/api/proof/demo", "/api/discover"];

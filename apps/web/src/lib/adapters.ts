@@ -1,4 +1,4 @@
-import type { Charity as ApiCharity, DonationsResponse, PortfolioResponse, TransactionsResponse } from "@project-name/shared";
+import { GIVE_COPY, safeHttpUrl, type Charity as ApiCharity, type DonationsResponse, type PortfolioResponse, type TransactionsResponse } from "@project-name/shared";
 import { formatAmount } from "./format";
 import type { PortfolioRow } from "./portfolio";
 import type { Charity, Donation, Transaction } from "./types";
@@ -56,18 +56,24 @@ export function transactionsFromApi(t: TransactionsResponse, walletLabel: string
 
 export function charityFromApi(c: ApiCharity): Charity {
   const walletsVerified = c.wallets.some((w) => w.verificationStatus === "verified");
+  // "VERIFIED" only when the API says the organization is verified AND at least one wallet is.
+  const verification = c.verificationState === "VERIFIED" && !walletsVerified ? "PENDING_REVIEW" : c.verificationState;
+  const fixture = c.dataSource === "demo" || c.verificationSource === "FIXTURE";
   return {
     id: c.id,
     name: c.name,
     description: c.description ?? "",
     category: c.category ?? "Uncategorized",
     country: c.country ?? "",
-    // "verified" only when the API says the organization is verified AND at least one wallet is.
-    verification: c.verificationStatus === "verified" && !walletsVerified ? "pending" : c.verificationStatus,
-    verificationNote:
-      c.dataSource === "demo"
-        ? "Demo record. The real admin review workflow is not implemented."
-        : c.verificationStatus === "verified" ? "Verified by admin review." : "Not verified: cannot receive donations.",
+    verification,
+    verificationSource: c.verificationSource,
+    lastReviewedAt: c.lastReviewedAt,
+    evidenceCount: c.evidenceCount,
+    website: safeHttpUrl(c.website),
+    verificationNote: fixture
+      ? GIVE_COPY.fixtureVerification
+      : verification === "VERIFIED" ? "Verified from the evidence listed below. This is not a guarantee about the organization."
+      : verification === "SUSPENDED" ? "Suspended: cannot receive donations." : "Not verified: cannot receive donations.",
     dataSource: c.dataSource,
   };
 }
@@ -77,11 +83,11 @@ export function donationsFromApi(d: DonationsResponse): Donation[] {
     id: x.id,
     charityId: x.charityId,
     assetSymbol: x.asset,
-    amountCents: BigInt(x.amountUsdCents),
-    occurredAt: x.createdAt,
+    amountCents: BigInt(x.usdReferenceCents ?? "0"),
+    occurredAt: x.donatedAt ?? x.createdAt,
     // The UI vocabulary keeps the API's status; only "confirmed" means an on-chain transaction exists.
-    status: x.status as Donation["status"],
-    receiptRef: x.receiptReference ?? "",
+    status: x.status,
+    receiptRef: x.receiptId ?? "",
     signature: x.transactionSignature ?? "",
   }));
 }

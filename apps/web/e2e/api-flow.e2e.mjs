@@ -291,9 +291,35 @@ check("tax reserve: estimate only for the real wallet; balance not read; no demo
 
 await go("/give");
 t = await text();
-check("give: charity information from the API with demo verification labeled", t.includes("CHARITY INFORMATION") && t.includes("VERIFIED (DEMO DATA)") && t.includes("PENDING REVIEW"));
-check("give: on-chain donation is unavailable and donate is disabled", t.includes("ACTUAL ON-CHAIN DONATION") && await page.getByRole("button", { name: "DONATE" }).isDisabled());
-check("give: no donation records for this wallet, nothing invented", t.includes("NO DONATIONS YET") && !t.includes("DEMO RECORD ·"));
+check("give: registry from the API; fixture verification is labeled, never real-world", t.includes("CHARITY REGISTRY") && t.includes("VERIFIED (FIXTURE, NOT REAL-WORLD)") && t.includes("PENDING REVIEW") && ["verification status", "verification source", "last reviewed"].every((l) => t.toLowerCase().includes(l)), t.slice(0, 900));
+check("give: no 'safe' or 'guaranteed' claims anywhere on the page", !/\bsafe\b|guarantee|IRS approved|tax write-off/i.test(t));
+check("give: transfers are not enabled and nothing can be confirmed", t.includes("TRANSFERS NOT ENABLED") && t.includes("Donation transfers are not enabled in this beta."));
+check("give: no donation records for this wallet, nothing invented", t.includes("NO DONATIONS YET") && !t.includes("DEMO RECORD ·") && !t.includes("DEMO RECEIPT"));
+await page.getByRole("button", { name: "View evidence for Open Water Initiative (demo)" }).click();
+await page.getByText("Selected charity").waitFor({ timeout: 8000 });
+await page.getByText("does not prove legitimacy").waitFor({ timeout: 8000 });
+t = await text();
+check("give: selected charity shows evidence with source, status and the caveat", t.toLowerCase().includes("evidence") && t.includes("FIXTURE") && t.includes("not a real-world verification") && t.toLowerCase().includes("checked"), t.slice(0, 1200));
+const charitySearch = page.getByLabel("Search charities");
+await charitySearch.fill("reforest");
+await page.waitForTimeout(200);
+t = await text();
+const evidenceButtons = page.getByRole("button", { name: /^View evidence for / });
+check("give: search filters the registry as plain text", await evidenceButtons.count() === 1 && (await evidenceButtons.first().getAttribute("aria-label")).includes("Reforest Together (demo)"));
+await charitySearch.fill("");
+await page.getByLabel("Amount (USDC)").fill("25.50");
+await page.getByRole("button", { name: "REVIEW DONATION" }).click();
+await page.getByText("REVIEW ONLY · NOTHING SENT").waitFor({ timeout: 8000 });
+t = await text();
+check("give: donation review shows asset, amount, USD reference, fee and tax wording and sends nothing", t.includes("25.5") && t.includes("$25.50") && t.toLowerCase().includes("network fee") && t.includes("Potentially deductible charitable contribution") && t.includes("not automatically the deductible amount") && t.includes("explicitly sign"), t.slice(0, 1500));
+check("give: the final action is disabled with the beta message", await page.getByRole("button", { name: "CONFIRM DONATION" }).isDisabled() && t.includes("Donation transfers are not enabled in this beta."));
+check("give: review created no record and no signature", !/success|thank you|signature/i.test(t) && (await (await apiGet(`/api/donations/${WALLET_ID}`)).json()).donations.length === 0);
+// ownership: this session cannot read the demo user's donation or receipt, and there is no create endpoint
+const DEMO_DONATION = "00000000-0000-4000-8000-000000000501", DEMO_RCPT = "00000000-0000-4000-8000-000000000701";
+check("give: another user's donation and receipt are 404 (no IDOR)", (await apiGet(`/api/donations/by-id/${DEMO_DONATION}`)).status() === 404 && (await apiGet(`/api/receipts/${DEMO_RCPT}`)).status() === 404 && (await apiGet("/api/donations/00000000-0000-4000-8000-000000000001")).status() === 404);
+check("give: there is no donation creation endpoint", (await context.request.post(`${API}/api/donations`, { headers: { origin: WEB }, data: { walletId: WALLET_ID, charityId: "00000000-0000-4000-8000-000000000201", amount: "1" } })).status() === 404);
+const evidenceJson = await (await context.request.get(`${API}/api/charities/00000000-0000-4000-8000-000000000201/evidence`)).text();
+check("give: public evidence exposes no verifier identity or internal notes", !/verifier|internal|notes/i.test(evidenceJson), evidenceJson.slice(0, 300));
 await shot("6-give");
 
 await go("/discover");

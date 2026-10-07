@@ -34,7 +34,8 @@ describe("mock data consistency", () => {
     expect(s.recommendedAdditionalCents).toBe(422_000n);
   });
   it("confirmed donations total $1,840", () => {
-    expect(DEMO_DONATIONS.filter((d) => d.status === "confirmed").reduce((s, d) => s + d.amountCents, 0n)).toBe(184_000n);
+    expect(DEMO_DONATIONS.every((d) => d.status === "demo" && d.signature === "" && d.receiptRef === "")).toBe(true); // fixtures never look confirmed
+    expect(DEMO_DONATIONS.reduce((s, d) => s + d.amountCents, 0n)).toBe(184_000n);
   });
   it("every token fee split is exactly 10000 bps and money flow sums to lifetime fees", () => {
     for (const t of DEMO_TOKENS) {
@@ -49,7 +50,7 @@ describe("mock data consistency", () => {
     expect(FEATURED_TOKEN.slug).toBe("demo");
   });
   it("at least one charity is unverified (shows the gate)", () => {
-    expect(DEMO_CHARITIES.some((c) => c.verification === "pending")).toBe(true);
+    expect(DEMO_CHARITIES.some((c) => c.verification === "PENDING_REVIEW")).toBe(true);
   });
 });
 

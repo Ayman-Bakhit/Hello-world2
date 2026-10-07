@@ -421,7 +421,7 @@ describe("CSRF / origin protection", () => {
   it("a cross-site form post (cookie + evil origin) cannot create launches or donations", async () => {
     const { res } = await signIn(ctx.app, await makeSigner());
     const cookies = { pn_session: cookieValue(res)! };
-    const r = await ctx.app.inject({ method: "POST", url: "/api/donations", cookies, headers: { origin: "https://evil.example" }, payload: {} });
+    const r = await ctx.app.inject({ method: "POST", url: "/api/donations/plan", cookies, headers: { origin: "https://evil.example" }, payload: {} });
     expect(r.statusCode).toBe(403);
   });
   it("non-browser clients without cookies or Origin still work", async () => {

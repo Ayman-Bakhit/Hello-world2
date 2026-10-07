@@ -32,7 +32,7 @@ export function WalletSelect({ id, value, wallets, ctx, onChange }: { id: string
 
 export function CharityConfig({ charities }: { charities: Charity[] }) {
   const { config, update } = useLaunch();
-  const verified = charities.filter((c) => c.verification === "verified");
+  const verified = charities.filter((c) => c.verification === "VERIFIED");
   const chosen = effectiveCharityId(config.charityId, { walletConnected: true, verifiedCharityIds: verified.map((c) => c.id), walletIds: [] });
   const selected = charities.find((c) => c.id === chosen);
   return (

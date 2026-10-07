@@ -11,7 +11,7 @@ import Link from "next/link";
 
 export default function Landing() {
   const trading = portfolioTotals(DEMO_PORTFOLIO).valueCents;
-  const giving = DEMO_DONATIONS.filter((d) => d.status === "confirmed").reduce((s, d) => s + d.amountCents, 0n);
+  const giving = DEMO_DONATIONS.reduce((s, d) => s + d.amountCents, 0n); // fixture records: not donations
 
   return (
     <div className="space-y-14">
@@ -39,7 +39,7 @@ export default function Landing() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard label="Trading" value={formatUsd(trading)} dotClass="bg-b-creator" sub="Across demo wallets" />
           <StatCard label="Tax" value={formatUsd(DEMO_TAX_RESERVE.reserveCents)} dotClass="bg-b-tax" sub="Estimated tax reserve" />
-          <StatCard label="Giving" value={formatUsd(giving)} dotClass="bg-b-charity" sub="Confirmed donations" />
+          <StatCard label="Giving" value={formatUsd(giving)} dotClass="bg-b-charity" sub="Demo records, not real donations" />
           <StatCard label="Creator" value={formatUsd(DEMO_CREATOR_FEES_CENTS)} dotClass="bg-b-protocol" sub="Creator fees" />
         </div>
         <p className="mt-2 text-xs text-faint">Sample values. After you connect a real wallet in a later release, these show your own data.</p>
