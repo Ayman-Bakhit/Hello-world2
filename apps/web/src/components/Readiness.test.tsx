@@ -40,7 +40,7 @@ describe("deployment readiness view", () => {
   });
   it("lists the decision records with status, version, provenance and what is missing", () => {
     const o = out(); const t = text(o);
-    expect(t).toContain("12 DECIDED"); expect(t).toContain("10 PENDING"); expect(t).toContain("11 WITHOUT PRODUCT APPROVAL");
+    expect(t).toContain("12 DECIDED"); expect(t).toContain("9 PENDING"); expect(t).toContain("9 WITHOUT PRODUCT APPROVAL");
     for (const d of decisions.decisions) expect(o).toContain(`data-decision="${d.id}" data-status="${d.status}"`);
     expect(t).toContain("Missing:"); expect(t).toMatch(/changing it invalidates readiness: yes/);
     expect(t).toContain("approver: none recorded");
@@ -84,7 +84,7 @@ describe("client: readiness, decisions, attempts", () => {
     const f = vi.fn(); const mc = createApiClient({ mode: "mock", fetchImpl: f as unknown as typeof fetch });
     const d = ExecutionReadinessResponse.parse(await mc.getExecutionReadiness(DEMO_IDS.launch));
     expect(d.readiness).toMatchObject({ overall: "BLOCKED", executionPermitted: false }); expect(d.dataSource).toBe("demo");
-    expect(DeploymentDecisionSummary.parse(await mc.getDeploymentDecisionSummary(DEMO_IDS.launch)).counts).toEqual({ decided: 12, pending: 10, unapproved: 11 });
+    expect(DeploymentDecisionSummary.parse(await mc.getDeploymentDecisionSummary(DEMO_IDS.launch)).counts).toEqual({ decided: 12, pending: 9, unapproved: 9 });
     expect(DeploymentAttemptList.parse(await mc.getDeploymentAttempts(DEMO_IDS.launch)).attempts).toEqual([]);
     await expect(mc.getExecutionReadiness(crypto.randomUUID())).rejects.toMatchObject({ status: 404 });
     expect(f).not.toHaveBeenCalled();

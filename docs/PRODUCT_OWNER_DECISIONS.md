@@ -1,5 +1,7 @@
 # PRODUCT_OWNER_DECISIONS: questionnaire
 
+> **Status (pass 2):** the supply questions below were answered. Supply is creator 8%, liquidity 40%, permanently unissued 52% (never minted, not burned), approved with SUPPLY_SEMANTICS. The tax reserve destination and custody stay PENDING, and SPL Token classic stays the default. See `docs/PRODUCT_DECISIONS.md` for the canonical record. Option B ("the remainder is burned") below is the rejected alternative.
+
 Fill this in by ticking one box per question (or writing your own under "Other") and returning it. **Nothing here is approved until you answer.** Each question maps to an option table in `docs/PRODUCT_ECONOMICS_OPTIONS.md` (same numbers); read the tradeoffs there first. Answering this does not change the code or enable anything: a later, reviewed change records your answers as approved decisions with your name, a date and a reference.
 
 Name: ______________________  Date: ______________  Reference: ______________________
@@ -117,7 +119,7 @@ Mark each: A = approve as is, R = reject (say what instead), M = amend (say how)
 | Metadata canonical format and sha256 | | |
 | Devnet and mainnet separation | | |
 | Cluster mismatch refusal | | |
-| Supply semantics (fixed supply, bps, no silent remainder, burn explicit) | | |
+| Supply semantics (fixed supply, bps, no silent remainder, permanent reduction explicit) | APPROVED (pass 2) | |
 
 ## Appendix: reviews
 Who will complete each, and by when?

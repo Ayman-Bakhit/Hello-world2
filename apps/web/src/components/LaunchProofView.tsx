@@ -95,7 +95,9 @@ export function LaunchProofView({ proof, audience = proof.audience }: { proof: L
           <dl className="divide-y divide-line">
             <Row label="Name / symbol">{c.name} / {c.symbol}<Badge tone="neutral" className="ml-2">USER-PROVIDED</Badge></Row>
             <Row label="Decimals">{c.decimals}</Row>
-            <Row label="Total supply">{group(c.totalSupply)} ({group(c.expectedSupplyRaw)} base units)</Row>
+            <Row label="Intended supply">{group(c.totalSupply)} ({group(c.intendedSupplyRaw)} base units). Not all of it exists on-chain.</Row>
+            <Row label="Expected minted supply">{group(c.expectedMintedSupplyRaw)} base units (what a chain read should show)</Row>
+            <Row label="Permanently unissued">{group(c.unissuedSupplyRaw)} base units. Never minted, not burned.</Row>
             <Row label="Mint authority">{c.mintAuthority.policy === "disabled" ? "disabled" : c.mintAuthority.expected}</Row>
             <Row label="Freeze authority">{c.freezeAuthority.policy === "disabled" ? "disabled" : c.freezeAuthority.expected}</Row>
             <Row label="Fee split">{pct(c.feeSplit.creator)} / {pct(c.feeSplit.taxReserve)} / {pct(c.feeSplit.charity)} / {pct(c.feeSplit.protocol)}</Row>

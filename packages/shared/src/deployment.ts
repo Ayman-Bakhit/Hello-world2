@@ -15,7 +15,8 @@ import type { Launch, LaunchConfig } from "./api/schemas";
 import { ASSOCIATED_TOKEN_PROGRAM, COMPUTE_BUDGET_PROGRAM, SYSTEM_PROGRAM, TOKEN_PROGRAM } from "./chain/types";
 import { CANONICAL_FEE_SPLIT, FEE_BUCKETS, isCanonicalFeeSplit, percentToBps, TOTAL_BPS, type FeeBucket } from "./feesplit";
 import { sha256Hex } from "./hash";
-import { DEPLOYMENT_POLICY, decisionOf, environmentFor, metadataDocumentSha256, policyHash, resolveSupplyAllocation, type DeploymentPolicy, type SupplyAllocationModel } from "./deploymentPolicy";
+import { DEPLOYMENT_POLICY, decisionOf, environmentFor, isApproved, metadataDocumentSha256, policyHash, resolveSupplyAllocation, type DeploymentPolicy, type SupplyAllocationModel } from "./deploymentPolicy";
+import { SUPPLY_MODEL_COPY, supplyBreakdown, type SupplyRole } from "./supplyModel";
 import { LAUNCH_NETWORKS, MAX_U64 } from "./launchConstants";
 import { launchFingerprint } from "./launchModel";
 import { stableStringify } from "./taxdata/report";
@@ -52,12 +53,12 @@ export const CURRENT_DEPLOYMENT_FACTS: Readonly<DeploymentFacts> = Object.freeze
 });
 
 export const BLOCKER_CODES = [
-  "ALLOCATION_MODEL_UNDEFINED", "SUPPLY_BURN_MECHANISM_UNDEFINED", "METADATA_URI_UNDEFINED", "PROTOCOL_DESTINATION_NOT_CONFIGURED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED",
+  "ALLOCATION_MODEL_UNDEFINED", "TAX_RESERVE_DESTINATION_PENDING", "METADATA_URI_UNDEFINED", "PROTOCOL_DESTINATION_NOT_CONFIGURED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED",
   "FEE_ROUTING_NOT_IMPLEMENTED", "CHARITY_DESTINATION_UNRESOLVED",
 ] as const;
 export type BlockerCode = (typeof BLOCKER_CODES)[number];
 const BLOCKER_TEXT: Record<BlockerCode, { message: string; decision: string }> = {
-  SUPPLY_BURN_MECHANISM_UNDEFINED: { message: "The allocation burns part of the supply, but how the burn is realized (minted then burned, or never minted) and observed is undecided. No burn is invented.", decision: "Decide how the burned share is realized, performed and observed." },
+  TAX_RESERVE_DESTINATION_PENDING: { message: "The launch tax reserve destination and custody model are undecided. The address in the launch configuration is a schema compatibility field, not an approved destination.", decision: "Decide the tax reserve destination, its custody model (wallet or program-controlled), who controls and can change it, and withdrawal rules." },
   ALLOCATION_MODEL_UNDEFINED: { message: "The configuration defines a creator share and a liquidity share of supply, but not where the rest goes. No allocation formula is invented.", decision: "Decide the initial token supply allocation model (who receives which share, and whether charity, reserve or protocol receive tokens at all)." },
   METADATA_URI_UNDEFINED: { message: "No metadata JSON URI is configured, so the metadata account cannot be fully specified. Nothing is fetched or invented.", decision: "Decide where token metadata JSON is hosted and who maintains it." },
   PROTOCOL_DESTINATION_NOT_CONFIGURED: { message: "No protocol destination address is configured. The protocol share has no recipient.", decision: "Decide the protocol wallet and its custody." },
@@ -71,7 +72,7 @@ export const FAILURE_STAGES = ["BUILD_ERROR", "SIGNING_ERROR", "SUBMISSION_ERROR
 export type FailureStage = (typeof FAILURE_STAGES)[number];
 export const BUILD_ERROR_CODES = [
   "LAUNCH_NOT_READY", "STALE_REVIEW", "INVALID_NETWORK", "INVALID_SUPPLY", "INVALID_DECIMALS", "INVALID_AUTHORITY_POLICY", "INVALID_FEE_SPLIT", "INVALID_ADDRESS",
-  "UNSUPPORTED_TOKEN_PROGRAM", "PRECISION_LOSS", "ALLOCATION_OVERFLOW", "ALLOCATION_MODEL_MISMATCH", "CHARITY_NOT_FOUND", "CHARITY_NOT_VERIFIED",
+  "UNSUPPORTED_TOKEN_PROGRAM", "PRECISION_LOSS", "ALLOCATION_OVERFLOW", "ALLOCATION_MODEL_MISMATCH", "UNISSUED_SUPPLY_NOT_PERMANENT", "CHARITY_NOT_FOUND", "CHARITY_NOT_VERIFIED",
 ] as const;
 export type BuildErrorCode = (typeof BUILD_ERROR_CODES)[number];
 /** Failures that can only happen after BUILD. Listed so the vocabulary is fixed before Slice 14; NONE of these is implemented or ever faked. */
@@ -125,8 +126,8 @@ export const PlannedTransaction = z.object({
 });
 const Destination = z.object({
   role: z.enum(["CREATOR", "TAX_RESERVE", "CHARITY", "PROTOCOL", "LIQUIDITY"]), address: z.string().nullable(),
-  provenance: z.enum(["LAUNCH_CONFIGURATION", "CHARITY_REGISTRY", "NOT_CONFIGURED", "RESERVED_FOR_FUTURE"]),
-  validation: z.enum(["VALID_ADDRESS", "INVALID_ADDRESS", "NOT_CONFIGURED", "UNRESOLVED", "RESERVED"]),
+  provenance: z.enum(["LAUNCH_CONFIGURATION", "LAUNCH_CONFIGURATION_COMPATIBILITY_FIELD", "CHARITY_REGISTRY", "NOT_CONFIGURED", "RESERVED_FOR_FUTURE"]),
+  validation: z.enum(["VALID_ADDRESS", "INVALID_ADDRESS", "NOT_CONFIGURED", "UNRESOLVED", "RESERVED", "PENDING_DECISION"]),
 });
 const AuthorityPlan = z.object({
   policy: z.enum(["disabled", "creator"]), initial: z.string().nullable(), final: z.string().nullable(),
@@ -137,10 +138,16 @@ export const ExpectedState = z.object({
   provenance: z.literal("EXPECTED_NOT_OBSERVED"),
   network: z.enum(LAUNCH_NETWORKS), cluster: z.enum(["devnet", "mainnet-beta"]), tokenProgram: z.string(), tokenProgramName: z.literal("SPL_TOKEN"),
   /** null until the mint keypair exists in the wallet context; an observation fills it later */
-  mintAddress: z.null(), decimals: z.number().int(), supplyRaw: Raw,
+  mintAddress: z.null(), decimals: z.number().int(),
+  /** what exists on-chain after minting: the ISSUED roles only. Null while the allocation model is undecided. */
+  mintedSupplyRaw: NullableRaw,
+  /** the maximum the launch is defined around. NOT the amount that exists on-chain. */
+  intendedSupplyRaw: Raw,
+  /** never minted (PERMANENTLY_UNISSUED): not burned and not on-chain */
+  unissuedSupplyRaw: NullableRaw,
   mintAuthority: z.string().nullable(), freezeAuthority: z.string().nullable(),
   metadata: z.object({ name: z.string(), symbol: z.string(), uri: z.string().nullable(), documentSha256: Hex64, updateAuthority: z.string(), isMutable: z.boolean(), sellerFeeBasisPoints: z.literal(0), provenance: z.enum(["USER_PROVIDED", "TO_BE_WRITTEN"]) }),
-  allocations: z.array(z.object({ role: z.string(), recipient: z.string().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]) })),
+  allocations: z.array(z.object({ role: z.string(), recipient: z.string().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]), issued: z.boolean().nullable() })),
   destinations: z.array(z.object({ role: z.string(), address: z.string().nullable() })),
   feeRouting: z.object({ status: z.literal("NOT_IMPLEMENTED"), configuredBps: z.object({ creator: z.number().int(), taxReserve: z.number().int(), charity: z.number().int(), protocol: z.number().int() }), onChainEnforced: z.literal(false) }),
   liquidity: z.object({ kind: z.literal("LIQUIDITY_EXPECTED"), status: z.literal("LIQUIDITY_BUILD_NOT_IMPLEMENTED"), initialLiquidityUsdc: z.string(), lockDays: z.number().int(), poolAddress: z.null() }),
@@ -166,7 +173,15 @@ export const DeploymentPlan = z.object({
   /** always false in this slice: there is no execution path */
   executionEnabled: z.literal(false),
   labels: z.tuple([z.literal("NOT DEPLOYED"), z.literal("NOT SIGNED"), z.literal("NO FUNDS MOVED")]),
-  token: z.object({ name: z.string(), symbol: z.string(), decimals: z.number().int(), totalSupply: z.string(), supplyRaw: Raw }),
+  token: z.object({
+    name: z.string(), symbol: z.string(), decimals: z.number().int(), totalSupply: z.string(),
+    /** intended supply in base units: not what exists on-chain */
+    intendedSupplyRaw: Raw,
+    /** supply actually minted (issued roles); null while the allocation model is undecided */
+    mintedSupplyRaw: NullableRaw,
+    /** supply that is never minted (permanently unissued); not burned */
+    unissuedSupplyRaw: NullableRaw,
+  }),
   mint: z.object({
     strategy: z.literal("CLIENT_GENERATED_KEYPAIR"), address: z.null(),
     note: z.string(),
@@ -177,7 +192,7 @@ export const DeploymentPlan = z.object({
     updateAuthority: z.string(), isMutable: z.boolean(), account: z.null(), accountNote: z.string(),
     provenance: z.enum(["USER_PROVIDED", "TO_BE_WRITTEN"]), verified: z.literal(false), documentSha256: Hex64, imageUri: z.string().nullable(), website: z.string().nullable(), contentFetched: z.literal(false),
   }),
-  supplyAllocations: z.array(z.object({ role: z.enum(["CREATOR", "LIQUIDITY", "CHARITY", "TAX_RESERVE", "PROTOCOL", "BURN", "UNASSIGNED"]), bps: z.number().int().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]), note: z.string() })),
+  supplyAllocations: z.array(z.object({ role: z.enum(["CREATOR", "LIQUIDITY", "CHARITY", "TAX_RESERVE", "PROTOCOL", "PERMANENTLY_UNISSUED", "UNASSIGNED"]), bps: z.number().int().nullable(), amountRaw: NullableRaw, status: z.enum(["DEFINED", "UNDEFINED"]), issued: z.boolean().nullable(), note: z.string() })),
   feeAllocations: z.object({
     label: z.literal("Configured fee split (not token supply)"), enforcement: z.literal("not_enforced"),
     buckets: z.array(z.object({ bucket: z.enum(["creator", "taxReserve", "charity", "protocol"]), bps: z.number().int(), destinationRole: z.string() })),
@@ -289,15 +304,14 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   // the decided supply allocation model (if any): every unit of supply has exactly one role and the roles sum to 10000 bps
   const allocDec = decisionOf(policy, "SUPPLY_ALLOCATION_MODEL");
   const model = allocDec.status === "DECIDED" && allocDec.value ? (allocDec.value as unknown as SupplyAllocationModel) : null;
-  const modelRaw: Array<{ role: "CREATOR" | "LIQUIDITY" | "CHARITY" | "TAX_RESERVE" | "PROTOCOL" | "BURN"; bps: number; raw: bigint }> = [];
+  let breakdown: ReturnType<typeof supplyBreakdown> | null = null;
   if (errors.length === 0 && model) {
     const r = resolveSupplyAllocation(c, model);
-    if (!r.ok) errors.push(err("ALLOCATION_MODEL_MISMATCH", "supplyAllocation", `This launch does not match the decided supply allocation model: ${r.errors.join("; ")}.`));
-    else for (const e of r.entries) {
-      if (e.bps === 0) continue;
-      const x = share(raw, e.bps);
-      if (!x.ok) errors.push(err("PRECISION_LOSS", `supplyAllocation.${e.role}`, `The ${e.role} share is not a whole number of base units at this supply and decimals.`));
-      else modelRaw.push({ role: e.role, bps: e.bps, raw: x.value });
+    if (!r.ok) errors.push(err("ALLOCATION_MODEL_MISMATCH", "supplyAllocation", `This launch does not match the canonical supply allocation: ${r.errors.join("; ")}.`));
+    else {
+      breakdown = supplyBreakdown(c.totalSupply, c.decimals, Object.fromEntries(r.entries.map((e) => [e.role, e.bps])) as Record<SupplyRole, number>);
+      if (!breakdown.ok) errors.push(err(breakdown.reason === "NOT_WHOLE_UNITS" ? "PRECISION_LOSS" : "INVALID_SUPPLY", `supplyAllocation.${breakdown.role ?? "total"}`, `The ${breakdown.role ?? "supply"} share is not a whole number of base units at this supply and decimals.`));
+      else if (model.permanentlyUnissuedBps > 0 && c.mintAuthority !== "disabled") errors.push(err("UNISSUED_SUPPLY_NOT_PERMANENT", "mintAuthority", `${SUPPLY_MODEL_COPY.permanence} This launch keeps the mint authority, so the unissued supply would not be permanent.`));
     }
   }
   if (errors.length > 0 || creatorRaw === null || liqRaw === null) return { ok: false, errors };
@@ -305,8 +319,8 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   // ---- blockers: explicit, from facts ----
   const blockers: BlockerCode[] = [];
   if (!model) blockers.push("ALLOCATION_MODEL_UNDEFINED");
-  const burnBps = model ? model.burnBps : 0;
-  if (burnBps > 0 && decisionOf(policy, "SUPPLY_BURN_MECHANISM").status !== "DECIDED") blockers.push("SUPPLY_BURN_MECHANISM_UNDEFINED");
+  const taxApproved = isApproved(decisionOf(policy, "TAX_RESERVE_FUNDING"));
+  if (!taxApproved) blockers.push("TAX_RESERVE_DESTINATION_PENDING");
   if (facts.metadataUri === null) blockers.push("METADATA_URI_UNDEFINED");
   if (facts.protocolDestination === null) blockers.push("PROTOCOL_DESTINATION_NOT_CONFIGURED");
   if (!facts.liquidityBuilderImplemented) blockers.push("LIQUIDITY_BUILD_NOT_IMPLEMENTED");
@@ -323,7 +337,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   const docHash = metadataDocumentSha256(c);
   const allocBlocked: BlockerCode[] = model ? [] : ["ALLOCATION_MODEL_UNDEFINED"];
   // minting the supply and the authority revoke that follows it wait on everything that decides where each share goes
-  const mintBlocked: BlockerCode[] = blockers.filter((b) => b === "ALLOCATION_MODEL_UNDEFINED" || b === "SUPPLY_BURN_MECHANISM_UNDEFINED" || b === "LIQUIDITY_BUILD_NOT_IMPLEMENTED");
+  const mintBlocked: BlockerCode[] = blockers.filter((b) => b === "ALLOCATION_MODEL_UNDEFINED" || b === "LIQUIDITY_BUILD_NOT_IMPLEMENTED");
   const metaBlocked: BlockerCode[] = uri === null ? ["METADATA_URI_UNDEFINED"] : [];
   const acct = (ref: string, role: string, signer: boolean, writable: boolean, address: string | null, addressNote: string | null = null) => ({ ref, role, signer, writable, address, addressNote });
   const MINT_NOTE = "Generated in the wallet context at signing time; unknown to the server";
@@ -356,7 +370,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     },
     {
       id: "mint-supply", txIndex: 1, order: 1, program: "SPL_TOKEN", programId: TOKEN_PROGRAM, kind: "mintTo",
-      description: model ? "Mint the supply per the decided allocation model (creator, liquidity and the explicit burn). BLOCKED: no liquidity venue exists to receive the liquidity share and the burn mechanism is undecided, so no amount or recipient is written." : "Mint the supply to its recipients. BLOCKED: who receives which share beyond the creator and liquidity shares is undecided, so no amount or recipient is written.",
+      description: model ? "Mint ONLY the issued supply: the creator share and the liquidity share (48% of the intended supply). The 52% permanently unissued is never minted. BLOCKED: no liquidity venue exists to receive the liquidity share, so no amount or recipient is written." : "Mint the supply to its recipients. BLOCKED: who receives which share beyond the creator and liquidity shares is undecided, so no amount or recipient is written.",
       accounts: [acct("mint", "mint", false, true, null, MINT_NOTE), acct("creatorTokenAccount", "destination", false, true, null, PDA_NOTE), acct("mintAuthority", "mint authority", true, false, creator)],
       data: { amountRaw: null }, status: "BLOCKED", blockedBy: mintBlocked, dependsOn: ["create-creator-token-account"],
     },
@@ -364,7 +378,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   if (c.mintAuthority === "disabled") {
     instr.push({
       id: "revoke-mint-authority", txIndex: 1, order: 2, program: "SPL_TOKEN", programId: TOKEN_PROGRAM, kind: "setAuthority",
-      description: "Set the mint authority to NONE after the supply is minted. Until this instruction executes the creator still holds mint authority.",
+      description: model ? "Set the mint authority to NONE after the issued supply is minted. This is what makes the unissued supply permanent: until it executes the creator could still mint it." : "Set the mint authority to NONE after the supply is minted. Until this instruction executes the creator still holds mint authority.",
       accounts: [acct("mint", "mint", false, true, null, MINT_NOTE), acct("mintAuthority", "current authority", true, false, creator)],
       data: { authorityType: "MintTokens", newAuthority: null }, status: "BLOCKED", blockedBy: mintBlocked, dependsOn: ["mint-supply"],
     });
@@ -389,24 +403,28 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
 
   const destinations: DeploymentPlan["destinations"] = [
     { role: "CREATOR", address: creator, provenance: "LAUNCH_CONFIGURATION", validation: "VALID_ADDRESS" },
-    { role: "TAX_RESERVE", address: c.taxReserveConfiguration.destinationAddress, provenance: "LAUNCH_CONFIGURATION", validation: "VALID_ADDRESS" },
+    taxApproved
+      ? { role: "TAX_RESERVE", address: c.taxReserveConfiguration.destinationAddress, provenance: "LAUNCH_CONFIGURATION", validation: "VALID_ADDRESS" }
+      : { role: "TAX_RESERVE", address: c.taxReserveConfiguration.destinationAddress, provenance: "LAUNCH_CONFIGURATION_COMPATIBILITY_FIELD", validation: "PENDING_DECISION" },
     { role: "CHARITY", address: charityAddr, provenance: charityAddr ? "CHARITY_REGISTRY" : "NOT_CONFIGURED", validation: charityAddr ? "VALID_ADDRESS" : "UNRESOLVED" },
     { role: "PROTOCOL", address: facts.protocolDestination, provenance: facts.protocolDestination ? "LAUNCH_CONFIGURATION" : "NOT_CONFIGURED", validation: facts.protocolDestination ? "VALID_ADDRESS" : "NOT_CONFIGURED" },
     { role: "LIQUIDITY", address: null, provenance: "RESERVED_FOR_FUTURE", validation: "RESERVED" },
   ];
   const unassigned = raw - creatorRaw - liqRaw;
   const ROLE_NOTE: Record<string, string> = {
-    CREATOR: "Share of supply the creator configured for themself.", LIQUIDITY: "Share of supply configured for liquidity. No venue exists, so none of it can be placed.",
-    CHARITY: "A supply share for the charity (not part of the current model).", TAX_RESERVE: "A supply share for the launch tax reserve (not part of the current model).", PROTOCOL: "A supply share for the protocol (not part of the current model).",
-    BURN: "Explicit burn role from the product decision. How it is realized is a separate, undecided matter.",
+    CREATOR: "Issued: minted to the creator.", LIQUIDITY: "Issued: minted for liquidity. No venue exists, so none of it can be placed.",
+    CHARITY: "Issued: a supply share for the charity (0% in the canonical model).", TAX_RESERVE: "Issued: a supply share for the launch tax reserve (0% in the canonical model).", PROTOCOL: "Issued: a supply share for the protocol (0% in the canonical model).",
+    PERMANENTLY_UNISSUED: `${SUPPLY_MODEL_COPY.unissued} ${SUPPLY_MODEL_COPY.permanence}`,
   };
-  const supplyAllocations: DeploymentPlan["supplyAllocations"] = model
-    ? modelRaw.map((e) => ({ role: e.role, bps: e.bps, amountRaw: e.raw.toString(), status: "DEFINED" as const, note: ROLE_NOTE[e.role]! }))
+  const supplyAllocations: DeploymentPlan["supplyAllocations"] = breakdown && breakdown.ok
+    ? breakdown.value.roles.filter((e) => e.bps > 0).map((e) => ({ role: e.role, bps: e.bps, amountRaw: e.raw.toString(), status: "DEFINED" as const, issued: e.issued, note: ROLE_NOTE[e.role]! }))
     : [
-      { role: "CREATOR", bps: creatorBps, amountRaw: creatorRaw.toString(), status: "DEFINED", note: ROLE_NOTE.CREATOR! },
-      { role: "LIQUIDITY", bps: liqBps, amountRaw: liqRaw.toString(), status: "DEFINED", note: ROLE_NOTE.LIQUIDITY! },
-      { role: "UNASSIGNED", bps: TOTAL_BPS - creatorBps - liqBps, amountRaw: unassigned.toString(), status: "UNDEFINED", note: "No allocation model says where this remainder goes. None is invented." },
+      { role: "CREATOR", bps: creatorBps, amountRaw: creatorRaw.toString(), status: "DEFINED", issued: null, note: "Share of supply the creator configured for themself." },
+      { role: "LIQUIDITY", bps: liqBps, amountRaw: liqRaw.toString(), status: "DEFINED", issued: null, note: "Share of supply configured for liquidity. No venue exists, so none of it can be placed." },
+      { role: "UNASSIGNED", bps: TOTAL_BPS - creatorBps - liqBps, amountRaw: unassigned.toString(), status: "UNDEFINED", issued: null, note: "No allocation model says where this remainder goes. None is invented." },
     ];
+  const mintedRaw = breakdown && breakdown.ok ? breakdown.value.mintedRaw : null;
+  const unissuedRaw = breakdown && breakdown.ok ? breakdown.value.unissuedRaw : null;
   const feeRoleOf: Record<FeeBucket, string> = { creator: "CREATOR", taxReserve: "TAX_RESERVE", charity: "CHARITY", protocol: "PROTOCOL" };
   const feeBuckets = FEE_BUCKETS.map((b) => ({ bucket: b, bps: CANONICAL_FEE_SPLIT[b], destinationRole: feeRoleOf[b] }));
   const blockerList = blockers.map((code) => ({ code, ...BLOCKER_TEXT[code] }));
@@ -414,7 +432,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
   const canonical = {
     planVersion: DEPLOYMENT_PLAN_VERSION, builderVersion: BUILDER_VERSION, launchId: launch.id, network: c.network, tokenProgram: { name: "SPL_TOKEN" as const, programId: TOKEN_PROGRAM },
     configFingerprint: launch.fingerprint, reviewedFingerprint: launch.review.fingerprint, creator,
-    token: { name: c.name, symbol: c.symbol, decimals: c.decimals, supplyRaw: raw.toString() },
+    token: { name: c.name, symbol: c.symbol, decimals: c.decimals, intendedSupplyRaw: raw.toString(), mintedSupplyRaw: mintedRaw === null ? null : mintedRaw.toString(), unissuedSupplyRaw: unissuedRaw === null ? null : unissuedRaw.toString() },
     authorities: { mint: { initial: mintAuthInitial, final: mintAuthFinal }, freeze: { initial: freezeFinal, final: freezeFinal }, updateIsMutable: isMutable },
     metadata: { uri, imageUri: c.imageUri, website: c.website, documentSha256: docHash },
     policyHash: policyId, cluster: c.network,
@@ -435,7 +453,7 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
     },
     environment: { cluster: c.network, environmentId: env!.environmentId, rpcEnvironment: env!.rpcEnvironment, executionAllowed: false, programs: env!.programs },
     status: planStatus(blockers), blockers: blockerList, executionEnabled: false, labels: ["NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED"],
-    token: { name: c.name, symbol: c.symbol, decimals: c.decimals, totalSupply: c.totalSupply, supplyRaw: raw.toString() },
+    token: { name: c.name, symbol: c.symbol, decimals: c.decimals, totalSupply: c.totalSupply, intendedSupplyRaw: raw.toString(), mintedSupplyRaw: mintedRaw === null ? null : mintedRaw.toString(), unissuedSupplyRaw: unissuedRaw === null ? null : unissuedRaw.toString() },
     mint: { strategy: "CLIENT_GENERATED_KEYPAIR", address: null, note: "The mint keypair is generated in the wallet context at signing time. Its private key never reaches the server, and the server never generates or stores one. The mint address is therefore unknown now and is not invented." },
     authorities: {
       mint: auth(c.mintAuthority, mintAuthInitial, mintAuthFinal, c.mintAuthority === "disabled" ? "revoke-mint-authority" : null,
@@ -458,17 +476,17 @@ export function buildDeploymentPlan(input: PlanInput): PlanResult {
       { kind: "LAMPORTS", from: "feePayer (creator)", to: "mint account (rent)", amount: null, note: "Rent exemption needs a live cluster read; not computed here." },
       { kind: "LAMPORTS", from: "feePayer (creator)", to: "metadata account (rent)", amount: null, note: "Rent exemption needs a live cluster read; not computed here." },
       { kind: "LAMPORTS", from: "feePayer (creator)", to: "creator token account (rent)", amount: null, note: "Rent exemption needs a live cluster read; not computed here." },
-      { kind: "TOKEN", from: "mint", to: "recipients", amount: null, note: "Blocked: see the blockers. The full supply (in base units) is shown under token.supplyRaw." },
+      { kind: "TOKEN", from: "mint", to: "recipients", amount: null, note: "Blocked: see the blockers. The intended, minted and unissued amounts are shown under token." },
     ],
     computeBudget: { status: "NOT_MEASURED", note: `${COMPUTE_BUDGET_PROGRAM} instructions are not added: compute needs are measured by simulation, which needs RPC and a built transaction.` },
     rent: { status: "REQUIRES_RPC", note: "Rent-exempt minimums come from the cluster. Not estimated here." },
     signingBoundary: { serverSigns: false, serverHoldsKeys: false, serverAcceptsKeyMaterial: false, submission: "NOT_IMPLEMENTED", mintKeypair: "GENERATED_IN_WALLET_CONTEXT_PRIVATE_KEY_NEVER_SENT", futureFlow: SIGNING_FLOW },
     expectedState: {
-      provenance: "EXPECTED_NOT_OBSERVED", network: c.network, cluster: c.network, tokenProgram: TOKEN_PROGRAM, tokenProgramName: "SPL_TOKEN", mintAddress: null, decimals: c.decimals, supplyRaw: raw.toString(),
+      provenance: "EXPECTED_NOT_OBSERVED", network: c.network, cluster: c.network, tokenProgram: TOKEN_PROGRAM, tokenProgramName: "SPL_TOKEN", mintAddress: null, decimals: c.decimals, intendedSupplyRaw: raw.toString(), mintedSupplyRaw: mintedRaw === null ? null : mintedRaw.toString(), unissuedSupplyRaw: unissuedRaw === null ? null : unissuedRaw.toString(),
       mintAuthority: mintAuthFinal, freezeAuthority: freezeFinal,
       metadata: { name: c.name, symbol: c.symbol, uri, documentSha256: docHash, updateAuthority: creator, isMutable, sellerFeeBasisPoints: 0, provenance: uri === null ? "USER_PROVIDED" : "TO_BE_WRITTEN" },
-      allocations: supplyAllocations.map((a) => ({ role: a.role, recipient: a.role === "CREATOR" ? creator : null, amountRaw: a.amountRaw, status: a.status })),
-      destinations: destinations.map((d) => ({ role: d.role, address: d.address })),
+      allocations: supplyAllocations.map((a) => ({ role: a.role, recipient: a.role === "CREATOR" ? creator : null, amountRaw: a.amountRaw, status: a.status, issued: a.issued })),
+      destinations: destinations.map((d) => ({ role: d.role, address: d.validation === "PENDING_DECISION" ? null : d.address })),
       feeRouting: { status: "NOT_IMPLEMENTED", configuredBps, onChainEnforced: false },
       liquidity: { kind: "LIQUIDITY_EXPECTED", status: "LIQUIDITY_BUILD_NOT_IMPLEMENTED", initialLiquidityUsdc: c.liquidityConfiguration.initialLiquidityUsdc, lockDays: c.liquidityConfiguration.lockDays, poolAddress: null },
       liquidityObserved: null,
@@ -492,9 +510,9 @@ export function buildDeploymentReview(plan: DeploymentPlan): DeploymentReview {
     planHash: plan.identity.planHash, status: plan.status, labels: plan.labels, executionEnabled: false,
     headline: plan.status === "BLOCKED" ? "PLAN BLOCKED: DECISIONS REQUIRED. Nothing can be executed." : "READY FOR USER REVIEW. Execution is not enabled in this beta.",
     whatWillHappen: plan.instructions.map((i) => `${i.status === "BLOCKED" ? "[BLOCKED] " : ""}${i.description}`)
-      .concat([`Token: ${t.name} (${t.symbol}), ${t.decimals} decimals, total supply ${fmt(t.totalSupply)} (${fmt(t.supplyRaw)} base units).`]),
+      .concat([`Token: ${t.name} (${t.symbol}), ${t.decimals} decimals, intended supply ${fmt(t.totalSupply)} (${fmt(t.intendedSupplyRaw)} base units, not all of it exists on-chain)${t.mintedSupplyRaw === null ? "" : `; minted ${fmt(t.mintedSupplyRaw)} base units; permanently unissued ${fmt(t.unissuedSupplyRaw ?? "0")} base units (never minted, not burned)`}.`]),
     whoReceivesWhat: [
-      ...plan.supplyAllocations.map((a) => ({ role: `${a.role} (token supply)`, address: a.role === "CREATOR" ? plan.identity.creatorWallet : null, what: a.amountRaw === null ? "undefined" : `${fmt(a.amountRaw)} base units${a.bps === null ? "" : ` (${a.bps / 100}%)`}`, status: a.status })),
+      ...plan.supplyAllocations.map((a) => ({ role: `${a.role} (token supply)`, address: a.role === "CREATOR" ? plan.identity.creatorWallet : null, what: a.amountRaw === null ? "undefined" : a.role === "PERMANENTLY_UNISSUED" ? `${fmt(a.amountRaw)} base units (${(a.bps ?? 0) / 100}%), never minted, not burned` : `${fmt(a.amountRaw)} base units${a.bps === null ? "" : ` (${a.bps / 100}%)`}`, status: a.status })),
       ...plan.feeAllocations.buckets.map((b) => {
         const d = plan.destinations.find((x) => x.role === b.destinationRole)!;
         return { role: `${b.destinationRole} (fee share)`, address: d.address, what: `${b.bps / 100}% of fees, configured only (not enforced on-chain)`, status: d.validation };
@@ -520,7 +538,7 @@ export function buildDeploymentReview(plan: DeploymentPlan): DeploymentReview {
  */
 export function expectedStateForProof(plan: DeploymentPlan) {
   const e = plan.expectedState;
-  return { network: e.network, decimals: e.decimals, supplyRaw: e.supplyRaw, mintAuthority: e.mintAuthority, freezeAuthority: e.freezeAuthority, name: e.metadata.name, symbol: e.metadata.symbol, feeBps: e.feeRouting.configuredBps, cluster: e.cluster, tokenProgram: e.tokenProgramName, metadataDocumentSha256: e.metadata.documentSha256, configFingerprint: e.configFingerprint, planHash: e.planHash };
+  return { network: e.network, decimals: e.decimals, intendedSupplyRaw: e.intendedSupplyRaw, mintedSupplyRaw: e.mintedSupplyRaw, unissuedSupplyRaw: e.unissuedSupplyRaw, mintAuthority: e.mintAuthority, freezeAuthority: e.freezeAuthority, name: e.metadata.name, symbol: e.metadata.symbol, feeBps: e.feeRouting.configuredBps, cluster: e.cluster, tokenProgram: e.tokenProgramName, metadataDocumentSha256: e.metadata.documentSha256, configFingerprint: e.configFingerprint, planHash: e.planHash };
 }
 
 // ---------- API response schemas ----------

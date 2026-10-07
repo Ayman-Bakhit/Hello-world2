@@ -48,11 +48,13 @@ describe("PRODUCT_DECISIONS.md is the canonical record and cannot drift from the
 });
 
 describe("approval is explicit, versioned and never implied", () => {
-  const APPROVED_IN_PASS_1: DecisionId[] = ["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_ROUTING_MECHANISM", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "SUPPLY_ALLOCATION_MODEL", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"];
+  const APPROVED_IN_PASS_1: DecisionId[] = ["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_ROUTING_MECHANISM", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"];
+  const APPROVED_IN_PASS_2: DecisionId[] = ["SUPPLY_ALLOCATION_MODEL", "SUPPLY_SEMANTICS"];
   it("exactly the items the owner approved in pass 1 are approved, each with a role approver, the date, the reference and its current version; nothing else is", () => {
-    expect(DEPLOYMENT_POLICY.decisions.filter((d) => isApproved(d)).map((d) => d.id).sort()).toEqual([...APPROVED_IN_PASS_1].sort());
+    expect(DEPLOYMENT_POLICY.decisions.filter((d) => isApproved(d)).map((d) => d.id).sort()).toEqual([...APPROVED_IN_PASS_1, ...APPROVED_IN_PASS_2].sort());
     for (const d of DEPLOYMENT_POLICY.decisions) {
       if (APPROVED_IN_PASS_1.includes(d.id)) expect(d.approval).toEqual({ status: "APPROVED", approver: expect.stringContaining("Product owner"), approvedAt: "2026-10-07", reference: "Product Economics decision pass 1", approvedVersion: d.version });
+      else if (APPROVED_IN_PASS_2.includes(d.id)) expect(d.approval).toEqual({ status: "APPROVED", approver: expect.stringContaining("Product owner"), approvedAt: "2026-10-07", reference: "Product Economics decision pass 2 (supply model clarification)", approvedVersion: d.version });
       else expect(d.approval).toEqual({ status: "PENDING_PRODUCT_APPROVAL", approver: null, approvedAt: null, reference: null, approvedVersion: null });
     }
   });
@@ -60,11 +62,14 @@ describe("approval is explicit, versioned and never implied", () => {
     const names = new Set(DEPLOYMENT_POLICY.decisions.flatMap((d) => (d.approval.approver ? [d.approval.approver] : [])));
     expect([...names]).toHaveLength(1); expect([...names][0]).toMatch(/^Product owner \(name not supplied/);
   });
-  it("SUPPLY_SEMANTICS was not in the owner's approvals and is not approved", () => {
-    expect(isApproved(decisionOf(DEPLOYMENT_POLICY, "SUPPLY_SEMANTICS"))).toBe(false);
+  it("SUPPLY_SEMANTICS approval is recorded by the product owner in pass 2, at its current version, with a reference", () => {
+    const d = decisionOf(DEPLOYMENT_POLICY, "SUPPLY_SEMANTICS");
+    expect(isApproved(d)).toBe(true); expect(d.status).toBe("DECIDED"); expect(d.provenance).toBe("PRODUCT_OWNER_DECISION");
+    expect(d.approval).toMatchObject({ status: "APPROVED", approvedAt: "2026-10-07", approvedVersion: d.version, reference: expect.stringContaining("pass 2") });
+    expect(d.value).toMatchObject({ model: "FIXED_TOTAL_SUPPLY", shares: "BASIS_POINTS", everyUnit: "EXACTLY_ONE_EXPLICIT_ROLE", silentRemainder: "NOT_ALLOWED", permanentSupplyReduction: "MUST_BE_EXPLICIT", productConfigurationMustMatchCanonicalAllocation: true });
   });
   it("the owner's pass 1 answers are recorded: allocation 800/4000/5200, no supply for charity, reserve or protocol; custom program chosen but not implemented", () => {
-    expect(decisionOf(DEPLOYMENT_POLICY, "SUPPLY_ALLOCATION_MODEL").value).toEqual({ version: 1, charityBps: 0, taxReserveBps: 0, protocolBps: 0, burnBps: 5200 });
+    expect(decisionOf(DEPLOYMENT_POLICY, "SUPPLY_ALLOCATION_MODEL").value).toMatchObject({ version: 2, creatorBps: 800, liquidityBps: 4000, charityBps: 0, taxReserveBps: 0, protocolBps: 0, permanentlyUnissuedBps: 5200, fixed: true, configurable: false });
     expect(decisionOf(DEPLOYMENT_POLICY, "FEE_ROUTING_MECHANISM").value).toMatchObject({ mechanism: "CUSTOM_SOLANA_PROGRAM", verifiableOnChain: true, implemented: false, enforcesSplit: false, programId: null });
     expect(decisionOf(DEPLOYMENT_POLICY, "FEE_SPLIT_SCOPE").value).toMatchObject({ divides: "ACTUAL_FEES_GENERATED_BY_THE_DEFINED_FEE_MECHANISM", doesNotDivide: expect.arrayContaining(["TRADING_VOLUME", "TOKEN_SUPPLY", "MARKET_CAP", "GROSS_LAUNCH_VOLUME"]) });
     expect(decisionOf(DEPLOYMENT_POLICY, "CHARITY_PAYOUT_MODEL").value).toMatchObject({ tokenSupplyAllocation: false, feeAllocationBps: 1500 });
@@ -73,8 +78,9 @@ describe("approval is explicit, versioned and never implied", () => {
     expect(decisionOf(DEPLOYMENT_POLICY, "PROTOCOL_DESTINATION").notes.join(" ")).toMatch(/multisig or program-controlled/);
     expect(decisionOf(DEPLOYMENT_POLICY, "LIQUIDITY_STRATEGY").notes.join(" ")).toMatch(/Do not guess the venue/);
   });
-  it("the burn mechanism the answer implied but did not state is its own pending decision, and a pending decision holds no value", () => {
-    expect(decisionOf(DEPLOYMENT_POLICY, "SUPPLY_BURN_MECHANISM")).toMatchObject({ status: "PENDING", value: null });
+  it("there is no burn mechanism decision: the 52% is never minted, so nothing is burned", () => {
+    expect(DECISION_IDS as readonly string[]).not.toContain("SUPPLY_BURN_MECHANISM");
+    expect(decisionOf(DEPLOYMENT_POLICY, "SUPPLY_ALLOCATION_MODEL").value).toMatchObject({ permanentlyUnissuedMeaning: "NEVER_MINTED_NOT_BURNED", fixed: true, configurable: false });
   });
   it("an approval needs an approver, a date, a reference and the SAME version; a pending decision can never be approved; REJECTED is not approval", () => {
     const id: DecisionId = "TOKEN_PROGRAM";
@@ -86,21 +92,19 @@ describe("approval is explicit, versioned and never implied", () => {
     const bumped = withDecisions(approve(DEPLOYMENT_POLICY, id), { [id]: { version: 2 } });
     expect(isApproved(decisionOf(bumped, id))).toBe(false); // changing the decision invalidates the approval
   });
-  it("PRODUCT_APPROVAL_COMPLETE names every unapproved decided item and stays blocking", () => {
-    const g = gate(evaluateExecutionReadiness(base()), "PRODUCT_APPROVAL_COMPLETE");
-    expect(g).toMatchObject({ status: "PENDING", blocking: true, category: "PRODUCT" });
-    expect(g.reason).toContain("SUPPLY_SEMANTICS");
-    for (const d of DEPLOYMENT_POLICY.decisions.filter((x) => isApproved(x))) expect(g.reason, d.id).not.toContain(d.id);
+  it("PRODUCT_APPROVAL_COMPLETE passes today (every decided item is approved at its current version) and names any decided item that is not", () => {
+    expect(gate(evaluateExecutionReadiness(base()), "PRODUCT_APPROVAL_COMPLETE")).toMatchObject({ status: "PASS", blocking: false, category: "PRODUCT" });
+    const bumped = withDecisions(DEPLOYMENT_POLICY, { TOKEN_PROGRAM: { version: 2 } }); // an approved decision changed: its approval no longer applies
+    const g = gate(evaluateExecutionReadiness(base(bumped)), "PRODUCT_APPROVAL_COMPLETE");
+    expect(g).toMatchObject({ status: "PENDING", blocking: true }); expect(g.reason).toContain("TOKEN_PROGRAM");
     expect(g.reason).toMatch(/engineering default/); expect(g.reason).toMatch(/approval is not on-chain implementation/);
+    for (const d of DEPLOYMENT_POLICY.decisions.filter((x) => isApproved(x) && x.id !== "TOKEN_PROGRAM")) expect(g.reason, d.id).not.toContain(d.id);
   });
-  it("approving the one remaining decided item clears the gate, a pending SUPPLY_SEMANTICS holds it, and the pending decisions still block", () => {
-    const p = approve(DEPLOYMENT_POLICY, "SUPPLY_SEMANTICS");
-    expect(gate(evaluateExecutionReadiness(base(p)), "PRODUCT_APPROVAL_COMPLETE").status).toBe("PASS");
-    expect(evaluateExecutionReadiness(base(p)).prerequisitesMet).toBe(false);
-    const undecided = withDecisions(p, { SUPPLY_SEMANTICS: { status: "PENDING", value: null, provenance: "NONE", missing: "x" } });
+  it("a pending SUPPLY_SEMANTICS holds the gate, and the pending decisions still block readiness even with every decided item approved", () => {
+    expect(evaluateExecutionReadiness(base()).prerequisitesMet).toBe(false);
+    const undecided = withDecisions(DEPLOYMENT_POLICY, { SUPPLY_SEMANTICS: { status: "PENDING", value: null, provenance: "NONE", missing: "x" } });
     expect(gate(evaluateExecutionReadiness(base(undecided)), "PRODUCT_APPROVAL_COMPLETE").status).toBe("PENDING");
-    const bumped = withDecisions(p, { TOKEN_PROGRAM: { version: 2 } }); // an approved decision changed: its approval no longer applies
-    expect(gate(evaluateExecutionReadiness(base(bumped)), "PRODUCT_APPROVAL_COMPLETE").reason).toContain("TOKEN_PROGRAM");
+    expect(gate(evaluateExecutionReadiness(base(undecided)), "UNISSUED_SUPPLY_PERMANENT").blocking).toBe(true);
   });
   it("an approval changes the policy hash and the plan hash, so a recorded plan must be recorded again", () => {
     const plan = (p: DeploymentPolicy) => { const r = buildDeploymentPlan({ launch: fixtureReadyLaunch(), charity: FIXTURE_CHARITY, policy: p }); if (!r.ok) throw new Error("builds"); return r.plan.identity; };
@@ -121,7 +125,7 @@ describe("pending decisions block, and product approval never implies implementa
     expect(plan.plan.instructions.find((i) => i.id === "mint-supply")!.status).toBe("BLOCKED");
     expect(milestoneBlockers(none, "PLAN_EXECUTABLE")).toContain("SUPPLY_ALLOCATION_MODEL");
     expect(milestoneBlockers(DEPLOYMENT_POLICY, "PLAN_EXECUTABLE")).not.toContain("SUPPLY_ALLOCATION_MODEL"); // decided and approved
-    expect(milestoneBlockers(DEPLOYMENT_POLICY, "MINT_CREATION")).toContain("SUPPLY_BURN_MECHANISM");
+    expect(milestoneBlockers(DEPLOYMENT_POLICY, "MINT_CREATION")).not.toContain("SUPPLY_ALLOCATION_MODEL");
   });
   it("a decided and approved fee split scope and a chosen custom program are not enforcement: the split stays unenforced until the program exists", () => {
     expect(gate(r, "FEE_SPLIT_SCOPE_DEFINED").status).toBe("PASS"); expect(gate(r, "FEE_ROUTING_DEFINED").status).toBe("PASS");
@@ -137,7 +141,7 @@ describe("pending decisions block, and product approval never implies implementa
     expect(gate(evaluateExecutionReadiness(base(noProgram)), "SMART_CONTRACT_REVIEW_COMPLETE").status).toBe("NOT_APPLICABLE");
   });
   it("pending protocol destination, liquidity design, metadata hosting and product approval each block, and each blocks named milestones", () => {
-    for (const [id, ms] of [["PROTOCOL_DESTINATION_VALID", ["PLAN_EXECUTABLE", "MINT_CREATION", "FEE_ROUTING"]], ["LIQUIDITY_STRATEGY_DEFINED", ["PLAN_EXECUTABLE", "LIQUIDITY_CREATION"]], ["METADATA_STRATEGY_DEFINED", ["PLAN_EXECUTABLE", "MINT_CREATION"]], ["PRODUCT_APPROVAL_COMPLETE", []]] as const) {
+    for (const [id, ms] of [["PROTOCOL_DESTINATION_VALID", ["PLAN_EXECUTABLE", "MINT_CREATION", "FEE_ROUTING"]], ["LIQUIDITY_STRATEGY_DEFINED", ["PLAN_EXECUTABLE", "LIQUIDITY_CREATION"]], ["METADATA_STRATEGY_DEFINED", ["PLAN_EXECUTABLE", "MINT_CREATION"]], ["TAX_RESERVE_DESTINATION_VALID", ["FEE_ROUTING"]]] as const) {
       expect(gate(r, id).blocking, id).toBe(true);
       void ms;
     }
@@ -191,7 +195,7 @@ describe("the dependency graph", () => {
   });
   it("the decision summary exposes approval, dependencies, requirements, blocking and the milestones, and never an approve control", () => {
     const l = fixtureReadyLaunch(); const s = buildDecisionSummary(l, evaluateExecutionReadiness(base()));
-    expect(s.counts).toEqual({ decided: 12, pending: 10, unapproved: 11 }); expect(s.decisions.every((d) => d.blocking === !isApproved(DEPLOYMENT_POLICY.decisions.find((x) => x.id === d.id)!))).toBe(true);
+    expect(s.counts).toEqual({ decided: 12, pending: 9, unapproved: 9 }); expect(s.decisions.every((d) => d.blocking === !isApproved(DEPLOYMENT_POLICY.decisions.find((x) => x.id === d.id)!))).toBe(true);
     expect(s.decisions.find((d) => d.id === "LIQUIDITY_STRATEGY")!.notes.join(" ")).toMatch(/NONE YET/);
     expect(s.milestones.map((m) => m.id)).toEqual([...MILESTONE_IDS]); expect(s.milestones.every((m) => !m.unblocked)).toBe(true);
     expect(JSON.stringify(s)).not.toMatch(/"(approve|setApproval|canApprove)"/);

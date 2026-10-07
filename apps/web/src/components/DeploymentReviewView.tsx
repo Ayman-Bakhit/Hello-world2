@@ -65,7 +65,9 @@ export function DeploymentReviewView({ data }: { data: DeploymentPlanResponse })
             <Row label="Network">{p.identity.network}</Row>
             <Row label="Token program">{p.identity.tokenProgram.name} <code className="text-[11px]">{p.identity.tokenProgram.programId}</code> (Token-2022: not implemented)</Row>
             <Row label="Decimals">{p.token.decimals}</Row>
-            <Row label="Total supply">{group(p.token.totalSupply)} ({group(p.token.supplyRaw)} base units)</Row>
+            <Row label="Intended supply">{group(p.token.totalSupply)} ({group(p.token.intendedSupplyRaw)} base units). Not all of it exists on-chain.</Row>
+            <Row label="Minted supply">{p.token.mintedSupplyRaw === null ? "not defined" : `${group(p.token.mintedSupplyRaw)} base units (creator + liquidity)`}</Row>
+            <Row label="Permanently unissued">{p.token.unissuedSupplyRaw === null ? "not defined" : `${group(p.token.unissuedSupplyRaw)} base units. Never minted, not burned.`}</Row>
             <Row label="Mint address">{dash(p.mint.address, "NOT KNOWN YET")}</Row>
           </dl>
           <p className="mt-3 text-xs text-faint">{p.mint.note}</p>
@@ -144,7 +146,8 @@ export function DeploymentReviewView({ data }: { data: DeploymentPlanResponse })
         <dl className="divide-y divide-line">
           <Row label="Provenance"><Badge tone="demo">EXPECTED · NOT OBSERVED</Badge></Row>
           <Row label="Network / program">{p.expectedState.network} / SPL_TOKEN</Row>
-          <Row label="Decimals / supply">{p.expectedState.decimals} / {group(p.expectedState.supplyRaw)} base units</Row>
+          <Row label="Decimals / expected minted supply">{p.expectedState.decimals} / {p.expectedState.mintedSupplyRaw === null ? "not defined" : `${group(p.expectedState.mintedSupplyRaw)} base units`}</Row>
+          <Row label="Intended / unissued">{group(p.expectedState.intendedSupplyRaw)} / {p.expectedState.unissuedSupplyRaw === null ? "not defined" : group(p.expectedState.unissuedSupplyRaw)} base units (unissued is never minted)</Row>
           <Row label="Mint authority">{p.expectedState.mintAuthority ?? "none"}</Row>
           <Row label="Freeze authority">{p.expectedState.freezeAuthority ?? "none"}</Row>
           <Row label="Fee routing">{p.expectedState.feeRouting.status.replace("_", " ")} (configured {pct(p.expectedState.feeRouting.configuredBps.creator)} / {pct(p.expectedState.feeRouting.configuredBps.taxReserve)} / {pct(p.expectedState.feeRouting.configuredBps.charity)} / {pct(p.expectedState.feeRouting.configuredBps.protocol)})</Row>

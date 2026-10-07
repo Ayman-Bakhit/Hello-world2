@@ -95,7 +95,7 @@ describe("READY gate and validation (BUILD_ERROR)", () => {
   });
   it("M: the maximum u64 supply builds with exact arithmetic (no float rounding)", () => {
     const p = ok(deploymentFixtureInput("M_MAX_SAFE_VALUES"));
-    expect(p.token.supplyRaw).toBe("18446744073709551615"); expect(p.expectedState.supplyRaw).toBe("18446744073709551615");
+    expect(p.token.intendedSupplyRaw).toBe("18446744073709551615"); expect(p.expectedState.intendedSupplyRaw).toBe("18446744073709551615");
     expect(p.supplyAllocations.find((a) => a.role === "LIQUIDITY")!.amountRaw).toBe("18446744073709551615");
     expect(p.supplyAllocations.find((a) => a.role === "UNASSIGNED")!.amountRaw).toBe("0");
   });
@@ -115,7 +115,7 @@ describe("the plan (BLOCKED today, executable never)", () => {
   const plan = ok(base());
   it("is BLOCKED with every open decision named, and never executable", () => {
     expect(plan.status).toBe("BLOCKED"); expect(plan.executionEnabled).toBe(false); expect(plan.labels).toEqual(["NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED"]);
-    expect(plan.blockers.map((b) => b.code).sort()).toEqual(["ALLOCATION_MODEL_UNDEFINED", "FEE_ROUTING_NOT_IMPLEMENTED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED", "METADATA_URI_UNDEFINED", "PROTOCOL_DESTINATION_NOT_CONFIGURED"]);
+    expect(plan.blockers.map((b) => b.code).sort()).toEqual(["ALLOCATION_MODEL_UNDEFINED", "FEE_ROUTING_NOT_IMPLEMENTED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED", "METADATA_URI_UNDEFINED", "PROTOCOL_DESTINATION_NOT_CONFIGURED", "TAX_RESERVE_DESTINATION_PENDING"]);
     for (const b of plan.blockers) { expect(BLOCKER_CODES).toContain(b.code); expect(b.decision.length).toBeGreaterThan(10); }
     expect(planStatus([])).toBe("READY_FOR_REVIEW"); expect(planStatus(["x"])).toBe("BLOCKED");
   });
@@ -123,7 +123,7 @@ describe("the plan (BLOCKED today, executable never)", () => {
     const facts: DeploymentFacts = { ...CURRENT_DEPLOYMENT_FACTS, metadataUri: "https://example.org/meta.json", protocolDestination: fixtureAddress("protocol") };
     const p = ok({ ...base(), facts });
     expect(p.executionEnabled).toBe(false); expect(p.status).toBe("BLOCKED");
-    expect(p.blockers.map((b) => b.code)).toEqual(expect.arrayContaining(["ALLOCATION_MODEL_UNDEFINED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED", "FEE_ROUTING_NOT_IMPLEMENTED"]));
+    expect(p.blockers.map((b) => b.code)).toEqual(expect.arrayContaining(["ALLOCATION_MODEL_UNDEFINED", "TAX_RESERVE_DESTINATION_PENDING", "LIQUIDITY_BUILD_NOT_IMPLEMENTED", "FEE_ROUTING_NOT_IMPLEMENTED"]));
     expect(p.blockers.map((b) => b.code)).not.toContain("METADATA_URI_UNDEFINED"); expect(p.blockers.map((b) => b.code)).not.toContain("PROTOCOL_DESTINATION_NOT_CONFIGURED");
     expect(p.instructions.find((i) => i.id === "create-metadata")!.status).toBe("PLANNED");
     expect(p.instructions.find((i) => i.id === "mint-supply")!.status).toBe("BLOCKED");
@@ -151,7 +151,7 @@ describe("the plan (BLOCKED today, executable never)", () => {
     expect(creator).toMatchObject({ role: "CREATOR", bps: 800, status: "DEFINED", amountRaw: "80000000000000" });
     expect(liq).toMatchObject({ role: "LIQUIDITY", bps: 4000, status: "DEFINED", amountRaw: "400000000000000" });
     expect(rest).toMatchObject({ role: "UNASSIGNED", bps: 5200, status: "UNDEFINED", amountRaw: "520000000000000" });
-    expect(BigInt(creator!.amountRaw!) + BigInt(liq!.amountRaw!) + BigInt(rest!.amountRaw!)).toBe(BigInt(plan.token.supplyRaw));
+    expect(BigInt(creator!.amountRaw!) + BigInt(liq!.amountRaw!) + BigInt(rest!.amountRaw!)).toBe(BigInt(plan.token.intendedSupplyRaw));
     expect(plan.supplyAllocations.some((a) => /CHARITY|RESERVE|PROTOCOL/.test(a.role))).toBe(false);
   });
   it("liquidity is a future stage: no venue, no pool, no fake transaction", () => {
@@ -206,7 +206,7 @@ describe("the plan (BLOCKED today, executable never)", () => {
   });
   it("destinations show role, address, provenance and validation", () => {
     expect(plan.destinations.map((d) => d.role)).toEqual(["CREATOR", "TAX_RESERVE", "CHARITY", "PROTOCOL", "LIQUIDITY"]);
-    expect(plan.destinations.find((d) => d.role === "TAX_RESERVE")).toMatchObject({ address: FIXTURE_WALLETS.reserve, provenance: "LAUNCH_CONFIGURATION", validation: "VALID_ADDRESS" });
+    expect(plan.destinations.find((d) => d.role === "TAX_RESERVE")).toMatchObject({ address: FIXTURE_WALLETS.reserve, provenance: "LAUNCH_CONFIGURATION_COMPATIBILITY_FIELD", validation: "PENDING_DECISION" });
     expect(plan.destinations.find((d) => d.role === "CHARITY")).toMatchObject({ address: FIXTURE_WALLETS.charity, provenance: "CHARITY_REGISTRY" });
     expect(plan.destinations.find((d) => d.role === "PROTOCOL")).toMatchObject({ address: null, validation: "NOT_CONFIGURED" });
     expect(plan.destinations.find((d) => d.role === "LIQUIDITY")).toMatchObject({ address: null, validation: "RESERVED" });
@@ -275,11 +275,11 @@ describe("review (generated from the same plan)", () => {
 
 describe("bridge to Slice 12 (expected vs proof)", () => {
   it("the plan's expected state agrees with what the proof evaluator expects for the same configuration", () => {
-    const e = expectedStateForProof(ok(base()));
+    const bp = buildDeploymentPlan(base()); if (!bp.ok) throw new Error("builds"); const e = expectedStateForProof(bp.plan);
     const p = proofFixtureInputs("FULL_MATCH");
     const ev = evaluateProof({ ...p, historyIntact: true });
     const cfg = (id: string) => ev.checks.find((c) => c.id === id)!.configured;
-    expect(cfg("NETWORK_MATCH")).toBe(e.network); expect(cfg("DECIMALS_MATCH")).toBe(String(e.decimals)); expect(cfg("SUPPLY_MATCH")).toBe(e.supplyRaw);
+    expect(cfg("NETWORK_MATCH")).toBe(e.network); expect(cfg("DECIMALS_MATCH")).toBe(String(e.decimals)); expect(cfg("SUPPLY_MATCH")).toBe(e.mintedSupplyRaw);
     expect(cfg("MINT_AUTHORITY_MATCH")).toBe(e.mintAuthority === null ? "none (disabled)" : e.mintAuthority);
     expect(cfg("FREEZE_AUTHORITY_MATCH")).toBe(e.freezeAuthority === null ? "none (disabled)" : e.freezeAuthority);
     expect(cfg("METADATA_MATCH")).toBe(`${e.name} / ${e.symbol}`);
@@ -309,23 +309,56 @@ describe("a Launch value is not trusted beyond what the builder re-checks", () =
   });
 });
 
-describe("the decided supply allocation model (creator 8%, liquidity 40%, burn 52%)", () => {
+describe("the supply model: creator 8%, liquidity 40%, permanently unissued 52% (never minted, not burned)", () => {
   const direct = (i: PlanInput) => buildDeploymentPlan(i);
-  it("the plan carries exactly creator, liquidity and an explicit burn, every unit assigned, charity, reserve and protocol receiving none", () => {
+  it("the plan carries creator, liquidity and an explicit PERMANENTLY_UNISSUED role; every unit has one role; charity, reserve and protocol receive none", () => {
     const r = direct(base()); if (!r.ok) throw new Error(JSON.stringify(r.errors));
     const a = r.plan.supplyAllocations;
-    expect(a.map((x) => [x.role, x.bps, x.amountRaw, x.status])).toEqual([["CREATOR", 800, "80000000000000", "DEFINED"], ["LIQUIDITY", 4000, "400000000000000", "DEFINED"], ["BURN", 5200, "520000000000000", "DEFINED"]]);
-    expect(a.reduce((s2, x) => s2 + x.bps!, 0)).toBe(10000); expect(a.reduce((s2, x) => s2 + BigInt(x.amountRaw!), 0n)).toBe(BigInt(r.plan.token.supplyRaw));
-    expect(a.some((x) => ["UNASSIGNED", "CHARITY", "TAX_RESERVE", "PROTOCOL"].includes(x.role))).toBe(false);
-    expect(r.plan.expectedState.allocations.map((x) => x.role)).toEqual(["CREATOR", "LIQUIDITY", "BURN"]);
+    expect(a.map((x) => [x.role, x.bps, x.amountRaw, x.status, x.issued])).toEqual([["CREATOR", 800, "80000000000000", "DEFINED", true], ["LIQUIDITY", 4000, "400000000000000", "DEFINED", true], ["PERMANENTLY_UNISSUED", 5200, "520000000000000", "DEFINED", false]]);
+    expect(a.reduce((s2, x) => s2 + x.bps!, 0)).toBe(10000); expect(a.reduce((s2, x) => s2 + BigInt(x.amountRaw!), 0n)).toBe(BigInt(r.plan.token.intendedSupplyRaw));
+    expect(a.some((x) => ["UNASSIGNED", "CHARITY", "TAX_RESERVE", "PROTOCOL", "BURN"].includes(x.role))).toBe(false);
+    expect(r.plan.expectedState.allocations.map((x) => [x.role, x.issued])).toEqual([["CREATOR", true], ["LIQUIDITY", true], ["PERMANENTLY_UNISSUED", false]]);
+    expect(JSON.stringify(r.plan)).not.toMatch(/\bBURN/);
   });
-  it("the allocation blocker is gone, but the burn mechanism and liquidity venue still block minting", () => {
+  it("intended, minted and unissued supply are three separate numbers: minted is 48% of intended, unissued is 52%, and they add up exactly", () => {
+    const r = direct(base()); if (!r.ok) throw new Error("builds");
+    const t = r.plan.token; const intended = BigInt(t.intendedSupplyRaw), minted = BigInt(t.mintedSupplyRaw!), unissued = BigInt(t.unissuedSupplyRaw!);
+    expect(minted * 100n).toBe(intended * 48n); expect(unissued * 100n).toBe(intended * 52n); expect(minted + unissued).toBe(intended);
+    expect(r.plan.expectedState).toMatchObject({ intendedSupplyRaw: t.intendedSupplyRaw, mintedSupplyRaw: t.mintedSupplyRaw, unissuedSupplyRaw: t.unissuedSupplyRaw });
+    expect(r.plan.expectedState).not.toHaveProperty("supplyRaw"); expect(t).not.toHaveProperty("supplyRaw");
+  });
+  it("a concrete example: intended 100,000,000 gives creator 8,000,000 + liquidity 40,000,000 = minted 48,000,000; unissued 52,000,000 is never minted", () => {
+    const r = direct(withCfg({ totalSupply: "100000000", decimals: 0 })); if (!r.ok) throw new Error(JSON.stringify(r.errors));
+    expect(r.plan.token).toMatchObject({ intendedSupplyRaw: "100000000", mintedSupplyRaw: "48000000", unissuedSupplyRaw: "52000000" });
+    expect(r.plan.supplyAllocations.map((x) => [x.role, x.amountRaw])).toEqual([["CREATOR", "8000000"], ["LIQUIDITY", "40000000"], ["PERMANENTLY_UNISSUED", "52000000"]]);
+    expect(r.plan.expectedState.mintedSupplyRaw).not.toBe("100000000");
+  });
+  it("the unissued amount is never assigned to anyone: no recipient, and minting is described as the issued supply only", () => {
+    const r = direct(base()); if (!r.ok) throw new Error("builds");
+    expect(r.plan.expectedState.allocations.find((x) => x.role === "PERMANENTLY_UNISSUED")).toMatchObject({ recipient: null, issued: false });
+    expect(r.plan.instructions.find((x) => x.id === "mint-supply")!.description).toMatch(/ONLY the issued supply/);
+    expect(r.plan.supplyAllocations.find((x) => x.role === "PERMANENTLY_UNISSUED")!.note).toMatch(/never minted/i);
+  });
+  it("the unissued supply is only permanent if the mint authority is revoked: a launch that keeps it is refused", () => {
+    const r = direct(withCfg({ mintAuthority: "creator" })); expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.map((e) => e.code)).toContain("UNISSUED_SUPPLY_NOT_PERMANENT");
+    const good = direct(base()); if (!good.ok) throw new Error("builds");
+    expect(good.plan.instructions.find((x) => x.id === "revoke-mint-authority")).toBeDefined();
+  });
+  it("the allocation blocker is gone; the liquidity venue still blocks minting; the tax reserve destination is pending", () => {
     const r = direct(base()); if (!r.ok) throw new Error("builds");
     const codes2 = r.plan.blockers.map((b) => b.code);
-    expect(codes2).not.toContain("ALLOCATION_MODEL_UNDEFINED"); expect(codes2).toContain("SUPPLY_BURN_MECHANISM_UNDEFINED"); expect(codes2).toContain("LIQUIDITY_BUILD_NOT_IMPLEMENTED");
+    expect(codes2).not.toContain("ALLOCATION_MODEL_UNDEFINED"); expect(codes2).toContain("LIQUIDITY_BUILD_NOT_IMPLEMENTED"); expect(codes2).toContain("TAX_RESERVE_DESTINATION_PENDING");
+    expect(codes2.some((c) => /BURN/.test(c))).toBe(false);
     expect(r.plan.status).toBe("BLOCKED");
-    for (const id of ["mint-supply", "revoke-mint-authority"]) { const i = r.plan.instructions.find((x) => x.id === id)!; expect(i.status).toBe("BLOCKED"); expect(i.blockedBy).toEqual(expect.arrayContaining(["SUPPLY_BURN_MECHANISM_UNDEFINED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED"])); }
+    for (const id of ["mint-supply", "revoke-mint-authority"]) { const i = r.plan.instructions.find((x) => x.id === id)!; expect(i.status).toBe("BLOCKED"); expect(i.blockedBy).toEqual(expect.arrayContaining(["LIQUIDITY_BUILD_NOT_IMPLEMENTED"])); }
     expect(r.plan.instructions.find((x) => x.id === "create-creator-token-account")!.status).toBe("PLANNED");
+  });
+  it("the tax reserve destination is a pending compatibility field: not approved, not final custody, and the expected state does not carry it as a destination", () => {
+    const r = direct(base()); if (!r.ok) throw new Error("builds");
+    expect(r.plan.destinations.find((d) => d.role === "TAX_RESERVE")).toMatchObject({ provenance: "LAUNCH_CONFIGURATION_COMPATIBILITY_FIELD", validation: "PENDING_DECISION" });
+    expect(r.plan.expectedState.destinations.find((d) => d.role === "TAX_RESERVE")!.address).toBeNull();
+    expect(r.plan.blockers.find((b) => b.code === "TAX_RESERVE_DESTINATION_PENDING")).toBeDefined();
   });
   it("a launch whose creator and liquidity shares do not total 48% does not match the model and cannot be planned", () => {
     for (const over of [{ creatorAllocationPercent: "10" }, { creatorAllocationPercent: "0", liquidityConfiguration: { initialLiquidityUsdc: "1", supplyPercentage: "100", lockDays: 0 } }, { liquidityConfiguration: { initialLiquidityUsdc: "50000", supplyPercentage: "41", lockDays: 30 } }]) {
@@ -333,7 +366,7 @@ describe("the decided supply allocation model (creator 8%, liquidity 40%, burn 5
       if (!r.ok) expect(r.errors.map((e) => e.code)).toEqual(["ALLOCATION_MODEL_MISMATCH"]);
     }
   });
-  it("precision is still exact for every share, including the burn", () => {
+  it("precision is still exact for every share, including the unissued share", () => {
     const r = direct(withCfg({ totalSupply: "7", decimals: 0 })); expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors.map((e) => e.code)).toContain("PRECISION_LOSS");
   });

@@ -88,7 +88,8 @@ describe("owner proof endpoint", () => {
   it("shows the owner their own reserve destination and full creator address", async () => {
     const l = await ready(ctx.demoToken, demoCreator, false);
     const p = await ownerProof(l.id);
-    expect(p.configured.taxReserve.destination).toBe(demoCreator); expect(p.configured.creator.address).toBe(demoCreator);
+    expect(p.configured.taxReserve.destination).toBeNull(); // destination and custody are PENDING: the compatibility field is not shown as a destination
+    expect(p.configured.creator.address).toBe(demoCreator);
   });
   it("a foreign launch and an unknown launch are the same 404 and leak nothing", async () => {
     const l = await ready(ctx.demoToken, demoCreator, true);
@@ -214,18 +215,20 @@ describe("derived verification from stored rows", () => {
       feeRouting: { status: "OBSERVED", value: { creatorBps: 6000, taxReserveBps: 1500, charityBps: 1500, protocolBps: 1000, creatorRecipient: cfg.creatorWallet, taxReserveRecipient: cfg.taxReserveConfiguration.destinationAddress, charityRecipient: charityWallet } },
     };
   };
-  it("a matching RPC observation is VERIFIED; the same observation recorded as a FIXTURE on a demo proof is not", async () => {
+  it("a matching RPC observation is PARTIAL while the tax reserve destination is undecided (never VERIFIED); the same observation recorded as a FIXTURE on a demo proof is also not verified", async () => {
     const l = await ready(live.token, live.address, true, live.charityId);
     const mint = fakeMint("v1");
     const pid = await recordProofRecord(ctx.pool, { launchId: l.id, network: "devnet", mintAddress: mint, deploymentSignature: fakeSignature("v1"), deployedFingerprint: l.fingerprint, dataSource: "chain" });
     expect((await ownerProof(l.id, live.token)).status).toBe("AWAITING_OBSERVATION");
     await appendObservation(ctx.pool, pid, rpcMatch(l.config, live.charityWallet, mint));
     const own = await ownerProof(l.id, live.token);
-    expect(own).toMatchObject({ status: "VERIFIED", statusLabel: "VERIFIED TRANSPARENCY", verifiedOnChain: true, verifiedTransparency: true, evidence: { class: "OBSERVED_ON_CHAIN", source: "RPC", observationCount: 1, historyIntact: true } });
-    expect(own.checks.filter((c) => c.required).every((c) => c.state === "PASS")).toBe(true);
+    expect(own).toMatchObject({ status: "PARTIAL", verifiedOnChain: false, verifiedTransparency: false, evidence: { class: "OBSERVED_ON_CHAIN", source: "RPC", observationCount: 1, historyIntact: true } });
+    const notPass = own.checks.filter((c) => c.required && c.state !== "PASS");
+    expect(notPass.map((c) => [c.id, c.state])).toEqual([["TAX_RESERVE_DESTINATION_MATCH", "UNKNOWN"]]); // only the undecided destination holds it back
+    expect(own.checks.find((c) => c.id === "SUPPLY_MATCH")).toMatchObject({ state: "PASS", configured: own.configured.expectedMintedSupplyRaw });
     expect(own.identity.explorerUrl).toBeNull();
     const pub = await publicProof(l.id);
-    expect(pub.status).toBe("VERIFIED"); expect(pub.configured.taxReserve.destination).toBeNull();
+    expect(pub.status).toBe("PARTIAL"); expect(pub.configured.taxReserve.destination).toBeNull();
     expect(JSON.stringify(pub)).not.toContain(live.address);
 
     const l2 = await ready(live.token, live.address, true, live.charityId);
@@ -241,7 +244,7 @@ describe("derived verification from stored rows", () => {
     const pid = await recordProofRecord(ctx.pool, { launchId: l.id, network: "devnet", mintAddress: mint, deploymentSignature: fakeSignature("v3"), deployedFingerprint: l.fingerprint, dataSource: "chain" });
     const ok = rpcMatch(l.config, live.charityWallet, mint);
     await appendObservation(ctx.pool, pid, ok);
-    expect((await ownerProof(l.id, live.token)).status).toBe("VERIFIED");
+    expect((await ownerProof(l.id, live.token)).status).toBe("PARTIAL");
     await appendObservation(ctx.pool, pid, { ...ok, observedAt: new Date().toISOString(), supplyRaw: { status: "OBSERVED", value: "1" } });
     const p = await ownerProof(l.id, live.token);
     expect(p.status).toBe("FAILED"); expect(p.verifiedTransparency).toBe(false); expect(p.mismatches.map((m) => m.checkId)).toContain("SUPPLY_MATCH");
@@ -259,7 +262,7 @@ describe("derived verification from stored rows", () => {
     const mint = fakeMint("v5");
     const pid = await recordProofRecord(ctx.pool, { launchId: l.id, network: "devnet", mintAddress: mint, deploymentSignature: fakeSignature("v5"), deployedFingerprint: l.fingerprint, dataSource: "chain" });
     await appendObservation(ctx.pool, pid, rpcMatch(l.config, live.charityWallet, mint));
-    expect((await ownerProof(l.id, live.token)).status).toBe("VERIFIED");
+    expect((await ownerProof(l.id, live.token)).status).toBe("PARTIAL");
     // a database operator bypasses the immutability trigger and edits the observation: the hash chain exposes it
     await ctx.pool.query("ALTER TABLE token_proof_observations DISABLE TRIGGER token_proof_observations_immutable");
     try {

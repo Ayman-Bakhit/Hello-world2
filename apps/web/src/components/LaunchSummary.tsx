@@ -104,7 +104,7 @@ export function LaunchSummary({ launch }: { launch: Launch }) {
 
       <dl className="grid gap-3 text-xs sm:grid-cols-3">
         <div><dt className="eyebrow">Network</dt><dd className="mt-0.5">{c.network} (configuration only)</dd></div>
-        <div><dt className="eyebrow">Total supply</dt><dd className="num mt-0.5">{group(c.totalSupply)}</dd></div>
+        <div><dt className="eyebrow">Intended supply</dt><dd className="num mt-0.5">{group(c.totalSupply)}</dd></div>
         <div><dt className="eyebrow">Decimals</dt><dd className="num mt-0.5">{c.decimals}</dd></div>
         <div className="sm:col-span-3"><dt className="eyebrow">Description</dt><dd className="mt-0.5 break-words">{c.description || "None"}</dd></div>
         <div className="sm:col-span-3">
@@ -182,7 +182,7 @@ export function PublicLaunchView({ launch }: { launch: PublicLaunch }) {
       <dl className="grid gap-3 text-xs sm:grid-cols-4">
         <div><dt className="eyebrow">Network</dt><dd className="mt-0.5">{launch.network} (configuration only)</dd></div>
         <div><dt className="eyebrow">Creator</dt><dd className="num mt-0.5 font-mono">{launch.creator}</dd></div>
-        <div><dt className="eyebrow">Total supply</dt><dd className="num mt-0.5">{group(launch.totalSupply)}</dd></div>
+        <div><dt className="eyebrow">Intended supply</dt><dd className="num mt-0.5">{group(launch.totalSupply)}</dd></div>
         <div><dt className="eyebrow">Decimals</dt><dd className="num mt-0.5">{launch.decimals}</dd></div>
         <div className="sm:col-span-4"><dt className="eyebrow">Description</dt><dd className="mt-0.5 break-words">{launch.description || "None"}</dd></div>
         <div className="sm:col-span-4">

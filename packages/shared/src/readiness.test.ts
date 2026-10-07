@@ -3,7 +3,7 @@ import { LaunchConfigSchema } from "./api/schemas";
 import { buildDeploymentPlan, fixtureAddress, FUTURE_FAILURES } from "./deployment";
 import {
   ATTEMPT_STATES, ATTEMPT_STATES_WITHOUT_EXECUTION, ATTEMPT_TRANSITIONS, CLUSTERS, DECISION_IDS, DEPLOYMENT_POLICY, ENVIRONMENTS, EXECUTION_DISABLED_MESSAGE, ExecutionDisabledError, REAL_EXECUTION_ENABLED,
-  assertExecutionDisabled, assertPlanCluster, attemptEventHash, attemptStateRecordable, canTransition, canonicalMetadataDocument, decisionOf, metadataDocumentSha256, policyHash, resolveSupplyAllocation,
+  assertExecutionDisabled, assertPlanCluster, attemptEventHash, attemptStateRecordable, canTransition, canonicalMetadataDocument, decisionOf, metadataDocumentSha256, policyHash, resolveSupplyAllocation, CANONICAL_SUPPLY_MODEL,
   validateMintPublicKey, withDecisions, type DecisionId, type DeploymentPolicy, type SupplyAllocationModel,
 } from "./deploymentPolicy";
 import { CANONICAL_FEE_SPLIT, TOTAL_BPS } from "./feesplit";
@@ -19,12 +19,10 @@ const TEST_REVIEW = { evidenceRef: "TEST-ONLY-NOT-A-REAL-REVIEW", completedOn: "
 /** TEST-ONLY: records an approval for every decided item (a fake approver and reference), at the item's current version. */
 const approveAll = (p: DeploymentPolicy): DeploymentPolicy => ({ version: p.version, decisions: p.decisions.map((d) => (d.status === "DECIDED" ? { ...d, approval: { status: "APPROVED" as const, approver: "TEST-ONLY", approvedAt: "2000-01-01", reference: "TEST-ONLY", approvedVersion: d.version } } : d)) });
 const FULL: DeploymentPolicy = approveAll(withDecisions(DEPLOYMENT_POLICY, {
-  SUPPLY_BURN_MECHANISM: { status: "DECIDED", value: { burn: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   ALLOCATION_LOCKS_AND_VESTING: { status: "DECIDED", value: { creator: "TRANSFERABLE_NOW", locks: "NONE" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   CHARITY_VERIFICATION_GOVERNANCE: { status: "DECIDED", value: { verifier: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   TAX_RESERVE_FUNDING: { status: "DECIDED", value: { asset: "TEST_ONLY", funding: "DESIGNATED_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   METADATA_HOSTING: { status: "DECIDED", value: { uri: "https://example.invalid/test.json", contentAddressed: false }, missing: null, provenance: "ENGINEERING_DEFAULT" },
-  SUPPLY_ALLOCATION_MODEL: { status: "DECIDED", value: { version: 1, charityBps: 1000, taxReserveBps: 1000, protocolBps: 1200, burnBps: 2000 } satisfies SupplyAllocationModel, missing: null, provenance: "ENGINEERING_DEFAULT" },
   FEE_SPLIT_SCOPE: { status: "DECIDED", value: { stream: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   FEE_ROUTING_MECHANISM: { status: "DECIDED", value: { mechanism: "TEST_ONLY", implemented: true, enforcesSplit: true, programId: null }, missing: null, provenance: "ENGINEERING_DEFAULT" },
   PROTOCOL_DESTINATION: { status: "DECIDED", value: { address: fixtureAddress("test-protocol"), control: "MULTISIG", approvedBy: "TEST-ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" },
@@ -50,8 +48,8 @@ describe("the policy in force", () => {
   it("decided: token program, mint key, fee/compute, metadata format, fee split and scope, fee routing choice, supply semantics and allocation, charity model, tax reserve model, environments", () => {
     expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "DECIDED").map((d) => d.id).sort()).toEqual(["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_ROUTING_MECHANISM", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "SUPPLY_ALLOCATION_MODEL", "SUPPLY_SEMANTICS", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"]);
   });
-  it("pending (never guessed): burn mechanism, locks, metadata hosting, protocol destination, liquidity, charity governance, tax reserve funding and all three reviews", () => {
-    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "PENDING").map((d) => d.id).sort()).toEqual(["ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "LEGAL_REVIEW", "LIQUIDITY_STRATEGY", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "SUPPLY_BURN_MECHANISM", "TAX_RESERVE_FUNDING"]);
+  it("pending (never guessed): locks, metadata hosting, protocol destination, liquidity, charity governance, tax reserve funding and all three reviews", () => {
+    expect(DEPLOYMENT_POLICY.decisions.filter((d) => d.status === "PENDING").map((d) => d.id).sort()).toEqual(["ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "LEGAL_REVIEW", "LIQUIDITY_STRATEGY", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "TAX_RESERVE_FUNDING"]);
     for (const r of ["SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "LEGAL_REVIEW"] as const) expect(decisionOf(DEPLOYMENT_POLICY, r).status).toBe("PENDING"); // no audit or legal approval is claimed
   });
   it("the decided token program is classic SPL Token and records why Token-2022 is not used", () => {
@@ -92,8 +90,8 @@ describe("execution readiness: production policy", () => {
     for (const g of r.gates) { expect(g.reason.length).toBeGreaterThan(5); expect(g.provenance.length).toBeGreaterThan(3); expect(g.blocking).toBe(g.status === "BLOCKED" || g.status === "PENDING"); if (g.blocking) expect(g.required!.length).toBeGreaterThan(5); }
   });
   it("passes what is decided and true, and blocks the rest", () => {
-    for (const id of ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "CHARITY_DESTINATIONS_VERIFIED", "TAX_RESERVE_DESTINATION_VALID", "FEE_SPLIT_VALID", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID"] as const) expect(gateOf(r, id).status, id).toBe("PASS");
-    for (const id of ["SUPPLY_BURN_MECHANISM_DEFINED", "METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "LIQUIDITY_STRATEGY_DEFINED", "FEE_ROUTING_ENFORCEABLE", "PRODUCT_APPROVAL_COMPLETE", "SECURITY_REVIEW_COMPLETE", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE"] as const) expect(gateOf(r, id).blocking, id).toBe(true);
+    for (const id of ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "CHARITY_DESTINATIONS_VERIFIED", "UNISSUED_SUPPLY_PERMANENT", "PRODUCT_APPROVAL_COMPLETE", "FEE_SPLIT_VALID", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID"] as const) expect(gateOf(r, id).status, id).toBe("PASS");
+    for (const id of ["METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "LIQUIDITY_STRATEGY_DEFINED", "FEE_ROUTING_ENFORCEABLE", "TAX_RESERVE_DESTINATION_VALID", "SECURITY_REVIEW_COMPLETE", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE"] as const) expect(gateOf(r, id).blocking, id).toBe(true);
     expect(gateOf(r, "REAL_EXECUTION_ENABLED")).toMatchObject({ status: "BLOCKED", blocking: true });
   });
   it("names the fee routing blocker exactly and never calls the configured split enforced", () => {
@@ -118,7 +116,7 @@ describe("execution readiness: invariants", () => {
     expect(gateOf(r, "ALLOCATIONS_SUM_10000_BPS").status).toBe("PASS");
   });
   it("making any one required decision PENDING again blocks readiness (one at a time)", () => {
-    const required: DecisionId[] = ["SUPPLY_SEMANTICS", "SUPPLY_BURN_MECHANISM", "TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW", "LEGAL_REVIEW"];
+    const required: DecisionId[] = ["SUPPLY_SEMANTICS", "TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW", "LEGAL_REVIEW"];
     for (const id of required) {
       const p = withDecisions(FULL, { [id]: { status: "PENDING", value: null, provenance: "NONE", missing: "x" } });
       const r = evaluateExecutionReadiness(base({ policy: p }));
@@ -146,22 +144,23 @@ describe("execution readiness: invariants", () => {
       expect(gateOf(evaluateExecutionReadiness(base({ policy: withDecisions(FULL, { PROTOCOL_DESTINATION: { value: v } }) })), "PROTOCOL_DESTINATION_VALID").status).toBe("BLOCKED");
     }
   });
-  it("allocations that do not sum to 10000 bps, or are negative or fractional, are blocked; valid ones sum exactly", () => {
-    for (const m of [{ charityBps: 1000, taxReserveBps: 1000, protocolBps: 1200, burnBps: 1999 }, { charityBps: -1, taxReserveBps: 1000, protocolBps: 1200, burnBps: 2000 }, { charityBps: 1000.5, taxReserveBps: 1000, protocolBps: 1200, burnBps: 2000 }, { charityBps: 6000, taxReserveBps: 6000, protocolBps: 1200, burnBps: 2000 }]) {
-      const r = evaluateExecutionReadiness(base({ policy: withDecisions(FULL, { SUPPLY_ALLOCATION_MODEL: { value: { version: 1, ...m } } }) }));
+  it("any allocation model other than the canonical 8/40/52 is blocked: wrong sum, negative, fractional, or a different creator/liquidity share", () => {
+    const canon = { version: 2, creatorBps: 800, liquidityBps: 4000, charityBps: 0, taxReserveBps: 0, protocolBps: 0, permanentlyUnissuedBps: 5200 };
+    for (const m of [{ permanentlyUnissuedBps: 5199 }, { charityBps: -1 }, { charityBps: 0.5 }, { charityBps: 1000, permanentlyUnissuedBps: 4200 }, { creatorBps: 900, permanentlyUnissuedBps: 5100 }, { liquidityBps: 3000, permanentlyUnissuedBps: 6200 }]) {
+      const r = evaluateExecutionReadiness(base({ policy: withDecisions(FULL, { SUPPLY_ALLOCATION_MODEL: { value: { ...canon, ...m } } }) }));
       expect(gateOf(r, "ALLOCATIONS_SUM_10000_BPS").status, JSON.stringify(m)).toBe("BLOCKED"); expect(r.prerequisitesMet).toBe(false);
     }
+    expect(gateOf(evaluateExecutionReadiness(base({ policy: FULL })), "ALLOCATIONS_SUM_10000_BPS").status).toBe("PASS");
   });
-  it("PROPERTY: for any whole-number model that sums to 10000 the resolution sums to 10000; any other total is refused", () => {
+  it("PROPERTY: only the canonical model resolves; every perturbation, even one that still sums to 10000, is refused", () => {
     let seed = 7; const rnd = (n: number) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % (n + 1); };
     const c = LaunchConfigSchema.parse(fixtureLaunchConfig()); // creator 800 + liquidity 4000
+    expect(resolveSupplyAllocation(c, CANONICAL_SUPPLY_MODEL).ok).toBe(true);
     for (let i = 0; i < 300; i++) {
-      const rest = TOTAL_BPS - 4800; const a = rnd(rest), b = rnd(rest - a), d = rnd(rest - a - b);
-      const m: SupplyAllocationModel = { version: 1, charityBps: a, taxReserveBps: b, protocolBps: d, burnBps: rest - a - b - d };
-      const r = resolveSupplyAllocation(c, m); expect(r.ok).toBe(true);
-      if (r.ok) expect(r.entries.reduce((s, e) => s + e.bps, 0)).toBe(TOTAL_BPS);
-      expect(resolveSupplyAllocation(c, { ...m, burnBps: m.burnBps + 1 }).ok).toBe(false);
-      if (m.burnBps > 0) expect(resolveSupplyAllocation(c, { ...m, burnBps: m.burnBps - 1 }).ok).toBe(false);
+      const rest = TOTAL_BPS - 4800; const a = 1 + rnd(rest - 1);
+      const m: SupplyAllocationModel = { ...CANONICAL_SUPPLY_MODEL, charityBps: a, permanentlyUnissuedBps: rest - a };
+      expect(resolveSupplyAllocation(c, m).ok, JSON.stringify(m)).toBe(false);
+      expect(resolveSupplyAllocation(c, { ...CANONICAL_SUPPLY_MODEL, permanentlyUnissuedBps: rest + a }).ok).toBe(false);
     }
   });
   it("a non-READY launch, a stale fingerprint and a failed review block, and the plan cannot be built", () => {
@@ -219,8 +218,8 @@ describe("execution readiness: invariants", () => {
   it("the decision summary reports counts and which decisions block this launch", () => {
     const l = base().launch; const r = evaluateExecutionReadiness(base());
     const s = DeploymentDecisionSummary.parse(buildDecisionSummary(l, r));
-    expect(s.counts).toEqual({ decided: 12, pending: 10, unapproved: 11 }); expect(s.execution.enabled).toBe(false);
-    expect(s.blockingForThisLaunch).toEqual(expect.arrayContaining(["SUPPLY_BURN_MECHANISM", "PROTOCOL_DESTINATION", "LIQUIDITY_STRATEGY", "FEE_ROUTING_MECHANISM", "METADATA_HOSTING", "LEGAL_REVIEW", "SECURITY_REVIEW"]));
+    expect(s.counts).toEqual({ decided: 12, pending: 9, unapproved: 9 }); expect(s.execution.enabled).toBe(false);
+    expect(s.blockingForThisLaunch).toEqual(expect.arrayContaining(["PROTOCOL_DESTINATION", "LIQUIDITY_STRATEGY", "FEE_ROUTING_MECHANISM", "METADATA_HOSTING", "LEGAL_REVIEW", "SECURITY_REVIEW"]));
     expect(s.blockingForThisLaunch).not.toContain("SUPPLY_ALLOCATION_MODEL"); // decided and consistent with this launch
   });
 });

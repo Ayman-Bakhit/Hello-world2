@@ -16,6 +16,8 @@ import { z } from "zod";
 import type { LaunchConfig } from "./api/schemas";
 import { sha256Hex } from "./hash";
 import { stableStringify } from "./taxdata/report";
+import { CANONICAL_SUPPLY_ALLOCATION, supplyBreakdown } from "./supplyModel";
+import { DEPLOYMENT_POLICY, decisionOf, isApproved, type DeploymentPolicy } from "./deploymentPolicy";
 
 export const PROOF_STATUSES = ["NOT_DEPLOYED", "AWAITING_OBSERVATION", "PARTIAL", "VERIFIED", "FAILED", "UNAVAILABLE"] as const;
 export type ProofStatus = (typeof PROOF_STATUSES)[number];
@@ -39,7 +41,7 @@ export const CHECK_LABELS: Record<CheckId, string> = {
   NETWORK_MATCH: "Network matches",
   MINT_ADDRESS_MATCH: "Mint address matches the deployment record",
   DECIMALS_MATCH: "Decimals match",
-  SUPPLY_MATCH: "Total supply matches",
+  SUPPLY_MATCH: "Minted supply matches",
   MINT_AUTHORITY_MATCH: "Mint authority matches",
   FREEZE_AUTHORITY_MATCH: "Freeze authority matches",
   METADATA_MATCH: "On-chain name and symbol match",
@@ -167,11 +169,16 @@ export interface ProofEvaluation {
   summary: { pass: number; fail: number; unknown: number; unavailable: number; notApplicable: number; required: number };
 }
 
-const rawSupply = (c: LaunchConfig): string => (BigInt(c.totalSupply) * 10n ** BigInt(c.decimals)).toString();
+const intendedRaw = (c: LaunchConfig): string => (BigInt(c.totalSupply) * 10n ** BigInt(c.decimals)).toString();
+/** What must exist on-chain: the ISSUED roles only (48% of the intended supply). The 52% permanently unissued is never minted. */
+export function expectedSupply(c: LaunchConfig): { intendedRaw: string; mintedRaw: string; unissuedRaw: string } {
+  const b = supplyBreakdown(c.totalSupply, c.decimals, CANONICAL_SUPPLY_ALLOCATION);
+  return b.ok ? { intendedRaw: b.value.intendedRaw.toString(), mintedRaw: b.value.mintedRaw.toString(), unissuedRaw: b.value.unissuedRaw.toString() } : { intendedRaw: intendedRaw(c), mintedRaw: intendedRaw(c), unissuedRaw: "0" };
+}
 const expectedAuthority = (policy: "disabled" | "creator", c: LaunchConfig): string | null => (policy === "disabled" ? null : c.creatorWallet);
 const show = (v: string | number | null): string => (v === null ? "none (disabled)" : String(v));
 
-export function evaluateProof(i: { subject: ProofSubject; deployment: DeploymentRecord | null; observation: ChainObservation | null; historyIntact: boolean }): ProofEvaluation {
+export function evaluateProof(i: { subject: ProofSubject; deployment: DeploymentRecord | null; observation: ChainObservation | null; historyIntact: boolean; policy?: DeploymentPolicy | undefined }): ProofEvaluation {
   const { subject: s, deployment: d, observation: o } = i;
   const c = s.config;
   const empty = (status: ProofStatus, explanation: string, evidenceClass: ProofEvaluation["evidenceClass"] = "NONE"): ProofEvaluation => ({
@@ -212,7 +219,7 @@ export function evaluateProof(i: { subject: ProofSubject; deployment: Deployment
   checks.push(compare("NETWORK_MATCH", c.network, o?.network, (v) => v, "The network"));
   checks.push(compare("MINT_ADDRESS_MATCH", d.mintAddress, o?.mintAddress, (v) => v, "The mint address"));
   checks.push(compare("DECIMALS_MATCH", String(c.decimals), o?.decimals, (v) => String(v), "The decimals"));
-  checks.push(compare("SUPPLY_MATCH", rawSupply(c), o?.supplyRaw, (v) => v, "The total supply (base units)"));
+  checks.push(compare("SUPPLY_MATCH", expectedSupply(c).mintedRaw, o?.supplyRaw, (v) => v, "The minted supply (base units; 52% of the intended supply is permanently unissued and never minted)"));
   checks.push(compare("MINT_AUTHORITY_MATCH", show(expectedAuthority(c.mintAuthority, c)), o?.mintAuthority, (v) => show(v), "The mint authority"));
   checks.push(compare("FREEZE_AUTHORITY_MATCH", show(expectedAuthority(c.freezeAuthority, c)), o?.freezeAuthority, (v) => show(v), "The freeze authority"));
   checks.push(compare("METADATA_MATCH", `${c.name} / ${c.symbol}`, o?.metadata, (v) => `${v.name} / ${v.symbol}`, "The on-chain name and symbol"));
@@ -225,7 +232,9 @@ export function evaluateProof(i: { subject: ProofSubject; deployment: Deployment
   const split = c.feeSplit;
   checks.push(compare("FEE_SPLIT_MATCH", `${split.creator}/${split.taxReserve}/${split.charity}/${split.protocol}`, fr, (v) => `${v.creatorBps}/${v.taxReserveBps}/${v.charityBps}/${v.protocolBps}`, "The fee routing split (bps)"));
   checks.push(compare("CHARITY_MATCH", s.charity?.walletAddress ?? null, fr, (v) => v.charityRecipient, "The charity recipient"));
-  checks.push(compare("TAX_RESERVE_DESTINATION_MATCH", c.taxReserveConfiguration.destinationAddress, fr, (v) => v.taxReserveRecipient, "The tax reserve allocation destination"));
+  checks.push(!isApproved(decisionOf(i.policy ?? DEPLOYMENT_POLICY, "TAX_RESERVE_FUNDING"))
+    ? mk("TAX_RESERVE_DESTINATION_MATCH", "UNKNOWN", "The tax reserve destination and custody are undecided. The configured address is a compatibility field, not an approved destination, so nothing is compared against it.", null, null, "UNAVAILABLE")
+    : compare("TAX_RESERVE_DESTINATION_MATCH", c.taxReserveConfiguration.destinationAddress, fr, (v) => v.taxReserveRecipient, "The tax reserve allocation destination"));
   checks.push(compare("PROTOCOL_ALLOCATION_MATCH", String(split.protocol), fr, (v) => String(v.protocolBps), "The protocol allocation (bps; no protocol address is configured, so only the share is compared)"));
   checks.push(compare("CREATOR_ALLOCATION_MATCH", c.creatorWallet, fr, (v) => v.creatorRecipient, "The creator allocation recipient"));
   checks.push(compare("LIQUIDITY_CONFIGURATION_MATCH", `${c.liquidityConfiguration.initialLiquidityUsdc} USDC, lock ${c.liquidityConfiguration.lockDays} days`, o?.liquidity,
@@ -297,7 +306,7 @@ export const LaunchProof = z.object({
   configured: z.object({
     fingerprint: z.string().regex(/^[0-9a-f]{64}$/),
     deployedFingerprint: z.string().nullable(),
-    name: z.string(), symbol: z.string(), decimals: z.number().int(), totalSupply: z.string(), expectedSupplyRaw: z.string(),
+    name: z.string(), symbol: z.string(), decimals: z.number().int(), totalSupply: z.string(), intendedSupplyRaw: z.string(), expectedMintedSupplyRaw: z.string(), unissuedSupplyRaw: z.string(),
     mintAuthority: z.object({ policy: z.enum(["disabled", "creator"]), expected: z.string().nullable() }),
     freezeAuthority: z.object({ policy: z.enum(["disabled", "creator"]), expected: z.string().nullable() }),
     feeSplit: z.object({ creator: z.number().int(), taxReserve: z.number().int(), charity: z.number().int(), protocol: z.number().int() }),
@@ -342,9 +351,9 @@ export const REDACTED = "not shown publicly";
  * address) and nothing else: mint address, signature and observed facts are public chain facts. Never adds a field.
  */
 export function buildLaunchProof(i: {
-  subject: ProofSubject; deployment: DeploymentRecord | null; observation: ChainObservation | null; observationCount: number; historyIntact: boolean; audience: "owner" | "public";
+  subject: ProofSubject; deployment: DeploymentRecord | null; observation: ChainObservation | null; observationCount: number; historyIntact: boolean; audience: "owner" | "public"; policy?: DeploymentPolicy | undefined;
 }): LaunchProof {
-  const ev = evaluateProof({ subject: i.subject, deployment: i.deployment, observation: i.observation, historyIntact: i.historyIntact });
+  const ev = evaluateProof({ subject: i.subject, deployment: i.deployment, observation: i.observation, historyIntact: i.historyIntact, policy: i.policy });
   const c = i.subject.config;
   const pub = i.audience === "public";
   const o = i.observation;
@@ -370,12 +379,12 @@ export function buildLaunchProof(i: {
     },
     configured: {
       fingerprint: i.subject.fingerprint, deployedFingerprint: i.deployment?.deployedFingerprint ?? null,
-      name: c.name, symbol: c.symbol, decimals: c.decimals, totalSupply: c.totalSupply, expectedSupplyRaw: rawSupply(c),
+      name: c.name, symbol: c.symbol, decimals: c.decimals, totalSupply: c.totalSupply, intendedSupplyRaw: expectedSupply(c).intendedRaw, expectedMintedSupplyRaw: expectedSupply(c).mintedRaw, unissuedSupplyRaw: expectedSupply(c).unissuedRaw,
       mintAuthority: { policy: c.mintAuthority, expected: hide(expectedAuthority(c.mintAuthority, c)) },
       freezeAuthority: { policy: c.freezeAuthority, expected: hide(expectedAuthority(c.freezeAuthority, c)) },
       feeSplit: { creator: c.feeSplit.creator, taxReserve: c.feeSplit.taxReserve, charity: c.feeSplit.charity, protocol: c.feeSplit.protocol },
       charity: i.subject.charity ? { id: i.subject.charity.id, name: i.subject.charity.name } : null,
-      taxReserve: { bps: c.feeSplit.taxReserve, destination: pub ? null : c.taxReserveConfiguration.destinationAddress },
+      taxReserve: { bps: c.feeSplit.taxReserve, destination: pub || !isApproved(decisionOf(i.policy ?? DEPLOYMENT_POLICY, "TAX_RESERVE_FUNDING")) ? null : c.taxReserveConfiguration.destinationAddress },
       protocol: { bps: c.feeSplit.protocol, recipient: null },
       creator: { bps: c.feeSplit.creator, address: pub ? abbr(c.creatorWallet) : c.creatorWallet },
       liquidity: { initialLiquidityUsdc: c.liquidityConfiguration.initialLiquidityUsdc, lockDays: c.liquidityConfiguration.lockDays },

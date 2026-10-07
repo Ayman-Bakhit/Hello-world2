@@ -12,6 +12,7 @@ import { base58ByteLength, isValidSolanaAddress } from "./solanaAddress";
 import { stableStringify } from "./taxdata/report";
 import type { LaunchConfig } from "./api/schemas";
 import { percentToBps } from "./feesplit";
+import { CANONICAL_SUPPLY_ALLOCATION, SUPPLY_ROLES, bpsSum, type SupplyRole } from "./supplyModel";
 
 export const METAPLEX_METADATA_PROGRAM = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 
@@ -55,7 +56,7 @@ export function assertPlanCluster(plan: { environment: { cluster: string } }, ex
 
 // ---------- decision records ----------
 export const DECISION_IDS = [
-  "SUPPLY_SEMANTICS", "SUPPLY_BURN_MECHANISM", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING",
+  "SUPPLY_SEMANTICS", "ALLOCATION_LOCKS_AND_VESTING", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_FUNDING",
   "TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "METADATA_DOCUMENT", "METADATA_HOSTING", "SUPPLY_ALLOCATION_MODEL", "FEE_SPLIT", "FEE_SPLIT_SCOPE",
   "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL", "LIQUIDITY_STRATEGY", "ENVIRONMENT_POLICY",
   "SECURITY_REVIEW", "SMART_CONTRACT_REVIEW", "LEGAL_REVIEW",
@@ -111,21 +112,38 @@ export function policyHash(p: DeploymentPolicy): string {
 }
 
 // ---------- typed values ----------
-/** Initial token supply allocation. Creator and liquidity shares come from the launch configuration; the model defines the rest. */
-export interface SupplyAllocationModel { version: 1; charityBps: number; taxReserveBps: number; protocolBps: number; burnBps: number }
-export type SupplyRole = "CREATOR" | "LIQUIDITY" | "CHARITY" | "TAX_RESERVE" | "PROTOCOL" | "BURN";
+/**
+ * The fixed supply allocation, as a decision value. Every role is explicit: there is no remainder. The permanently unissued share is
+ * NEVER minted (it is not a burn). Creator and liquidity shares must equal the launch configuration's; there is no editor for this.
+ */
+export interface SupplyAllocationModel {
+  version: 2; creatorBps: number; liquidityBps: number; charityBps: number; taxReserveBps: number; protocolBps: number; permanentlyUnissuedBps: number;
+}
+export const CANONICAL_SUPPLY_MODEL: Readonly<SupplyAllocationModel> = Object.freeze({
+  version: 2, creatorBps: CANONICAL_SUPPLY_ALLOCATION.CREATOR, liquidityBps: CANONICAL_SUPPLY_ALLOCATION.LIQUIDITY, charityBps: CANONICAL_SUPPLY_ALLOCATION.CHARITY,
+  taxReserveBps: CANONICAL_SUPPLY_ALLOCATION.TAX_RESERVE, protocolBps: CANONICAL_SUPPLY_ALLOCATION.PROTOCOL, permanentlyUnissuedBps: CANONICAL_SUPPLY_ALLOCATION.PERMANENTLY_UNISSUED,
+});
+export type { SupplyRole };
 export type SupplyResolution = { ok: true; entries: Array<{ role: SupplyRole; bps: number }> } | { ok: false; errors: string[] };
-/** One canonical allocation: every unit of initial supply belongs to exactly one role and the roles sum to exactly 10000 bps. */
+const modelBps = (m: SupplyAllocationModel): Record<SupplyRole, number> => ({
+  CREATOR: m.creatorBps, LIQUIDITY: m.liquidityBps, CHARITY: m.charityBps, TAX_RESERVE: m.taxReserveBps, PROTOCOL: m.protocolBps, PERMANENTLY_UNISSUED: m.permanentlyUnissuedBps,
+});
+/**
+ * Checks a launch against the decided model: every role is a whole non-negative number of basis points, they sum to exactly 10000,
+ * and the launch's creator and liquidity shares equal the model's (they are not configurable in this version).
+ */
 export function resolveSupplyAllocation(c: LaunchConfig, m: SupplyAllocationModel): SupplyResolution {
   const errors: string[] = [];
-  const entries: Array<{ role: SupplyRole; bps: number }> = [
-    { role: "CREATOR", bps: percentToBps(c.creatorAllocationPercent) }, { role: "LIQUIDITY", bps: percentToBps(c.liquidityConfiguration.supplyPercentage) },
-    { role: "CHARITY", bps: m.charityBps }, { role: "TAX_RESERVE", bps: m.taxReserveBps }, { role: "PROTOCOL", bps: m.protocolBps }, { role: "BURN", bps: m.burnBps },
-  ];
-  for (const e of entries) if (!Number.isSafeInteger(e.bps) || e.bps < 0) errors.push(`${e.role} must be a non-negative whole number of basis points`);
-  const sum = entries.reduce((a, e) => a + (Number.isSafeInteger(e.bps) ? e.bps : 0), 0);
-  if (errors.length === 0 && sum !== TOTAL_BPS) errors.push(`allocations sum to ${sum} bps, not ${TOTAL_BPS}`);
-  return errors.length ? { ok: false, errors } : { ok: true, entries };
+  const bps = modelBps(m);
+  for (const r of SUPPLY_ROLES) if (!Number.isSafeInteger(bps[r]) || bps[r] < 0) errors.push(`${r} must be a non-negative whole number of basis points`);
+  if (errors.length === 0 && bpsSum(bps) !== TOTAL_BPS) errors.push(`allocations sum to ${bpsSum(bps)} bps, not ${TOTAL_BPS}`);
+  const canonical = modelBps(CANONICAL_SUPPLY_MODEL);
+  if (errors.length === 0) for (const r of SUPPLY_ROLES) if (bps[r] !== canonical[r]) errors.push(`${r} is ${bps[r]} bps; the only supported model is ${CANONICAL_SUPPLY_MODEL.creatorBps / 100}% creator, ${CANONICAL_SUPPLY_MODEL.liquidityBps / 100}% liquidity, ${CANONICAL_SUPPLY_MODEL.permanentlyUnissuedBps / 100}% permanently unissued, 0% to every other role`);
+  let creator = -1, liquidity = -1;
+  try { creator = percentToBps(c.creatorAllocationPercent); liquidity = percentToBps(c.liquidityConfiguration.supplyPercentage); } catch { errors.push("the launch's creator or liquidity share is not a valid percent"); }
+  if (creator >= 0 && creator !== m.creatorBps) errors.push(`the creator allocation is fixed at ${m.creatorBps / 100}% in this version (this launch has ${creator / 100}%)`);
+  if (liquidity >= 0 && liquidity !== m.liquidityBps) errors.push(`the liquidity allocation is fixed at ${m.liquidityBps / 100}% in this version (this launch has ${liquidity / 100}%)`);
+  return errors.length ? { ok: false, errors } : { ok: true, entries: SUPPLY_ROLES.map((role) => ({ role, bps: bps[role] })) };
 }
 
 export interface FeeComputePolicy {
@@ -150,9 +168,8 @@ const NO_APPROVAL: Approval = { status: "PENDING_PRODUCT_APPROVAL", approver: nu
 /** Dependencies and the exact items each decision must pin down. docs/PRODUCT_DECISIONS.md explains each. */
 const ANNOTATIONS: Record<DecisionId, { dependsOn: DecisionId[]; requires: string[] }> = {
   SUPPLY_SEMANTICS: { dependsOn: [], requires: [] },
-  SUPPLY_BURN_MECHANISM: { dependsOn: ["SUPPLY_ALLOCATION_MODEL", "TOKEN_PROGRAM"], requires: ["whether the burned share is minted and then burned, or never minted", "how the burn is performed and observed (instruction and account)", "what total supply the token reports afterwards", "whether the burn is part of the mint transaction group"] },
   SUPPLY_ALLOCATION_MODEL: { dependsOn: ["SUPPLY_SEMANTICS", "FEE_SPLIT_SCOPE"], requires: [] },
-  ALLOCATION_LOCKS_AND_VESTING: { dependsOn: ["SUPPLY_ALLOCATION_MODEL"], requires: ["whether the creator share is immediately transferable", "any lock, vesting or burn per role, with duration and who can release it", "how a lock would be observable for Token Proof"] },
+  ALLOCATION_LOCKS_AND_VESTING: { dependsOn: ["SUPPLY_ALLOCATION_MODEL"], requires: ["whether the creator share is immediately transferable", "any lock or vesting per issued role, with duration and who can release it", "how a lock would be observable for Token Proof"] },
   FEE_SPLIT: { dependsOn: [], requires: [] },
   FEE_SPLIT_SCOPE: { dependsOn: [], requires: [] },
   FEE_ROUTING_MECHANISM: { dependsOn: ["FEE_SPLIT_SCOPE", "LIQUIDITY_STRATEGY", "TOKEN_PROGRAM"], requires: [] },
@@ -177,17 +194,20 @@ const ANNOTATIONS: Record<DecisionId, { dependsOn: DecisionId[]; requires: strin
  * placeholder, so the approver is recorded as the role and the name is NOT invented. Each entry approves ONE version of ONE decision;
  * bumping a decision's version drops its approval. Approval is a product statement, not an implementation, an audit or mainnet readiness.
  */
-const PASS1_APPROVER = "Product owner (name not supplied: the form's name field was a template placeholder)";
-const PASS1_REFERENCE = "Product Economics decision pass 1";
-const PASS1_DATE = "2026-10-07";
-const PASS1_APPROVED_VERSION: Partial<Record<DecisionId, number>> = {
-  TOKEN_PROGRAM: 1, MINT_KEY_STRATEGY: 1, FEE_COMPUTE_POLICY: 1, METADATA_DOCUMENT: 2, ENVIRONMENT_POLICY: 1,
-  SUPPLY_ALLOCATION_MODEL: 1, FEE_SPLIT: 1, FEE_SPLIT_SCOPE: 1, FEE_ROUTING_MECHANISM: 1, CHARITY_PAYOUT_MODEL: 2, TAX_RESERVE_MODEL: 2,
+const OWNER_APPROVER = "Product owner (name not supplied: the form's name field was a template placeholder)";
+/** Which pass approved which VERSION of which decision. A decision whose current version differs from its approved version is not approved. */
+const OWNER_APPROVALS: Partial<Record<DecisionId, { version: number; pass: 1 | 2 }>> = {
+  TOKEN_PROGRAM: { version: 1, pass: 1 }, MINT_KEY_STRATEGY: { version: 1, pass: 1 }, FEE_COMPUTE_POLICY: { version: 1, pass: 1 }, METADATA_DOCUMENT: { version: 2, pass: 1 },
+  ENVIRONMENT_POLICY: { version: 1, pass: 1 }, FEE_SPLIT: { version: 1, pass: 1 }, FEE_SPLIT_SCOPE: { version: 1, pass: 1 }, FEE_ROUTING_MECHANISM: { version: 1, pass: 1 },
+  CHARITY_PAYOUT_MODEL: { version: 2, pass: 1 }, TAX_RESERVE_MODEL: { version: 2, pass: 1 },
+  // pass 2 (supply model clarification): the semantics and the corrected allocation (permanently unissued, not burned)
+  SUPPLY_SEMANTICS: { version: 2, pass: 2 }, SUPPLY_ALLOCATION_MODEL: { version: 2, pass: 2 },
 };
+const PASS_REFERENCE: Record<1 | 2, string> = { 1: "Product Economics decision pass 1", 2: "Product Economics decision pass 2 (supply model clarification)" };
 /** Owner statements on items that stay pending, or conditions on decided ones. They are recorded, not turned into values. */
 const NOTES: Partial<Record<DecisionId, string[]>> = {
-  SUPPLY_SEMANTICS: ["Not listed in the owner's approvals. The owner's supply answer states burn is an explicit role and not a hidden remainder, which matches this decision, but approval is NOT inferred from it."],
-  SUPPLY_BURN_MECHANISM: ["Raised by the allocation decision (52% burn): the owner's answer says burn is an explicit supply role but does not say how it is realized. Open."],
+  SUPPLY_SEMANTICS: ["Owner (pass 2): approved. Fixed total supply, basis-point allocations, every unit has exactly one explicit role, no silent remainder, a permanent supply reduction must be explicit, and the product configuration must match the canonical allocation."],
+  SUPPLY_ALLOCATION_MODEL: ["Owner (pass 2): the 52% is PERMANENTLY UNISSUED, not burned. Only 48% is ever minted. The allocation is fixed (creator 8%, liquidity 40%, permanently unissued 52%, charity, tax reserve and protocol 0%), not configurable, and there is no tokenomics editor. An earlier 'burn' wording (mint then burn) was rejected."],
   ALLOCATION_LOCKS_AND_VESTING: ["Owner: creator allocation is 8%. Transferability and vesting are PENDING. Do not assume immediate transferability."],
   FEE_SPLIT_SCOPE: ["Owner: the split divides ACTUAL FEES generated by the defined fee mechanism, whenever it generates one. It does NOT divide trading volume, token supply, market cap or gross launch volume. A $1,000 actual fee routes $600 creator, $150 tax reserve, $150 charity, $100 protocol.", "The exact fee source and venue are still to be specified as part of the liquidity and fee routing decisions."],
   FEE_ROUTING_MECHANISM: ["Owner: the split must be objectively verifiable from on-chain state and transactions. It is NOT implemented merely because a backend calculates or routes 60/15/15/10.", "A custom Solana program must enforce the routing rules, subject to security and smart-contract review before mainnet. The choice is a product decision; no program exists."],
@@ -195,19 +215,20 @@ const NOTES: Partial<Record<DecisionId, string[]>> = {
   LIQUIDITY_STRATEGY: ["Owner: venue NONE YET, pair PENDING, LP ownership PENDING, LP lock or burn PENDING. Do not guess the venue.", "Liquidity remains blocking until the venue and the resulting fee mechanics are evaluated."],
   CHARITY_PAYOUT_MODEL: ["Owner: charity receives NO initial token supply; it receives 15% of actual fees."],
   CHARITY_VERIFICATION_GOVERNANCE: ["Owner: PENDING. The charity payout wallet must be independently verifiable before the launch can claim verified charity routing."],
-  TAX_RESERVE_MODEL: ["Owner: a fee/revenue allocation. It is not an initial token allocation, not the creator's personal Tax Reserve, and not a USDC account that is funded before any fee exists."],
-  TAX_RESERVE_FUNDING: ["Owner: the exact destination and custody model remain PENDING."],
+  TAX_RESERVE_MODEL: ["Owner (pass 2): the destination and custody are NOT decided. The creator-controlled address in the configuration is not approved economic policy.", "Owner: a fee/revenue allocation. It is not an initial token allocation, not the creator's personal Tax Reserve, and not a USDC account that is funded before any fee exists."],
+  TAX_RESERVE_FUNDING: ["Owner: the exact destination and custody model remain PENDING.", "Owner (pass 2): the creator-controlled address in the launch configuration is a schema compatibility field, NOT an approved economic policy and NOT the final custody model. It stays visibly pending and blocks readiness."],
   METADATA_DOCUMENT: ["Owner: the canonical document and its SHA-256 hash remain the comparison anchor. A metadata change must not silently remain verified."],
   METADATA_HOSTING: ["Owner: hosting PENDING; creator updates PENDING."],
   SECURITY_REVIEW: ["Owner: REQUIRED. Reviewer to be determined."],
   SMART_CONTRACT_REVIEW: ["Owner: REQUIRED. Reviewer to be determined. A custom Solana program is the chosen fee routing direction, so this review applies."],
   LEGAL_REVIEW: ["Owner: REQUIRED. Reviewer to be determined. Mainnet approval only after all reviews and all blocking economic decisions are resolved."],
+  TOKEN_PROGRAM: ["Owner (pass 2): SPL Token classic remains the product-approved default. Do not switch to Token-2022. If the custom-program design later proves Token-2022 is technically required, the decision is reopened with that evidence; there is no such evidence today."],
   ENVIRONMENT_POLICY: ["Owner: approvals are product approvals only; they do not mean any mechanism is implemented, audited or mainnet-ready."],
 };
 const annotate = (xs: DecisionBase[]): Decision[] => xs.map((d) => {
-  const v = PASS1_APPROVED_VERSION[d.id];
-  const approval: Approval = v !== undefined && v === d.version && d.status === "DECIDED"
-    ? { status: "APPROVED", approver: PASS1_APPROVER, approvedAt: PASS1_DATE, reference: PASS1_REFERENCE, approvedVersion: v }
+  const o = OWNER_APPROVALS[d.id];
+  const approval: Approval = o !== undefined && o.version === d.version && d.status === "DECIDED"
+    ? { status: "APPROVED", approver: OWNER_APPROVER, approvedAt: "2026-10-07", reference: PASS_REFERENCE[o.pass], approvedVersion: o.version }
     : NO_APPROVAL;
   return { ...d, approval, dependsOn: ANNOTATIONS[d.id].dependsOn, requires: ANNOTATIONS[d.id].requires, notes: NOTES[d.id] ?? [] };
 });
@@ -216,12 +237,16 @@ export const DEPLOYMENT_POLICY: DeploymentPolicy = Object.freeze({
   version: 3,
   decisions: Object.freeze(annotate([
     {
-      id: "SUPPLY_SEMANTICS", title: "What the initial supply represents", category: "PRODUCT", status: "DECIDED", version: 1, provenance: "ENGINEERING_DEFAULT", environments: ALL, invalidatesReadiness: true,
-      value: { supply: "FIXED_AT_LAUNCH_IN_BASE_UNITS", shares: "BASIS_POINTS_OF_TOTAL_SUPPLY", allocation: "EVERY_UNIT_ASSIGNED_TO_EXACTLY_ONE_ROLE", unassignedRemainder: "NOT_ALLOWED", burn: "EXPLICIT_ROLE", relationToFeeSplit: "NONE" },
+      id: "SUPPLY_SEMANTICS", title: "What the initial supply represents", category: "PRODUCT", status: "DECIDED", version: 2, provenance: "PRODUCT_OWNER_DECISION", environments: ALL, invalidatesReadiness: true,
+      value: {
+        model: "FIXED_TOTAL_SUPPLY", shares: "BASIS_POINTS", everyUnit: "EXACTLY_ONE_EXPLICIT_ROLE", silentRemainder: "NOT_ALLOWED", permanentSupplyReduction: "MUST_BE_EXPLICIT",
+        productConfigurationMustMatchCanonicalAllocation: true, relationToFeeSplit: "NONE",
+        quantities: { intended: "THE_MAXIMUM_THE_LAUNCH_IS_DEFINED_AROUND_NOT_ON_CHAIN", minted: "SUM_OF_ISSUED_ROLES_ACTUALLY_CREATED_ON_CHAIN", unissued: "PERMANENTLY_UNISSUED_ROLE_NEVER_MINTED_NOT_BURNED" },
+      },
       missing: null,
-      summary: "Total supply is fixed at launch in base units. Allocation shares are basis points of that total and must sum to 10000, with every unit assigned to exactly one role; there is no silent remainder (a burned share is an explicit role). Initial token supply allocation is a different economic concept from the 60/15/15/10 fee split and neither is derived from the other.",
+      summary: "A fixed total supply, divided in basis points, where every unit has exactly one explicit role and there is no silent remainder. A permanent reduction of supply must be explicit: tokens that are never minted are the PERMANENTLY_UNISSUED role, not a burn, and they are permanent only once the mint authority is revoked. The product configuration must match the canonical allocation. Initial token supply allocation is a different economic concept from the 60/15/15/10 fee split.",
     },
-    pending("ALLOCATION_LOCKS_AND_VESTING", "Locks, vesting and burns of supply shares", "PRODUCT", "Whether the creator share is immediately transferable and whether any share is locked, vested or burned.", "For each role: transferable now, locked or vested (duration and who releases it) or burned, and how a lock is observable. No lock or vesting mechanism exists in the product today."),
+    pending("ALLOCATION_LOCKS_AND_VESTING", "Locks and vesting of issued supply shares", "PRODUCT", "Whether the creator share is immediately transferable and whether any issued share is locked or vested.", "For each role: transferable now, locked or vested (duration and who releases it) or burned, and how a lock is observable. No lock or vesting mechanism exists in the product today."),
     pending("CHARITY_VERIFICATION_GOVERNANCE", "Charity verification governance", "LEGAL", "Who verifies a charity, with what evidence, and what happens when a wallet changes or a charity is suspended after launch. Current verification is fixture or admin data only.", "The verifier and who controls verification, real evidence requirements, wallet-change and post-launch suspension rules, whether charity funds ever touch platform custody, and how payouts are independently verified."),
     pending("TAX_RESERVE_FUNDING", "Launch tax reserve funding semantics", "PRODUCT", "Whether the launch tax reserve allocation is funded by a mechanism or is only a designated address, and in what asset.", "The asset, mechanism-funded versus designated-only, withdrawal rules, who may change the destination, and how it is verified and shown in Token Proof."),
     {
@@ -264,11 +289,10 @@ export const DEPLOYMENT_POLICY: DeploymentPolicy = Object.freeze({
     },
     pending("METADATA_HOSTING", "Metadata hosting and URI", "PRODUCT", "Where the metadata JSON is hosted, who controls it, and whether its URI is content-addressed.", "A hosting location and owner, a versioning and update policy, and whether the URI is content-addressed or can change. Nothing may be claimed about decentralization or permanence until it is true."),
     {
-      id: "SUPPLY_ALLOCATION_MODEL", title: "Initial token supply allocation", category: "PRODUCT", status: "DECIDED", version: 1, provenance: "PRODUCT_OWNER_DECISION", environments: ALL, invalidatesReadiness: true,
-      value: { version: 1, charityBps: 0, taxReserveBps: 0, protocolBps: 0, burnBps: 5200 } satisfies SupplyAllocationModel as unknown as Record<string, unknown>, missing: null,
-      summary: "Creator 8% and liquidity 40% (from the launch configuration) plus an explicit burn of 52%, summing to 10000 bps. Charity, tax reserve and protocol receive NO initial token supply: their shares exist only as fee allocations. The 52% is an explicit BURN role, not a hidden remainder. A launch whose creator and liquidity shares do not total 48% does not match this model and cannot be planned. How the burn is realized is a separate, pending decision.",
+      id: "SUPPLY_ALLOCATION_MODEL", title: "Initial token supply allocation", category: "PRODUCT", status: "DECIDED", version: 2, provenance: "PRODUCT_OWNER_DECISION", environments: ALL, invalidatesReadiness: true,
+      value: { ...CANONICAL_SUPPLY_MODEL, fixed: true, configurable: false, permanentlyUnissuedMeaning: "NEVER_MINTED_NOT_BURNED" } as unknown as Record<string, unknown>, missing: null,
+      summary: "Fixed in this version: creator 8%, liquidity 40%, permanently unissued 52%, and 0% for charity, tax reserve and protocol. Only the creator and liquidity shares (48%) are minted. The 52% is never minted: it is not burned, it does not exist on-chain, and it is permanent only once the mint authority is revoked. It is not configurable, and a launch with any other creator or liquidity share is blocked.",
     },
-    pending("SUPPLY_BURN_MECHANISM", "How the burned share is realized", "TECHNICAL", "The allocation burns 52% of the initial supply but does not say how: minted then burned, or never minted, and how it is observed.", "Whether the burned share is minted and then burned or never minted, the instruction and account used, the total supply the token reports afterwards, and how Token Proof observes it. No burn mechanism exists."),
     {
       id: "FEE_SPLIT", title: "Fee split (basis points)", category: "PRODUCT", status: "DECIDED", version: 1, provenance: "EXISTING_CONFIGURATION", environments: ALL, invalidatesReadiness: true,
       value: { ...CANONICAL_FEE_SPLIT }, missing: null,
@@ -318,7 +342,7 @@ const NON_REVIEW: DecisionId[] = DECISION_IDS.filter((d) => !["SECURITY_REVIEW",
 export const MILESTONES: readonly Milestone[] = Object.freeze([
   { id: "PLAN_EXECUTABLE", title: "A deployment plan can become executable", decisions: NON_REVIEW, after: [], engineering: ["instruction builders for every decided design", "a plan that has no BLOCKED instruction"] },
   { id: "SIGNING", title: "Wallet signing can be implemented", decisions: ["TOKEN_PROGRAM", "MINT_KEY_STRATEGY", "FEE_COMPUTE_POLICY", "ENVIRONMENT_POLICY", "SECURITY_REVIEW"], after: ["PLAN_EXECUTABLE"], engineering: ["serialization with a client-reported mint public key and a recent blockhash", "client signing UI", "REAL_EXECUTION_ENABLED review and a new migration widening attempt states"] },
-  { id: "MINT_CREATION", title: "Mint creation can be implemented", decisions: ["SUPPLY_SEMANTICS", "SUPPLY_ALLOCATION_MODEL", "SUPPLY_BURN_MECHANISM", "ALLOCATION_LOCKS_AND_VESTING", "METADATA_DOCUMENT", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL"], after: ["SIGNING"], engineering: ["submission, confirmation and reconciliation paths"] },
+  { id: "MINT_CREATION", title: "Mint creation can be implemented", decisions: ["SUPPLY_SEMANTICS", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "METADATA_DOCUMENT", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_MODEL"], after: ["SIGNING"], engineering: ["submission, confirmation and reconciliation paths"] },
   { id: "LIQUIDITY_CREATION", title: "Liquidity creation can be implemented", decisions: ["LIQUIDITY_STRATEGY", "SUPPLY_ALLOCATION_MODEL", "ALLOCATION_LOCKS_AND_VESTING", "SMART_CONTRACT_REVIEW", "SECURITY_REVIEW"], after: ["MINT_CREATION"], engineering: ["the selected venue's instruction builder", "pool and LP observation"] },
   { id: "FEE_ROUTING", title: "Fee routing can be implemented", decisions: ["FEE_SPLIT", "FEE_SPLIT_SCOPE", "FEE_ROUTING_MECHANISM", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "CHARITY_VERIFICATION_GOVERNANCE", "TAX_RESERVE_MODEL", "TAX_RESERVE_FUNDING", "SMART_CONTRACT_REVIEW", "SECURITY_REVIEW", "LEGAL_REVIEW"], after: ["LIQUIDITY_CREATION"], engineering: ["the selected mechanism", "on-chain observation of the routing"] },
   { id: "PROOF_VERIFIED", title: "Token Proof can reach VERIFIED for a real token", decisions: ["LIQUIDITY_STRATEGY", "FEE_ROUTING_MECHANISM", "METADATA_HOSTING", "PROTOCOL_DESTINATION", "CHARITY_PAYOUT_MODEL", "TAX_RESERVE_FUNDING"], after: ["MINT_CREATION", "LIQUIDITY_CREATION", "FEE_ROUTING"], engineering: ["a privileged chain observer that records RPC observations", "fee-routing and liquidity observations"] },

@@ -2,13 +2,15 @@
 
 Analysis only. This document lays out 2 to 4 concrete options for each open product decision so the product owner can choose. **It chooses nothing and approves nothing.** No option here is implemented, and real execution stays disabled. The canonical record of what is decided is `docs/PRODUCT_DECISIONS.md`; the questionnaire to answer is `docs/PRODUCT_OWNER_DECISIONS.md`.
 
+> **Status note (pass 2):** the supply questions in this document are answered. See `docs/PRODUCT_DECISIONS.md`. The supply is creator 8%, liquidity 40%, permanently unissued 52% (never minted, not burned). The options below are kept as the record of what was weighed.
+
 How to read each option: **What it means** (the product behavior), **Needs** (what must exist for it to be real), **Tradeoffs** (what you gain and what you accept), **Verifiable?** (whether an outsider could confirm it from on-chain data). Statements about third-party venues describe categories, not any named product: no venue has been selected or assessed.
 
 Source material: `docs/PRODUCT_DECISIONS.md`, `packages/shared/src/deploymentPolicy.ts` (policy v2), the Slice 11 launch configuration (`creatorAllocationPercent`, `liquidityConfiguration.supplyPercentage`, `initialLiquidityUsdc`, `lockDays`, the fixed 6000/1500/1500/1000 fee split, `taxReserveConfiguration` as `creator_controlled`), and the Slice 3 demo token data.
 
 Facts that shape every option:
 - The configuration defines only a creator share and a liquidity share of supply. In the reference fixture that is 8% and 40%, so **52% has no stated recipient**.
-- Supply must be fully assigned: roles sum to exactly 10000 bps, with burn as an explicit role (decided as an engineering default, not yet product-approved).
+- Supply must be fully assigned: roles sum to exactly 10000 bps, with a permanent supply reduction as an explicit role (approved in pass 2).
 - A plain SPL token enforces no revenue split. Any split is only as real as the mechanism that moves the money.
 - The existing copy describes the charity, tax reserve and protocol shares as fee allocations, not token allocations.
 
@@ -26,7 +28,7 @@ Facts that shape every option:
 | | Option | What it means | Needs | Tradeoffs | Verifiable? |
 |---|---|---|---|---|---|
 | A | **All non-creator supply seeds liquidity** | Liquidity share becomes 100% minus the creator share; nothing else is minted to anyone | A liquidity design able to take that amount (decision 6); a larger liquidity share in the configuration | One simple rule, no other holder at launch; the pool is the only source of tokens; depends heavily on the venue | Yes, via the pool and supply accounts |
-| B | **The remainder is burned** | Supply that nobody receives is destroyed at launch (an explicit BURN role) | The burn mechanism and its observation | Fixed, smaller effective supply; the burned share is visible but irreversible | Yes, if burn is observable |
+| B | **The remainder is burned** (rejected in pass 2: the owner chose permanently unissued, never minted) | Supply that nobody receives is destroyed at launch (an explicit BURN role) | The burn mechanism and its observation | Fixed, smaller effective supply; the burned share is visible but irreversible | Yes, if burn is observable |
 | C | **The remainder goes to a named controlled destination** | A treasury or distribution wallet holds it | The destination, its control model and release rules (decisions 3 and 7) | Flexible for later distribution; creates a large concentrated holding that must be disclosed and locked to build trust | Yes for the balance; its use is not verifiable |
 | D | **Split across several of the above** | e.g. part to liquidity, part burned | Bps for each role summing to 10000 | Most flexible; most to explain | Yes |
 
@@ -123,7 +125,7 @@ For each default the choices are the same three: **Approve as is**, **Reject** (
 | Metadata canonical format and sha256 | A fixed document form with a recorded hash | Gives Token Proof a comparison anchor | Hosting still open (decision 8) |
 | Devnet and mainnet separation; local-fake cannot host a launch | Plans are cluster-bound | Prevents cross-cluster mistakes | None known |
 | Cluster mismatch refusal | A plan is refused on another cluster | Same | None known |
-| Supply semantics | Fixed supply, basis points, no silent remainder, burn explicit | Removes ambiguity | Forces decisions 1 and 2 to be made |
+| Supply semantics | Fixed supply, basis points, no silent remainder, permanent reduction explicit (approved in pass 2) | Removes ambiguity | Forces decisions 1 and 2 to be made |
 
 ## Appendix: reviews (not an economics decision)
 Security review, smart-contract review (only if a custom program is chosen) and legal review each need an owner, a completion date and an evidence reference. Options for who: an independent external firm, an internal reviewer for the security path only (weaker), or defer mainnet until funded. Nothing is claimed complete.

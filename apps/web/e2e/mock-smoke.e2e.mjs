@@ -144,18 +144,19 @@ for (const [label, vp] of [["desktop", { width: 1440, height: 900 }], ["mobile",
   await page.waitForURL(/scenario=SUPPLY_MISMATCH/, { timeout: 5000 });
   await page.getByText("VERIFICATION FAILED").first().waitFor({ timeout: 5000 });
   t = await main();
-  check(`${label} demo token proof: a supply mismatch shows VERIFICATION FAILED with configured vs observed values`, t.includes("VERIFICATION FAILED") && t.includes("1,000,000,000,000,000") && t.includes("1000000000000001"));
+  check(`${label} demo token proof: a supply mismatch shows VERIFICATION FAILED with configured vs observed values`, t.includes("VERIFICATION FAILED") && t.includes("480,000,000,000,000") && t.includes("480000000000001"));
   const noScroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   check(`${label} token proof: no horizontal overflow`, noScroll);
   await go("/launch/deployment?id=00000000-0000-4000-8000-000000000801");
   await page.getByText("1 · TOKEN").first().waitFor({ timeout: 8000 });
   t = await main();
   check(`${label} demo deployment plan: PLAN BLOCKED, DEMO · FIXTURE, NOT DEPLOYED / NOT SIGNED / NO FUNDS MOVED, disabled execution, no deploy control`, ["PLAN BLOCKED", "DEMO · FIXTURE", "NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED", "EXECUTION NOT ENABLED IN THIS BETA", "DECISIONS REQUIRED", "LIQUIDITY_BUILD_NOT_IMPLEMENTED", "9 · WHAT THE WALLET WILL NEED TO SIGN"].every((x) => t.includes(x)) && !/DEPLOY NOW|SIGN NOW|DEPLOYED SUCCESSFULLY|READY FOR USER REVIEW/.test(t) && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute/i }).count()) === 0, t.slice(0, 700));
+  check(`${label} demo deployment plan: intended, minted and permanently unissued supply are separate; the 52% is never minted and not burned; tax reserve destination pending`, ["Intended supply", "Minted supply", "Permanently unissued", "Never minted, not burned", "PERMANENTLY_UNISSUED", "PENDING DECISION"].every((x) => t.toLowerCase().includes(x.toLowerCase())) && !/52% burn/i.test(t));
   check(`${label} deployment plan: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await go("/launch/readiness?id=00000000-0000-4000-8000-000000000801");
   await page.getByText("DECISION RECORDS").first().waitFor({ timeout: 8000 });
   t = await main();
-  check(`${label} demo deployment readiness: BLOCKED, REAL EXECUTION: DISABLED, DEMO · FIXTURE, blockers with what is missing, no execution control`, ["BLOCKED", "REAL EXECUTION: DISABLED", "NO TRANSACTIONS SENT", "NO FUNDS MOVED", "NO PRIVATE KEYS STORED", "DEMO · FIXTURE", "Must be decided or done", "FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED", "12 DECIDED", "10 PENDING", "11 WITHOUT PRODUCT APPROVAL", "WHAT EACH DECISION BLOCKS", "approver: none recorded", "EXECUTION NOT ENABLED IN THIS BETA"].every((x) => t.includes(x)) && !/READY TO SIGN|READY FOR SIGNING|APPROVED FOR (EXECUTION|SIGNING|DEPLOYMENT|MAINNET)|MAINNET READY/.test(t) && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute|approve/i }).count()) === 0, t.slice(0, 800));
+  check(`${label} demo deployment readiness: BLOCKED, REAL EXECUTION: DISABLED, DEMO · FIXTURE, blockers with what is missing, no execution control`, ["BLOCKED", "REAL EXECUTION: DISABLED", "NO TRANSACTIONS SENT", "NO FUNDS MOVED", "NO PRIVATE KEYS STORED", "DEMO · FIXTURE", "Must be decided or done", "FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED", "12 DECIDED", "9 PENDING", "9 WITHOUT PRODUCT APPROVAL", "WHAT EACH DECISION BLOCKS", "approver: none recorded", "EXECUTION NOT ENABLED IN THIS BETA"].every((x) => t.includes(x)) && !/READY TO SIGN|READY FOR SIGNING|APPROVED FOR (EXECUTION|SIGNING|DEPLOYMENT|MAINNET)|MAINNET READY/.test(t) && (await page.locator("main button:not([disabled])").filter({ hasText: /deploy|sign|send|execute|approve/i }).count()) === 0, t.slice(0, 800));
   check(`${label} deployment readiness: no horizontal overflow`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   await ctx.close();
 }

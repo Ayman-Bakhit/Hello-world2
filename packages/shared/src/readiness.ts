@@ -17,7 +17,7 @@ import { launchFingerprint } from "./launchModel";
 import { isValidSolanaAddress } from "./solanaAddress";
 
 export const GATE_IDS = [
-  "LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "SUPPLY_BURN_MECHANISM_DEFINED", "ALLOCATION_LOCKS_DEFINED",
+  "LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "PLAN_RECORDED_CURRENT", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "UNISSUED_SUPPLY_PERMANENT", "ALLOCATION_LOCKS_DEFINED",
   "METADATA_STRATEGY_DEFINED", "PROTOCOL_DESTINATION_VALID", "CHARITY_DESTINATIONS_VERIFIED", "CHARITY_GOVERNANCE_DEFINED", "TAX_RESERVE_DESTINATION_VALID", "TAX_RESERVE_FUNDING_DEFINED",
   "LIQUIDITY_STRATEGY_DEFINED", "FEE_SPLIT_VALID",
   "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "FEE_ROUTING_ENFORCEABLE", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID", "PRODUCT_APPROVAL_COMPLETE",
@@ -94,12 +94,16 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
   if (alloc.status !== "PASS") g.push(gate("ALLOCATIONS_SUM_10000_BPS", "Allocations sum to 10000 bps", "PRODUCT", "PENDING", "Cannot be checked: no allocation model is defined, so part of the supply has no recipient.", "decision SUPPLY_ALLOCATION_MODEL: PENDING", decisionOf(policy, "SUPPLY_ALLOCATION_MODEL").missing, "SUPPLY_ALLOCATION_MODEL"));
   else {
     const r = resolveSupplyAllocation(c, decisionOf(policy, "SUPPLY_ALLOCATION_MODEL").value as unknown as SupplyAllocationModel);
-    g.push(r.ok ? gate("ALLOCATIONS_SUM_10000_BPS", "Allocations sum to 10000 bps", "PRODUCT", "PASS", `Creator, liquidity, charity, tax reserve, protocol and burn sum to exactly ${TOTAL_BPS} bps.`, "supply allocation model + launch configuration")
+    g.push(r.ok ? gate("ALLOCATIONS_SUM_10000_BPS", "Allocations sum to 10000 bps", "PRODUCT", "PASS", `Creator, liquidity, charity, tax reserve, protocol and permanently unissued sum to exactly ${TOTAL_BPS} bps.`, "supply allocation model + launch configuration")
       : gate("ALLOCATIONS_SUM_10000_BPS", "Allocations sum to 10000 bps", "PRODUCT", "BLOCKED", r.errors.join("; "), "supply allocation model + launch configuration", "Correct the allocation model.", "SUPPLY_ALLOCATION_MODEL"));
   }
 
-  g.push(viaDecision(policy, "SUPPLY_BURN_MECHANISM", "SUPPLY_BURN_MECHANISM_DEFINED", "Burn mechanism defined", () => ({ ok: true, reason: "How the burned share is realized and observed is decided." })));
-  g.push(viaDecision(policy, "ALLOCATION_LOCKS_AND_VESTING", "ALLOCATION_LOCKS_DEFINED", "Locks, vesting and burns defined", () => ({ ok: true, reason: "Transferability, locks, vesting and burns are decided for every supply share." })));
+  const sem = viaDecision(policy, "SUPPLY_SEMANTICS", "UNISSUED_SUPPLY_PERMANENT", "Unissued supply is permanent", () => ({ ok: true, reason: "The 52% is never minted and never burned." }));
+  g.push(sem.status !== "PASS" ? sem
+    : c.mintAuthority === "disabled"
+      ? gate("UNISSUED_SUPPLY_PERMANENT", "Unissued supply is permanent", "PRODUCT", "PASS", "The 52% is never minted (not burned). The plan revokes mint authority after minting, so it cannot be minted later. This is a plan; nothing has been revoked yet.", "decision SUPPLY_SEMANTICS + launch configuration", null, "SUPPLY_SEMANTICS")
+      : gate("UNISSUED_SUPPLY_PERMANENT", "Unissued supply is permanent", "PRODUCT", "BLOCKED", "The launch keeps the mint authority, so the unissued supply could be minted later and would not be permanent.", "launch configuration", "Set the mint authority to disabled.", "SUPPLY_SEMANTICS"));
+  g.push(viaDecision(policy, "ALLOCATION_LOCKS_AND_VESTING", "ALLOCATION_LOCKS_DEFINED", "Locks and vesting defined", () => ({ ok: true, reason: "Transferability, locks and vesting are decided for every supply share." })));
 
   const doc = decisionOf(policy, "METADATA_DOCUMENT"), host = decisionOf(policy, "METADATA_HOSTING");
   g.push(doc.status === "DECIDED" && host.status === "DECIDED"
@@ -123,10 +127,13 @@ export function evaluateExecutionReadiness(input: ReadinessInput): ExecutionRead
   g.push(viaDecision(policy, "CHARITY_VERIFICATION_GOVERNANCE", "CHARITY_GOVERNANCE_DEFINED", "Charity verification governance defined", () => ({ ok: true, reason: "Who verifies charities, with what evidence, and the wallet-change and suspension rules are decided." })));
 
   const tr = decisionOf(policy, "TAX_RESERVE_MODEL");
+  const trf = decisionOf(policy, "TAX_RESERVE_FUNDING");
   g.push(tr.status !== "DECIDED" ? gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "PENDING", tr.summary, "decision TAX_RESERVE_MODEL: PENDING", tr.missing, "TAX_RESERVE_MODEL")
+    : !isApproved(trf)
+    ? gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "PENDING", "The destination and custody are undecided. The address in the launch configuration is a compatibility field only: it is not an approved destination and not final custody.", "decision TAX_RESERVE_FUNDING: PENDING", "Decide the destination, custody and funding.", "TAX_RESERVE_FUNDING")
     : isValidSolanaAddress(c.taxReserveConfiguration.destinationAddress)
-      ? gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "PASS", "A valid creator-controlled address is configured. It is separate from the personal Tax Reserve.", "launch configuration", null, "TAX_RESERVE_MODEL")
-      : gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "BLOCKED", "The configured destination is not a valid Solana address.", "launch configuration", "Configure a valid address.", "TAX_RESERVE_MODEL"));
+      ? gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "PASS", "A valid, approved destination is configured. It is separate from the personal Tax Reserve.", "launch configuration + approved decision", null, "TAX_RESERVE_FUNDING")
+      : gate("TAX_RESERVE_DESTINATION_VALID", "Launch tax reserve destination valid", "PRODUCT", "BLOCKED", "The configured destination is not a valid Solana address.", "launch configuration", "Configure a valid address.", "TAX_RESERVE_FUNDING"));
 
   g.push(viaDecision(policy, "TAX_RESERVE_FUNDING", "TAX_RESERVE_FUNDING_DEFINED", "Launch tax reserve funding defined", () => ({ ok: true, reason: "The asset and whether the allocation is funded or only designated are decided." })));
   g.push(viaDecision(policy, "LIQUIDITY_STRATEGY", "LIQUIDITY_STRATEGY_DEFINED", "Liquidity strategy defined", (d) => {

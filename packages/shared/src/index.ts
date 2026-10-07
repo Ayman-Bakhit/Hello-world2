@@ -20,4 +20,5 @@ export * from "./launchModel";
 export * from "./proof";
 export * from "./deployment";
 export * from "./deploymentPolicy";
+export * from "./supplyModel";
 export * from "./readiness";

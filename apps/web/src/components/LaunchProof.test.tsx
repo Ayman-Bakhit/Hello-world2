@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  BANNED_PHRASES, DEMO_IDS, DEMO_WALLETS, FIXTURE_MINT, FIXTURE_WALLETS, LaunchProof, PROOF_COPY, PROOF_SCENARIOS, buildLaunchProof, buildProofFixture, proofFixtureInputs, type ChainObservation,
+  BANNED_PHRASES, DEMO_IDS, DEMO_WALLETS, FIXTURE_MINT, FIXTURE_WALLETS, LaunchProof, PROOF_COPY, PROOF_SCENARIOS, buildLaunchProof, buildProofFixture, proofFixtureInputs, DEPLOYMENT_POLICY, withDecisions, type ChainObservation, type DeploymentPolicy,
 } from "@project-name/shared";
 import { createApiClient } from "@/lib/api/client";
 import { toLaunchRequest } from "@/lib/launch";
@@ -12,6 +12,8 @@ import { transparencyBadge } from "@/lib/transparency";
 import { DEFAULT_LAUNCH_CONFIG } from "@/mock";
 import { LaunchProofView } from "./LaunchProofView";
 
+/** TEST-ONLY: tax reserve destination decided and approved, so a synthetic RPC proof can verify. Production has it PENDING. */
+const TAX_DECIDED: DeploymentPolicy = (() => { const p = withDecisions(DEPLOYMENT_POLICY, { TAX_RESERVE_FUNDING: { status: "DECIDED", value: { asset: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" } }); return { ...p, decisions: p.decisions.map((d) => (d.id === "TAX_RESERVE_FUNDING" ? { ...d, approval: { status: "APPROVED" as const, approver: "TEST-ONLY", approvedAt: "2000-01-01", reference: "TEST-ONLY", approvedVersion: d.version } } : d)) }; })();
 const html = (el: ReactElement) => renderToStaticMarkup(el);
 const view = (s: (typeof PROOF_SCENARIOS)[number], audience: "owner" | "public" = "public") => html(<LaunchProofView proof={buildProofFixture(s, audience)} />);
 const text = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, " ");
@@ -35,7 +37,7 @@ describe("token proof view: status labels come from the server and never oversta
   it("prints VERIFIED TRANSPARENCY only when the SERVER object says verifiedTransparency (synthetic RPC proof)", () => {
     const i = proofFixtureInputs("FULL_MATCH");
     const rpc: ChainObservation = { ...i.observation!, source: "RPC" };
-    const proof = buildLaunchProof({ ...i, subject: { ...i.subject, dataSource: "chain" }, observation: rpc, observationCount: 1, historyIntact: true, audience: "owner" });
+    const proof = buildLaunchProof({ ...i, subject: { ...i.subject, dataSource: "chain" }, observation: rpc, observationCount: 1, historyIntact: true, audience: "owner", policy: TAX_DECIDED });
     expect(proof.verifiedTransparency).toBe(true);
     const out = html(<LaunchProofView proof={proof} />);
     expect(out).toContain("VERIFIED TRANSPARENCY");
@@ -54,7 +56,7 @@ describe("token proof view: status labels come from the server and never oversta
   });
   it("mismatch scenarios show configured and observed values side by side", () => {
     const t = text(view("SUPPLY_MISMATCH"));
-    expect(t).toContain("Total supply matches"); expect(t).toContain("1,000,000,000,000,000"); expect(t).toContain("1000000000000001");
+    expect(t).toContain("Minted supply matches"); expect(t).toContain("480,000,000,000,000"); expect(t).toContain("480000000000001");
     expect(view("NETWORK_MISMATCH")).toContain("mainnet-beta");
     expect(view("DECIMALS_MISMATCH")).toContain('data-check="DECIMALS_MATCH" data-state="FAIL"');
     expect(view("AUTHORITY_MISMATCH")).toContain('data-check="MINT_AUTHORITY_MATCH" data-state="FAIL"');
@@ -75,7 +77,7 @@ describe("token proof view: status labels come from the server and never oversta
     const pub = text(view("FULL_MATCH", "public"));
     for (const q of ["What was promised?", "What was observed?", "Do they match?", "What could not be verified?"]) expect(pub).toContain(q);
     expect(pub).not.toContain(FIXTURE_WALLETS.reserve); expect(pub).not.toContain(FIXTURE_WALLETS.creator);
-    expect(text(view("FULL_MATCH", "owner"))).toContain(FIXTURE_WALLETS.reserve);
+    expect(text(view("FULL_MATCH", "owner"))).not.toContain(FIXTURE_WALLETS.reserve); expect(text(view("FULL_MATCH", "owner"))).toMatch(/undecided/); // pending: never shown as a destination
   });
   it("is escaped: hostile user metadata renders as inert text", () => {
     const i = proofFixtureInputs("FULL_MATCH");

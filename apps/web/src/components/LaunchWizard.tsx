@@ -147,9 +147,9 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
 
         {step === "supply" ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Total supply" htmlFor="t-supply"><input id="t-supply" inputMode="numeric" className={`${inputCls} num`} value={config.totalSupply} onChange={(e) => update({ totalSupply: e.target.value })} /></Field>
+            <Field label="Intended supply" htmlFor="t-supply" hint="Only 48% is ever minted. The other 52% is permanently unissued, not burned."><input id="t-supply" inputMode="numeric" className={`${inputCls} num`} value={config.totalSupply} onChange={(e) => update({ totalSupply: e.target.value })} /></Field>
             <Field label="Decimals" htmlFor="t-dec" hint="0 to 9."><input id="t-dec" inputMode="numeric" className={`${inputCls} num`} value={config.decimals} onChange={(e) => update({ decimals: e.target.value })} /></Field>
-            <Field label="Creator allocation (% of supply)" htmlFor="t-alloc" hint="Shown publicly on the proof page."><input id="t-alloc" inputMode="decimal" className={`${inputCls} num`} value={config.creatorAllocationPercent} onChange={(e) => update({ creatorAllocationPercent: e.target.value })} /></Field>
+            <Field label="Creator allocation (% of supply)" htmlFor="t-alloc" hint="Fixed at 8%. Not configurable. Shown publicly on the proof page."><input id="t-alloc" readOnly aria-readonly="true" inputMode="decimal" className={`${inputCls} num`} value="8" /></Field>
             <Field label="Creator wallet" htmlFor="t-wallet" hint="Disclosed publicly. Team wallets must be disclosed."><WalletSelect id="t-wallet" value={config.creatorWalletId} wallets={wallet.wallets} ctx={ctx} onChange={(v) => update({ creatorWalletId: v })} /></Field>
           </div>
         ) : null}
@@ -157,7 +157,7 @@ export function LaunchWizard({ charities }: { charities: Charity[] }) {
         {step === "liquidity" ? (
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Initial liquidity (USDC)" htmlFor="l-usdc"><input id="l-usdc" inputMode="numeric" className={`${inputCls} num`} value={config.liquidityUsdc} onChange={(e) => update({ liquidityUsdc: e.target.value })} /></Field>
-            <Field label="Supply paired (% of supply)" htmlFor="l-supply"><input id="l-supply" inputMode="decimal" className={`${inputCls} num`} value={config.liquiditySupplyPercent} onChange={(e) => update({ liquiditySupplyPercent: e.target.value })} /></Field>
+            <Field label="Supply paired (% of supply)" htmlFor="l-supply" hint="Fixed at 40%. The other 52% is permanently unissued: never minted, not burned."><input id="l-supply" readOnly aria-readonly="true" inputMode="decimal" className={`${inputCls} num`} value="40" /></Field>
             <Field label="Lock (days, 0 = none)" htmlFor="l-lock" hint="Locks are not enforced in this demo."><input id="l-lock" inputMode="numeric" className={`${inputCls} num`} value={config.liquidityLockDays} onChange={(e) => update({ liquidityLockDays: e.target.value })} /></Field>
           </div>
         ) : null}

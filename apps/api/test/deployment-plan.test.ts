@@ -82,10 +82,12 @@ describe("read-only plan and review (owner)", () => {
     expect(d.plan).toMatchObject({ status: "BLOCKED", executionEnabled: false, labels: ["NOT DEPLOYED", "NOT SIGNED", "NO FUNDS MOVED"], mint: { address: null }, dataSource: "database" });
     expect(d.plan.identity).toMatchObject({ launchId: l.id, configFingerprint: l.fingerprint, reviewedFingerprint: l.fingerprint, network: "devnet" });
     expect(d.plan.destinations.find((x) => x.role === "CHARITY")).toMatchObject({ address: live.charityWallet, provenance: "CHARITY_REGISTRY" });
-    expect(d.plan.destinations.find((x) => x.role === "TAX_RESERVE")!.address).toBe(live.reserve);
-    expect(d.plan.blockers.map((b) => b.code)).toContain("SUPPLY_BURN_MECHANISM_UNDEFINED");
-    expect(d.plan.blockers.map((b) => b.code)).not.toContain("ALLOCATION_MODEL_UNDEFINED"); // decided: creator 8%, liquidity 40%, burn 52%
-    expect(d.plan.supplyAllocations.map((a) => [a.role, a.bps])).toEqual([["CREATOR", 800], ["LIQUIDITY", 4000], ["BURN", 5200]]);
+    expect(d.plan.destinations.find((x) => x.role === "TAX_RESERVE")).toMatchObject({ address: live.reserve, provenance: "LAUNCH_CONFIGURATION_COMPATIBILITY_FIELD", validation: "PENDING_DECISION" });
+    expect(d.plan.blockers.map((b) => b.code)).toContain("TAX_RESERVE_DESTINATION_PENDING");
+    expect(d.plan.blockers.map((b) => b.code)).not.toContain("ALLOCATION_MODEL_UNDEFINED"); // decided: creator 8%, liquidity 40%, permanently unissued 52%
+    expect(d.plan.supplyAllocations.map((a) => [a.role, a.bps, a.issued])).toEqual([["CREATOR", 800, true], ["LIQUIDITY", 4000, true], ["PERMANENTLY_UNISSUED", 5200, false]]);
+    expect(BigInt(d.plan.token.mintedSupplyRaw!) * 100n).toBe(BigInt(d.plan.token.intendedSupplyRaw) * 48n);
+    expect(d.plan.expectedState.destinations.find((x) => x.role === "TAX_RESERVE")!.address).toBeNull();
     expect(d.recorded).toBe(false); expect(d.supersededPlans).toBe(0); expect(d.review.executionEnabled).toBe(false);
     expect(await planRows(l.id)).toBe(0);
     const again = await plan(l.id); expect(again.plan.identity.planHash).toBe(d.plan.identity.planHash);

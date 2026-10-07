@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { LaunchConfigSchema } from "./api/schemas";
 import { launchFingerprint } from "./launchModel";
+import { DEPLOYMENT_POLICY, withDecisions, type DeploymentPolicy } from "./deploymentPolicy";
 import {
-  CHECK_IDS, ChainObservationSchema, LaunchProof, PROOF_COPY, PROOF_STATUS_LABEL, PROOF_STATUSES, REDACTED, buildLaunchProof, evaluateProof,
+  CHECK_IDS, ChainObservationSchema, LaunchProof, PROOF_COPY, PROOF_STATUS_LABEL, PROOF_STATUSES, REDACTED, buildLaunchProof, evaluateProof as evaluateProofRaw, expectedSupply,
   isBase58Address, isBase58Signature, observationRowHash, type ChainObservation, type CheckId,
 } from "./proof";
 import { FIXTURE_MINT, FIXTURE_SIGNATURE, FIXTURE_WALLETS, PROOF_SCENARIOS, buildProofFixture, fixtureLaunchConfig, matchingFixtureObservation, proofFixtureInputs } from "./demo/proofFixtures";
 
+/** TEST-ONLY: a policy in which the tax reserve destination is decided and approved, so the machinery can be exercised. Production has it PENDING. */
+const TAX_DECIDED: DeploymentPolicy = (() => { const p = withDecisions(DEPLOYMENT_POLICY, { TAX_RESERVE_FUNDING: { status: "DECIDED", value: { asset: "TEST_ONLY" }, missing: null, provenance: "ENGINEERING_DEFAULT" } }); return { ...p, decisions: p.decisions.map((d) => (d.id === "TAX_RESERVE_FUNDING" ? { ...d, approval: { status: "APPROVED" as const, approver: "TEST-ONLY", approvedAt: "2000-01-01", reference: "TEST-ONLY", approvedVersion: d.version } } : d)) }; })();
+const evaluateProof = (i: Parameters<typeof evaluateProofRaw>[0]) => evaluateProofRaw({ policy: TAX_DECIDED, ...i });
 const ev = (s: (typeof PROOF_SCENARIOS)[number]) => { const i = proofFixtureInputs(s); return evaluateProof({ ...i, historyIntact: true }); };
 const state = (e: ReturnType<typeof ev>, id: CheckId) => e.checks.find((c) => c.id === id)!.state;
 /** the same machinery fed by an RPC observation: only a pure unit test may do this; nothing persists it in demo/mock */
@@ -146,13 +150,23 @@ describe("fingerprint semantics", () => {
   });
   it("supply comparison is exact for u64 values above 2^53", () => {
     const c = LaunchConfigSchema.parse({ ...fixtureLaunchConfig(), totalSupply: "18446744073", decimals: 9 });
-    const raw = (BigInt("18446744073") * 10n ** 9n).toString();
+    const raw = expectedSupply(c).mintedRaw; expect(raw).toBe("8854437155040000000");
     const i = proofFixtureInputs("FULL_MATCH"); const fp = launchFingerprint(c);
     const base = { subject: { ...i.subject, config: c, fingerprint: fp }, deployment: { ...i.deployment!, deployedFingerprint: fp }, historyIntact: true };
     const good = evaluateProof({ ...base, observation: { ...rpc(i.observation!), decimals: { status: "OBSERVED", value: 9 }, supplyRaw: { status: "OBSERVED", value: raw } } });
     expect(state(good, "SUPPLY_MATCH")).toBe("PASS");
     const off = evaluateProof({ ...base, observation: { ...rpc(i.observation!), decimals: { status: "OBSERVED", value: 9 }, supplyRaw: { status: "OBSERVED", value: (BigInt(raw) + 1n).toString() } } });
     expect(state(off, "SUPPLY_MATCH")).toBe("FAIL");
+  });
+  it("the proof expects the MINTED supply (48%): a chain showing the full intended supply FAILS, so 52% is never treated as minted-and-burned", () => {
+    const i = proofFixtureInputs("FULL_MATCH"); const e = expectedSupply(i.subject.config);
+    expect(BigInt(e.mintedRaw) * 100n).toBe(BigInt(e.intendedRaw) * 48n); expect(BigInt(e.mintedRaw) + BigInt(e.unissuedRaw)).toBe(BigInt(e.intendedRaw));
+    const full = evaluateProof({ ...i, observation: { ...rpc(i.observation!), supplyRaw: { status: "OBSERVED", value: e.intendedRaw } }, historyIntact: true });
+    expect(state(full, "SUPPLY_MATCH")).toBe("FAIL");
+    const minted = evaluateProof({ ...i, observation: { ...rpc(i.observation!), supplyRaw: { status: "OBSERVED", value: e.mintedRaw } }, historyIntact: true });
+    expect(state(minted, "SUPPLY_MATCH")).toBe("PASS");
+    const p = buildProofFixture("FULL_MATCH", "owner");
+    expect(p.configured).toMatchObject({ intendedSupplyRaw: e.intendedRaw, expectedMintedSupplyRaw: e.mintedRaw, unissuedSupplyRaw: e.unissuedRaw });
   });
 });
 
@@ -198,11 +212,19 @@ describe("response building", () => {
     expect(p.identity.mintProvenance).toBe("UNAVAILABLE"); expect(p.statusLabel).toBe("NOT DEPLOYED");
   });
   it("public form hides the reserve destination and abbreviates the creator; owner form shows them", () => {
-    const pub = JSON.stringify(buildProofFixture("FULL_MATCH", "public")); const own = JSON.stringify(buildProofFixture("FULL_MATCH", "owner"));
+    const pub = JSON.stringify(buildProofFixture("FULL_MATCH", "public", TAX_DECIDED)); const own = JSON.stringify(buildProofFixture("FULL_MATCH", "owner", TAX_DECIDED));
     expect(pub).not.toContain(FIXTURE_WALLETS.reserve); expect(pub).not.toContain(FIXTURE_WALLETS.creator);
     expect(own).toContain(FIXTURE_WALLETS.reserve); expect(own).toContain(FIXTURE_WALLETS.creator);
     expect(pub).toContain(REDACTED);
-    const p = buildProofFixture("FULL_MATCH", "public"); expect(p.configured.taxReserve.destination).toBeNull();
+    const p = buildProofFixture("FULL_MATCH", "public", TAX_DECIDED); expect(p.configured.taxReserve.destination).toBeNull();
+  });
+  it("while the tax reserve destination is PENDING (production) it is not shown as a destination even to the owner, and it is not compared", () => {
+    const o = buildProofFixture("FULL_MATCH", "owner");
+    expect(o.configured.taxReserve.destination).toBeNull();
+    const chk = o.checks.find((x) => x.id === "TAX_RESERVE_DESTINATION_MATCH")!;
+    expect(chk).toMatchObject({ state: "UNKNOWN", required: true, configured: null }); expect(chk.explanation).toMatch(/undecided/);
+    expect(JSON.stringify(o.configured)).not.toContain(FIXTURE_WALLETS.reserve);
+    expect(o.status).not.toBe("VERIFIED");
   });
   it("public form of a mismatch still hides private addresses inside mismatches", () => {
     const p = JSON.stringify(buildProofFixture("AUTHORITY_MISMATCH", "public"));

@@ -17,6 +17,22 @@ const plan = buildDemoDeploymentPlan();
 const data = () => DeploymentPlanResponse.parse({ plan, review: buildDeploymentReview(plan), recorded: false, supersededPlans: 0 });
 const out = () => html(<DeploymentReviewView data={data()} />);
 
+describe("deployment review view: supply wording", () => {
+  it("shows intended, minted and permanently unissued supply separately; the unissued share is never minted and never burned", () => {
+    const t = text(out());
+    expect(t).toContain("Intended supply"); expect(t).toContain("Not all of it exists on-chain"); expect(t).toContain("Minted supply"); expect(t).toContain("Permanently unissued");
+    expect(t).toContain("Never minted, not burned");
+    expect(t).toContain("PERMANENTLY_UNISSUED (token supply)"); expect(t).toContain("never minted, not burned");
+    expect(t).not.toMatch(/\bBURN\b/); expect(t).not.toMatch(/52% burn/i);
+    const m = plan.token.mintedSupplyRaw!, u = plan.token.unissuedSupplyRaw!, i = plan.token.intendedSupplyRaw;
+    expect(BigInt(m) + BigInt(u)).toBe(BigInt(i)); expect(BigInt(m) * 100n).toBe(BigInt(i) * 48n);
+  });
+  it("shows the tax reserve destination as undecided, never as an approved destination", () => {
+    const t = text(out());
+    expect(out()).toContain(`data-destination="TAX_RESERVE" data-validation="PENDING_DECISION"`); expect(t).toContain("LAUNCH CONFIGURATION COMPATIBILITY FIELD"); expect(t).toContain("TAX_RESERVE_DESTINATION_PENDING");
+  });
+});
+
 describe("deployment review view", () => {
   it("says PLAN BLOCKED, NOT DEPLOYED, NOT SIGNED, NO FUNDS MOVED and never READY FOR USER REVIEW while blockers exist", () => {
     const t = text(out());

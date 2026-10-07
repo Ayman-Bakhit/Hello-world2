@@ -6,6 +6,8 @@
 import { LaunchConfigSchema, type LaunchConfig } from "../api/schemas";
 import { fakeBase58, fakeMint, fakeSignature } from "../chain/testing";
 import { fixtureAddress } from "../deployment";
+import { expectedSupply } from "../proof";
+import type { DeploymentPolicy } from "../deploymentPolicy";
 import { launchFingerprint } from "../launchModel";
 import { buildLaunchProof, type ChainObservation, type DeploymentRecord, type LaunchProof, type Observed, type ProofSubject } from "../proof";
 import { DEMO_IDS } from "./fixtures";
@@ -41,7 +43,7 @@ const gone = (reason: string): Observed<never> => ({ status: "UNAVAILABLE", reas
 export function matchingFixtureObservation(c: LaunchConfig): ChainObservation {
   return {
     source: "FIXTURE", observedAt: FIXTURE_OBSERVED_AT,
-    network: ok(c.network), mintAddress: ok(FIXTURE_MINT), decimals: ok(c.decimals), supplyRaw: ok((BigInt(c.totalSupply) * 10n ** BigInt(c.decimals)).toString()),
+    network: ok(c.network), mintAddress: ok(FIXTURE_MINT), decimals: ok(c.decimals), supplyRaw: ok(expectedSupply(c).mintedRaw),
     mintAuthority: ok(null), freezeAuthority: ok(null),
     metadata: ok({ address: fakeBase58("fixture:metadata", 44), name: c.name, symbol: c.symbol, uri: null }),
     liquidity: ok({ initialLiquidityUsdc: c.liquidityConfiguration.initialLiquidityUsdc, lockDays: c.liquidityConfiguration.lockDays }),
@@ -77,7 +79,7 @@ export function proofFixtureInputs(scenario: ProofScenario): ProofFixtureInputs 
   }
 }
 
-export function buildProofFixture(scenario: ProofScenario, audience: "owner" | "public" = "public"): LaunchProof {
+export function buildProofFixture(scenario: ProofScenario, audience: "owner" | "public" = "public", policy?: DeploymentPolicy): LaunchProof {
   const i = proofFixtureInputs(scenario);
-  return buildLaunchProof({ ...i, observationCount: i.observation ? 1 : 0, historyIntact: true, audience });
+  return buildLaunchProof({ ...i, observationCount: i.observation ? 1 : 0, historyIntact: true, audience, policy });
 }

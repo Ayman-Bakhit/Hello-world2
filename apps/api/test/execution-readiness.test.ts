@@ -81,8 +81,9 @@ describe("execution readiness (owner only, server derived)", () => {
     const d = ExecutionReadinessResponse.parse(r.json());
     expect(d.readiness).toMatchObject({ overall: "BLOCKED", prerequisitesMet: false, executionPermitted: false });
     expect(d.execution).toEqual({ enabled: false, label: "DISABLED", notices: ["NO TRANSACTIONS SENT", "NO FUNDS MOVED", "NO PRIVATE KEYS STORED"] });
-    for (const id of ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "CHARITY_DESTINATIONS_VERIFIED", "TAX_RESERVE_DESTINATION_VALID", "FEE_SPLIT_VALID", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID"] as const) expect(gate(d, id).status, id).toBe("PASS");
-    for (const id of ["SUPPLY_BURN_MECHANISM_DEFINED", "PROTOCOL_DESTINATION_VALID", "LIQUIDITY_STRATEGY_DEFINED", "FEE_ROUTING_ENFORCEABLE", "METADATA_STRATEGY_DEFINED", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE", "SECURITY_REVIEW_COMPLETE", "PRODUCT_APPROVAL_COMPLETE", "REAL_EXECUTION_ENABLED"] as const) expect(gate(d, id).blocking, id).toBe(true);
+    for (const id of ["LAUNCH_READY", "FINGERPRINT_CURRENT", "PLAN_BUILDABLE", "TOKEN_PROGRAM_SELECTED", "SUPPLY_ALLOCATION_DEFINED", "ALLOCATIONS_SUM_10000_BPS", "FEE_SPLIT_SCOPE_DEFINED", "FEE_ROUTING_DEFINED", "CHARITY_DESTINATIONS_VERIFIED", "UNISSUED_SUPPLY_PERMANENT", "PRODUCT_APPROVAL_COMPLETE", "FEE_SPLIT_VALID", "MINT_STRATEGY_DEFINED", "FEE_POLICY_DEFINED", "CLUSTER_VALID"] as const) expect(gate(d, id).status, id).toBe("PASS");
+    for (const id of ["TAX_RESERVE_DESTINATION_VALID", "PROTOCOL_DESTINATION_VALID", "LIQUIDITY_STRATEGY_DEFINED", "FEE_ROUTING_ENFORCEABLE", "METADATA_STRATEGY_DEFINED", "SMART_CONTRACT_REVIEW_COMPLETE", "LEGAL_REVIEW_COMPLETE", "SECURITY_REVIEW_COMPLETE", "REAL_EXECUTION_ENABLED"] as const) expect(gate(d, id).blocking, id).toBe(true);
+    expect(gate(d, "TAX_RESERVE_DESTINATION_VALID")).toMatchObject({ status: "PENDING" }); expect(gate(d, "TAX_RESERVE_DESTINATION_VALID").reason).toMatch(/compatibility field/);
     expect(gate(d, "FEE_ROUTING_ENFORCEABLE").reason).toContain("FEE_ROUTING_ENFORCEMENT_NOT_IMPLEMENTED");
   });
   it("recording the current plan passes the recorded-plan gate; editing the launch makes it stale and not READY", async () => {
@@ -138,14 +139,14 @@ describe("decision summary", () => {
     const r = await call("GET", `/api/launches/${l.id}/deployment-decision-summary`, live.token);
     expect(r.statusCode).toBe(200); expect(r.headers["cache-control"]).toBe("no-store");
     const d = DeploymentDecisionSummary.parse(r.json());
-    expect(d.counts).toEqual({ decided: 12, pending: 10, unapproved: 11 }); expect(d.execution.enabled).toBe(false); expect(d.policyHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(d.counts).toEqual({ decided: 12, pending: 9, unapproved: 9 }); expect(d.execution.enabled).toBe(false); expect(d.policyHash).toMatch(/^[0-9a-f]{64}$/);
     expect(d.decisions.find((x) => x.id === "PROTOCOL_DESTINATION")).toMatchObject({ status: "PENDING", value: null });
     expect(d.decisions.find((x) => x.id === "TOKEN_PROGRAM")).toMatchObject({ status: "DECIDED", value: { name: "SPL_TOKEN" } });
-    expect(d.blockingForThisLaunch).toEqual(expect.arrayContaining(["SUPPLY_BURN_MECHANISM", "PROTOCOL_DESTINATION", "LEGAL_REVIEW"]));
+    expect(d.blockingForThisLaunch).toEqual(expect.arrayContaining(["TAX_RESERVE_FUNDING", "PROTOCOL_DESTINATION", "LEGAL_REVIEW"]));
     // Slice 15 (decisions): approval, dependencies, what is required, blocking, and the milestones
-    expect(d.decisions.filter((x) => x.approval.status === "APPROVED").map((x) => x.id).sort()).toEqual(["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_ROUTING_MECHANISM", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "SUPPLY_ALLOCATION_MODEL", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"]);
+    expect(d.decisions.filter((x) => x.approval.status === "APPROVED").map((x) => x.id).sort()).toEqual(["CHARITY_PAYOUT_MODEL", "ENVIRONMENT_POLICY", "FEE_COMPUTE_POLICY", "FEE_ROUTING_MECHANISM", "FEE_SPLIT", "FEE_SPLIT_SCOPE", "METADATA_DOCUMENT", "MINT_KEY_STRATEGY", "SUPPLY_ALLOCATION_MODEL", "SUPPLY_SEMANTICS", "TAX_RESERVE_MODEL", "TOKEN_PROGRAM"]);
     expect(d.decisions.every((x) => (x.approval.status === "APPROVED") === !x.blocking && (x.approval.status === "APPROVED" || (x.approval.approver === null && x.approval.approvedAt === null)))).toBe(true);
-    expect(d.decisions.find((x) => x.id === "SUPPLY_ALLOCATION_MODEL")).toMatchObject({ status: "DECIDED", value: { burnBps: 5200, charityBps: 0, taxReserveBps: 0, protocolBps: 0 } });
+    expect(d.decisions.find((x) => x.id === "SUPPLY_ALLOCATION_MODEL")).toMatchObject({ status: "DECIDED", value: { creatorBps: 800, liquidityBps: 4000, permanentlyUnissuedBps: 5200, charityBps: 0, taxReserveBps: 0, protocolBps: 0, fixed: true, configurable: false } });
     expect(d.decisions.find((x) => x.id === "FEE_ROUTING_MECHANISM")).toMatchObject({ value: { mechanism: "CUSTOM_SOLANA_PROGRAM", implemented: false, enforcesSplit: false, programId: null } });
     expect(d.decisions.find((x) => x.id === "LIQUIDITY_STRATEGY")).toMatchObject({ status: "PENDING", value: null });
     expect(d.decisions.find((x) => x.id === "FEE_ROUTING_MECHANISM")).toMatchObject({ dependsOn: expect.arrayContaining(["FEE_SPLIT_SCOPE", "LIQUIDITY_STRATEGY"]), requires: expect.any(Array) });
@@ -162,7 +163,7 @@ describe("decision summary", () => {
     }
     for (const p of ["/api/decisions", "/api/product-decisions", "/api/policy", "/api/deployment-policy"]) for (const m of ["GET", "POST", "PUT"] as const) expect([404, 405], `${m} ${p}`).toContain((await call(m, p, live.token, m === "GET" ? undefined : { approved: true })).statusCode);
     const again = await call("GET", `/api/launches/${l.id}/deployment-decision-summary`, live.token);
-    expect(DeploymentDecisionSummary.parse(again.json()).counts.unapproved).toBe(11);
+    expect(DeploymentDecisionSummary.parse(again.json()).counts.unapproved).toBe(9);
   });
   it("a decision record never carries an address, a URI, a signature or an observation (so none can reach the browser)", async () => {
     const l = await ready();
@@ -298,6 +299,6 @@ describe("deployment attempts (foundation; privileged writers, tests only)", () 
   it("there is no column that could hold a private key, seed phrase or signature outside the always-empty array", async () => {
     const cols = (await ctx.pool.query("SELECT column_name FROM information_schema.columns WHERE table_name IN ('deployment_attempts','deployment_attempt_events','deployment_plans')")).rows.map((r) => r.column_name as string);
     expect(cols.filter((c) => /private|secret|seed|mnemonic|keypair/i.test(c))).toEqual([]);
-    expect(DEPLOYMENT_POLICY.decisions.length).toBe(22);
+    expect(DEPLOYMENT_POLICY.decisions.length).toBe(21);
   });
 });
