@@ -131,5 +131,23 @@ Who will complete each, and by when?
 ____________________________________________________________
 ____________________________________________________________
 
+## Liquidity and fee architecture decisions (research round, 2026-10-08)
+Source: `docs/LIQUIDITY_AND_FEE_ARCHITECTURE_RESEARCH.md`, section 14. **Nothing below is answered or approved; every item is PENDING.** The research recommends nothing as a decision.
+
+1. Scope of the fee claim: [ ] A. the split of fees collected by the launch's own program (an existing venue's operator can still change the pool fee) [ ] B. nobody but our code can change the pool fee or pause trading (requires our own pool program)
+2. Venue, if A: ______________  (shortlist from the research: Orca Whirlpool, Meteora DAMM v2; selection criteria in section 12)
+3. Quote asset: ______________  Accept a quote token whose issuer can freeze accounts? [ ] yes [ ] no
+4. Initial price and quote amount: ______________  Who funds the quote side: ______________
+5. Liquidity shape: [ ] full range [ ] chosen range: ______  [ ] two-sided [ ] single-sided
+6. LP ownership and lock: [ ] permanent lock [ ] time lock: ______ days [ ] burn [ ] other: ______  Who may ever remove liquidity: ______________
+7. Fee assets: [ ] recipients receive both pool tokens as collected [ ] convert to one asset (accepting the swap cost and trust): ______
+8. Recipient mutability: may creator / charity / tax reserve / protocol destinations change? Who authorizes? Charity rotation or suspension rule: ______________
+9. Program upgrade authority: [ ] revoked [ ] multisig with timelock: whose: ______________
+10. Rounding rule for split dust: ______________
+11. Percentages disclosed against both minted supply (48%) and intended supply: [ ] yes [ ] other: ______
+12. Accept that the venue's position tokens are Token-2022 although the launch mint is SPL Token classic: [ ] yes [ ] no
+13. What "VERIFIED" means for the fee split given the venue-admin caveat: ______________
+(Tax reserve destination and custody, protocol destination, creator transferability and vesting remain pending in the sections above.)
+
 ---
 **Status:** answered on 2026-10-07 ("Product Economics decision pass 1"). The answers and what they changed are recorded in docs/PRODUCT_DECISIONS.md (section "Product owner decision pass 1"). Anything the answers left PENDING remains blocking.
