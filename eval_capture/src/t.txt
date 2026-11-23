@@ -1,0 +1,1 @@
+ This endpoint requires response compression. Send an Accept-Encoding header that permits compression. 11 

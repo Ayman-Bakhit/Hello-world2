@@ -1,0 +1,1174 @@
+ 
+ Federal Register, Volume 91 Issue 138 (Tuesday, July 21, 2026) 
+[Federal Register Volume 91, Number 138 (Tuesday, July 21, 2026)]
+[Rules and Regulations]
+[Pages 45653-45662]
+From the Federal Register Online via the Government Publishing Office [ www.gpo.gov ]
+[FR Doc No: 2026-14701]
+=======================================================================
+-----------------------------------------------------------------------
+DEPARTMENT OF TRANSPORTATION
+Federal Motor Carrier Safety Administration
+49 CFR Chapter III
+[Docket No. FMCSA-2025-0754]
+RIN 2126-AC75
+General Technical, Organizational, Conforming, and Correcting 
+Amendments to the Federal Motor Carrier Safety Regulations
+AGENCY: Federal Motor Carrier Safety Administration (FMCSA), Department 
+of Transportation (DOT).
+ACTION: Final rule.
+-----------------------------------------------------------------------
+SUMMARY: FMCSA amends its regulations by making technical corrections 
+throughout the Federal Motor Carrier Safety Regulations (FMCSR). The 
+Agency makes minor changes to correct inadvertent errors and omissions, 
+remove or update obsolete references, and improve the clarity and 
+consistency of certain regulatory provisions. FMCSA also makes a change 
+to its rules of organization, procedures, and practice. Because the 
+rule does not impose any new material requirements or increase 
+compliance obligations, it is issued without prior notice and 
+opportunity for comment, pursuant to the good cause exception in the 
+Administrative Procedure Act (APA).
+DATES: Effective July 21, 2026. The incorporation by reference of the 
+material described in the rule is approved by the Director of the 
+Federal Register as of July 21, 2026.
+ Petitions for Reconsideration of this final rule must be submitted 
+to the FMCSA Administrator no later than August 20, 2026.
+FOR FURTHER INFORMATION CONTACT: Ghita Palmer, Regulatory Development 
+Division, Office of Policy, FMCSA, 1200 New Jersey Avenue SE, 
+Washington, DC 20590-0001; (202) 366-1144; [email protected] .
+SUPPLEMENTARY INFORMATION: 
+I. Abbreviations
+APA Administrative Procedure Act
+CDC U.S. Center for Disease Control and Prevention
+CDL Commercial Driver's License
+CDLIS Commercial Driver's License Information System
+CFR Code of Federal Regulations
+CMV Commercial Motor Vehicle
+DOT Department of Transportation
+E.O. Executive Order
+FHWA Federal Highway Administration
+FMCSA Federal Motor Carrier Safety Administration
+FMCSR Federal Motor Carrier Safety Regulations
+GVWR Gross vehicle weight rating
+IC Information collection
+ICC Interstate Commerce Commission
+ICCTA ICC Termination Act of 1995
+IT Information technology
+LCV Longer combination vehicle
+MCSIA Motor Carrier Safety Improvement Act of 1999
+MVR Motor vehicle records
+NARA National Archives and Records Administration
+OFR Office of the Federal Register
+OMB Office of Management and Budget
+PIA Privacy Impact Analysis
+PTA Privacy Threshold Assessment
+SAFETEA-LU Safe, Accountable, Flexible, Efficient Transportation 
+Equity Act: A Legacy for Users
+SDLAs State Driver's Licensing Agencies
+SPE Skills performance evaluation
+UMRA Unfunded Mandates Reform Act of 1995
+U.S.C. United States Code
+II. Legal Basis for the Rulemaking
+ Congress delegated certain powers to regulate interstate commerce 
+to DOT in numerous pieces of legislation, most notably in section 6 of 
+the Department of Transportation Act (DOT Act) (Pub. L. 89-670, 80 
+Stat. 931, 937, Oct. 15, 1966). Section 6 of the DOT Act transferred to 
+DOT the authority of the former Interstate Commerce Commission (ICC) to 
+regulate the qualifications and maximum hours of service of employees, 
+the safety of operations, and the equipment, of motor carriers in 
+interstate commerce (80 Stat. 939; see also 49 U.S.C. 31502(b)). This 
+authority, first granted to the ICC in the Motor Carrier Act of 1935 
+(Pub. L. 74-255, 49 Stat. 543, Aug. 9, 1935), now appears in 49 U.S.C. 
+chapter 315. The regulations issued under this authority, as well as 
+subsequently enacted laws, became known as the FMCSR and are codified 
+at 49 CFR parts 350-399. The administrative powers to enforce chapter 
+315 (codified in 49 U.S.C. chapter 5) were also transferred from the 
+ICC to DOT in 1966, assigned first to the Federal Highway 
+Administration (FHWA), and then to FMCSA. The FMCSA Administrator, 
+whose powers and duties are set forth in 49 U.S.C. 113, has been 
+delegated authority by the Secretary of Transportation (the Secretary) 
+under 49 CFR 1.81 to prescribe regulations and to exercise authority 
+over and with respect to any personnel within the organization, and 
+under 49 CFR 1.87 to carry out the motor carrier functions vested in 
+the Secretary.
+ Between 1984 and 1999, enforcement of the FMCSR, the Hazardous 
+Materials Regulations, and the Commercial Regulations was added to 
+FHWA's authority. The statutes granting these authorities include the 
+Motor Carrier Safety Act of 1984 (Pub. L. 98-554, Title II, 98 Stat. 
+2832, Oct. 30, 1984), codified at 49 U.S.C. chapter 311, subchapter 
+III; the Commercial Motor Vehicle Safety Act of 1986 (Pub. L. 99-570, 
+Title XII, 100 Stat. 3207-170, Oct. 27, 1986), codified at 49 U.S.C. 
+chapter 313; the Hazardous Materials Transportation Uniform Safety Act 
+of 1990, as amended (Pub. L. 101-615, 104 Stat. 3244, Nov. 16, 1990), 
+codified at 49 U.S.C. chapter 51; the Omnibus Transportation Employee 
+Testing Act of 1991 (Pub. L. 102-143, Title V, 105 Stat. 917, 952, Oct. 
+28, 1991), codified at 49 U.S.C. 31306; the ICC Termination Act of 1995 
+(ICCTA) (Pub. L. 104-88, 109 Stat. 803, Dec. 29, 1995), codified at 49 
+U.S.C. chapters 131-149; and the Transportation Equity Act for the 21st
+[[Page 45654]]
+Century (Pub. L. 105-178, 112 Stat. 107, June 9, 1998).
+ The Motor Carrier Safety Improvement Act of 1999 (MCSIA), Public 
+Law 106-159, 113 Stat. 1748, Dec. 9, 1999, established FMCSA as a new 
+operating administration within DOT, effective January 1, 2000, and 
+transferred authorities specifically related to commercial motor 
+vehicle safety to FMCSA. Accordingly, since that time the motor carrier 
+safety, and certain commercial, responsibilities previously assigned to 
+both the ICC and FHWA have been the jurisdiction of FMCSA. These 
+responsibilities also include regulations relating to section 18 of the 
+Noise Control Act of 1972, codified at 42 U.S.C. 4917, which were 
+originally assigned to the Secretary of Transportation (Pub. L. 92-574, 
+86 Stat. 1249, Oct. 27, 1972) and delegated to FHWA (39 FR 7791, Feb. 
+28, 1974), and are now the jurisdiction of FMCSA, as codified at 49 
+U.S.C. 113(f)(1).\1\
+---------------------------------------------------------------------------
+ \1\ Responsibility for the regulations related to section 18 of 
+the Noise Control Act was given to FMCSA by Congress in section 101 
+of the Motor Carrier Safety Improvement Act (Pub. L. 106-159, 113 
+Stat. 1748, 1750, Dec. 9, 1999).
+---------------------------------------------------------------------------
+ Congress subsequently expanded, modified, and amended FMCSA's 
+authority in the Uniting and Strengthening America by Providing 
+Appropriate Tools Required to Intercept and Obstruct Terrorism Act of 
+2001 (Pub. L. 107-56, 115 Stat. 272, Oct. 26, 2001); the Safe, 
+Accountable, Flexible, Efficient Transportation Equity Act: A Legacy 
+for Users (SAFETEA-LU) (Pub. L. 109-59, 119 Stat. 1144, Aug. 10, 2005); 
+the SAFETEA-LU Technical Corrections Act of 2008 (Pub. L. 110-244, 122 
+Stat. 1572, June 6, 2008); the Moving Ahead for Progress in the 21st 
+Century Act (Pub. L. 112-141, 126 Stat. 405, July 6, 2012); Fixing 
+America's Surface Transportation Act (Pub. L. 114-94, 129 Stat. 1312, 
+Dec. 4, 2015); and the Infrastructure Investment and Jobs Act (Pub. L. 
+117-58, 135 Stat. 429, Nov. 15, 2021).
+ The regulations amended by this rule are based on the statutes 
+detailed above. Generally, the legal authority for each provision being 
+amended was explained when the requirement was originally adopted and 
+is noted at the beginning of each part in Title 49 of the CFR.
+ The APA specifically provides exceptions to its notice and comment 
+rulemaking procedures when an agency finds there is good cause to 
+dispense with them, and incorporates the finding, and a brief statement 
+of reasons therefore, in the rules issued (5 U.S.C. 553(b)(B)). Good 
+cause exists when an agency determines that notice and public comment 
+procedures are impractical, unnecessary, or contrary to the public 
+interest. The amendments made in this final rule primarily correct 
+inadvertent errors and omissions, remove or update obsolete references, 
+and make minor language changes to improve clarity and consistency. The 
+technical amendments do not impose any new material requirements or 
+increase compliance obligations. For these reasons, FMCSA finds good 
+cause that notice and public comment on this final rule are 
+unnecessary.
+ In addition to amendments that fall within the APA good cause 
+exception, this rule also contains amendments that fall within the APA 
+exception for rules of agency organization, procedure, or practice. 
+Specifically, the Agency amends 49 CFR 387.307(e) to specify the same 
+procedures for Agency review of documents filed by brokers notified of 
+a pending suspension of operating authority due to insufficient 
+financial responsibility as are followed by the Agency when such 
+brokers file documents in support of a reinstatement from suspension. 
+These amendments fall within the exception to the APA's notice and 
+comment rulemaking procedures for ``rules of agency organization, 
+procedure, or practice,'' (5 U.S.C. 553(b)(A)) because the procedures 
+for filing such documents are already specified in Sec. 387.307(e) and 
+so are made clearer with this amendment. Similarly, an amendment to 
+part 389 also concerns matters of Agency policy. These changes are 
+therefore excepted from the notice and public comment requirements.
+ The APA also allows agencies to make rules effective immediately 
+with good cause (5 U.S.C. 553(d)(3)), instead of requiring publication 
+30 days prior to the effective date. For the reasons already stated, 
+FMCSA finds there is good cause for this rule to be effective 
+immediately.
+ This rule contains numerous, unrelated provisions that focus on 
+unique aspects of FMCSA's regulations. Therefore, FMCSA finds that the 
+various provisions of this final rule are severable and able to operate 
+functionally if severed from each other. In the event a court were to 
+invalidate one or more of this final rule's unique provisions, the 
+remaining provisions should stand.
+III. Section-by-Section Analysis
+A. Part 372--Exemptions, Commercial Zones, and Terminal Areas
+Appendix A to Part 372 Commercial Zones
+ FMCSA is updating Appendix A to part 372 to ensure internal 
+consistency in the regulations. On December 12, 1976, the ICC modified 
+its regulations, which were then codified at 49 CFR part 1048, to 
+expand commercial zones and motor carrier and freight forwarder 
+terminal areas. (41 FR 56655). This amendment was based on a new 
+population-mileage formula, which better reflected the growing economic 
+and social development of American municipalities. As a result, ICC 
+expanded the population-mileage boundaries beyond the existing zones in 
+the regulations to better equalize competition between shippers located 
+beyond the existing shipping zones and those located within the 
+existing zones.
+ Congress transferred jurisdiction over these regulations to the 
+Federal Highway Administration (FHWA) as part of ICCTA (Pub. L. 104-88, 
+109 Stat. 803). In a final rule published on May 19, 1988 (53 FR 
+18042), FHWA added Appendix F to section 1048 and titled it, ``Appendix 
+F to Subchapter B--Commercial Zones.'' A note was added to Appendix F 
+to mention that its text is identical to the text of part 1048, revised 
+as of October 1, 1975, which is no longer in print. On April 1, 1997, 
+FHWA issued a final rule (62 FR 15417) to amend the former ICC 
+regulations. The rule modified references to the ICC Act by changing 
+references to provisions no longer in effect following enactment of 
+ICCTA. As a result, part 372 was amended by replacing the words ``part 
+II of the ICC Act'' and ``part II of the Act'' with ``49 U.S.C. 
+subtitle IV, part B.'' In a later technical amendment published on 
+September 24, 1997 (62 FR 49939), Sec. 1048.101 was removed and 
+replaced with Sec. 372.241.
+ Jurisdiction over commercial zones transferred to FMCSA in 2000, 
+after Congress created the Agency as part of MCSIA. On October 14, 
+2021, FMCSA published a final rule moving Appendix F of subchapter B of 
+chapter III, to part 372, and redesignating it as Appendix A (86 FR 
+57060).
+ It has come to FMCSA's attention that when the regulatory language 
+was moved in 1997 from its former position at 49 CFR 1048.101 to its 
+current position at 372.241, conforming changes were never made in 
+Appendix A (formerly Appendix F of subchapter B). FMCSA now amends the 
+outdated language in Appendix A to part 372 to match that of Sec. 
+372.241, so that all references will be to the correct authority of 49 
+U.S.C. subtitle IV, part B.
+[[Page 45655]]
+B. Part 384--State Compliance With Commercial Driver's License Program
+Section 384.234 Driver Medical Certification Recordkeeping
+ Section 384.234 requires that States meet the medical certification 
+recordkeeping requirements set out in the referenced sections of part 
+383. FMCSA published a final rule in October 2021 (86 FR 57060) to 
+delete obsolete language from Sec. 383.73 by revising the introductory 
+paragraph (a), removing paragraph (a)(1), and renumbering paragraphs 
+(a)(2)(i) through (vii) as paragraphs (a)(1) through (7). As a result 
+of the change, prior Sec. 383.73(a)(2)(vii) became 383.73(a)(7). 
+However, the cross-references in Sec. 384.234 were not updated to 
+maintain consistency. FMCSA amends Sec. 384.234 to change the outdated 
+cross-reference to Sec. 383.73(a)(2)(vii) to the current regulation, 
+Sec. 383.73(a)(7).
+Section 384.301 Substantial Compliance--General Requirements
+ FMCSA amends Sec. 384.301 to more clearly explain which 
+requirements the States need to comply with. Currently, the regulations 
+cause confusion among State Driver's Licensing Agencies (SDLAs) because 
+they do not specifically describe which requirements are covered by 
+each compliance date paragraph; in most cases, the wording of each 
+paragraph is identical except for the dates. To eliminate confusion, 
+FMCSA supplements the words ``requirements of subpart B of this part'' 
+each time they appear with the precise regulation each paragraph 
+references. FMCSA also supplements ``the requirements of part 383 of 
+this chapter'' in paragraph (m) with the name of the applicable 
+regulation and adds the name of the applicable regulation to paragraph 
+(n). No substantive changes to the requirements are made by this 
+revision. Instead, this revision will eliminate confusion for SDLAs and 
+ensure the compliance dates applicable to States are clear.
+C. Part 386--Rules of Practice for FMCSA Proceedings
+Appendix B to Part 386
+ FMCSA is amending paragraph (g)(1) in Appendix B to part 386 to 
+make clear that all entities required to register pursuant to 49 U.S.C. 
+13901 are subject to the civil penalty set out in 49 U.S.C. 14901 for 
+failure to register. In 2015, FMCSA made numerous technical amendments 
+to Appendix B, during which the earlier provision addressing civil 
+penalties for noncompliance with 13901 was split in two. The first 
+provision was made applicable to motor carriers and the second, to 
+brokers. However, the provision addressing brokers, which is found at 
+paragraph (g)(2) of Appendix B, only sets out the penalty for entities 
+who knowingly operate as a broker in violation of registration 
+requirements of 49 U.S.C 13904 or financial security requirements of 49 
+U.S.C 13906. It does not address the registration obligations in 13901, 
+which are applicable to motor carriers, brokers, and freight 
+forwarders.
+ At the same time, the term ``carrier'' in paragraph (g)(1) was 
+amended to read, ``motor carrier.'' Under the definition in 49 U.S.C. 
+13102(3), which applies to 49 U.S.C. 13901, the term ``carrier'' is 
+defined to include freight forwarders (and water carriers) \2\ in 
+addition to motor carriers. By specifying that (g)(1) was applicable 
+only to motor carriers, the 2015 amendments erroneously removed freight 
+forwarders from the entities subject to civil penalties for violations 
+of 49 U.S.C. 13901.
+---------------------------------------------------------------------------
+ \2\ References to water carriers were carried over from FMCSA's 
+predecessor agencies, the ICC and FHWA. However, FMCSA does not have 
+jurisdiction over water carriers. The Agency proposed to remove 
+obsolete references to water carriers from its regulations on May 
+30, 2025 (90 FR 22892).
+---------------------------------------------------------------------------
+ FMCSA is therefore conforming paragraph (g)(1) of Appendix B to the 
+statute to correct the omission of covered entities and clarify once 
+again that brokers and freight forwarders are also subject to the 
+penalty specified in that paragraph for failure to comply with the 
+requirements of 49 U.S.C. 13901.
+D. Part 387--Minimum Levels of Financial Responsibility for Motor 
+Carriers
+Section 387.9 Financial Responsibility, Minimum Levels
+ Section 387.9 specifies minimum levels of financial responsibility 
+that motor carriers must maintain to comply with Sec. 387.7. FMCSA, 
+and FHWA before it, have amended table 1 to Sec. 387.9 several times 
+to clarify that the list generally refers to commodities carried in 
+bulk (see 59 FR 63921, 63924 (Dec. 12, 1994), 73 FR 76472, 76496 (Dec. 
+16, 2008), 86 FR 57060, 57064 (Oct. 14, 2021), and 88 FR 80169 (Nov. 
+17, 2023)). The table previously used various terms to describe the 
+quantities of these commodities, which were all revised to read ``in 
+bulk'' in order to eliminate confusion and increase consistency by 
+replacing the various terms with a single defined term.
+ The second row of the table specifies a combination of carriage 
+type and commodity subject to a $5,000,000 level of financial 
+responsibility. In the description in the ``Commodity transported'' 
+column of this row, the words ``with capacities in bulk'' were 
+inadvertently added to describe hopper-type vehicles. This phrase is 
+redundant, as the requirements already apply to hazardous materials 
+transported ``in bulk in cargo tanks, portable tanks, or hopper-type 
+vehicles.'' In order to clarify and streamline the description, FMCSA 
+revises table 1, second row, second column, by removing the words 
+``with capacities in bulk.''
+Section 387.307 Property Broker Surety Bond or Trust Fund
+ FMCSA amends Sec. 387.307(e)(1)(iv)(C) and (e)(3)(ii) to correct 
+an inadvertent typographical error from a previous final rule titled 
+``Broker and Freight Forwarder Financial Responsibility'' (88 FR 
+78656). The rule set out financial responsibility requirements for 
+brokers of property and freight forwarders in five separate areas: 
+assets readily available; immediate suspension of broker and freight 
+forwarder operating authority; surety or trust responsibilities in 
+cases of broker and freight forwarder financial failure or insolvency; 
+enforcement authority; and entities eligible to provide trust funds for 
+brokers and freight forwarders. The rule introduced new paragraphs, 
+including paragraph (e), subparagraphs (e)(1) through (e)(6), which set 
+out specific requirements for immediate suspension of broker and 
+freight forwarder operating authority. When the Agency introduced 
+paragraphs (e)(1)(iv)(C) and (e)(3)(ii), references to a non-existent 
+paragraph (e)(1)(D) were inadvertently introduced. FMCSA amends both 
+paragraphs to remove references to non-existent paragraph (e)(1)(D) and 
+replace them with the correct provision, paragraph (e)(1)(ii).
+Part 389--Rulemaking Procedures--Federal Motor Carrier Safety 
+Regulations
+Section 389.31 Petitions for Rulemaking
+ FMCSA amends part 389 to simplify the process for any interested 
+person to petition the Administrator to establish, amend, interpret, 
+clarify, or withdraw a rule, by clarifying the process to submit a 
+petition. The Agency modifies the regulations to replace the general 
+FMCSA website listed in Sec. 389.31(b)(1) with a direct link to 
+ www.regulations.gov , which will facilitate submitting petitions for a
+[[Page 45656]]
+rulemaking for the public. Docket number FMCSA-2021-0054 continues to 
+serve as a mailbox for the public's submission of a petition for 
+rulemaking. All petitions submitted to the docket will continue to be 
+tracked on FMCSA's Petitions website.
+E. Part 390--Federal Motor Carrier Safety Regulations; General
+Section 390.5 Definitions
+ FMCSA amends this section by making a clarifying change to the 
+definition of Gross vehicle weight rating (GVWR). Some stakeholders 
+have found the definition ambiguous regarding whether a vehicle with a 
+GVWR of 10,001 pounds or more ceases to be a commercial motor vehicle 
+(CMV) when, unladen, the vehicle weighs less than 10,001 pounds. This 
+amendment serves to clarify that a vehicle with a GVWR of 10,001 pounds 
+or more are always a CMV, regardless of the vehicle's actual weight at 
+any point in time, as actual weight may fluctuate. Because the 
+manufacturer determines a vehicle's GVWR, the weight rating does not 
+change regardless of the actual weight of a vehicle at any given time. 
+Although this section is currently suspended, FMCSA is amending it to 
+mirror the amendments to temporary regulations in Sec. 390.5T.
+Section 390.5T Definitions
+ As explained in the prior paragraph, Section 390.5 Definitions, 
+FMCSA amends this section by making a clarifying change to the 
+definition of Gross vehicle weight rating (GVWR).
+Section 390.27 Locations of Motor Carrier Safety Service Centers
+ Section 390.27 provides the addresses of the motor carrier safety 
+service centers. FMCSA revises Sec. 390.27 to change the address of 
+the Midwestern Service Center from 600 Holiday Plaza Drive, Suite 240, 
+Matteson, Illinois 60443, to 600 Town Center Road, Suite 240, Matteson, 
+Illinois 60443. Although the Midwestern Service Center has not changed 
+physical locations, FMCSA was notified that the Village of Matteson has 
+changed the name of ``Holiday Plaza Drive'' to ``Town Center Road,'' 
+requiring this technical update to the address.
+ FMCSA also revises Sec. 390.27 to change the address for the 
+Western Service Center from 12600 West Colfax Avenue, Suite B-300, 
+Lakewood, Colorado 80215, to 12300 West Dakota Avenue, Suite 131, 
+Lakewood, Colorado 80229. This location change is effective as of 
+December 2025.
+F. Part 391--Qualifications of Drivers and Longer Combination Vehicle 
+(LCV) Driver Instructors
+Section 391.23 Investigation and Inquiries
+ This section describes the investigations and inquiries a motor 
+carrier conducts to ensure the qualifications of each driver it 
+employs. Section 391.23(a)(1) describes the inquiry process to obtain a 
+motor vehicle record covering the driver's prior 3-year driving 
+history, which must be initiated within 30 days of the date the 
+driver's employment begins. A final rule published in March 2022 (87 FR 
+13192) eliminated the requirement that drivers operating CMVs in 
+interstate commerce prepare and submit an annual list of their 
+convictions for traffic violations to their employers. As a result of 
+the final rule, the language in Sec. 391.23(a)(1) was amended to 
+require inquiries for motor vehicle records (or MVRs) be made to 
+``driver's licensing authorities'' where the driver holds or has held a 
+motor vehicle operator's license or permit, rather than to a ``State.'' 
+The change of term usage from ``State'' to ``driver's licensing 
+authorities'' was established to ensure motor carriers are aware of 
+traffic convictions for a driver who is licensed by a foreign authority 
+and not only drivers licensed by a State.
+ In a subsequent rule published in November 2023, FMCSA amended its 
+regulations by making technical corrections throughout the FMCSRs, 
+including to Sec. 391.23 (88 FR 80169, 80176 (Nov. 17, 2023)). As 
+explained in the 2023 rule, the amendment was intended to clarify that 
+the initial MVR required by Sec. 391.23(a) is to cover the prior 3 
+years. However, the language inadvertently utilized the term ``State'' 
+that had been replaced the in the rulemaking the prior year.
+ Accordingly, FMCSA revises Sec. 391.23(a)(1) to revert the word 
+``State'' to the term ``driver's licensing authorities,'' as 
+accomplished in the March 2022 rule, as this is the accurate 
+terminology.
+ Separately, Section 391.23(m)(3)(i)(C) allows a driver to use a 
+copy of the medical examiner's certificate as proof of the driver's 
+certification for up to 15 days after the date it was issued, if the 
+driver provided the motor carrier with a copy of the current medical 
+examiner's certificate that was submitted to the State in accordance 
+with Sec. 383.73(a)(2)(vii). FMCSA published a final rule in October 
+2021 (86 FR 57060), in which it deleted obsolete language from Sec. 
+383.73 by revising the introductory paragraph (a), removing paragraph 
+(a)(1), and renumbering paragraphs (a)(2)(i) through (vii) as 
+paragraphs (a)(1) through (7). As a result of the change, prior Sec. 
+383.73(a)(2)(vii) became 383.73(a)(7). The rule failed to change cross-
+references to Sec. 383.73(a)(2)(vii) in Sec. 391.23(m)(3)(i)(C). 
+FMCSA amends Sec. 391.23(m)(3)(i)(C) to change an obsolete cross-
+reference to Sec. 383.73(a)(2)(vii) to the current regulation, Sec. 
+383.73(a)(7).
+Section 391.41 Physical Qualifications for Drivers
+ Section 391.41(a)(1)(i) describes the medical certification 
+requirements for drivers physically qualified to operate a CMV. It 
+requires drivers to obtain a medical certification to operate a CMV and 
+have on their person the original or a copy of the current medical 
+examiner's certificate indicating they can operate a CMV (with 
+exceptions indicated in Section 391.41(a)(2)). FMCSA amends Sec. 
+391.41(2)(1)(i) to correct an error in the last sentence referencing 
+medical variance by replacing the words ``medical variance'' with 
+``exemption or waiver.''
+ In 1999, the United States and Canada entered into a Reciprocity 
+Agreement (the Agreement), recognizing that a Canadian commercial 
+driver's license is proof of medical fitness to drive a CMV. In 2000, 
+the waiver program then codified at Sec. 391.49 was changed to an 
+alternative physical qualification standard under FMCSA's general 
+safety authority, following changes to exemption authorities mandated 
+by the Transportation Equity Act for the 21st Century, Public Law 105-
+178 (Jun. 9, 1998). Also in 2000, the Agreement was amended to prohibit 
+drivers with medical exemptions, in addition to those who were 
+medically certified via waivers or grandfathering, from engaging in 
+cross-border operations.
+ On December 1, 2008, FMCSA published a final rule amending the 
+FMCSR to add a provision excluding CDL drivers subject to part 391 from 
+the requirement to carry the medical examiner's certificate because 
+their current medical certification status information is reflected in 
+the electronic Commercial Driver's License Information System (CDLIS) 
+driver record. The rule also amended the regulations in Sec. 390.5 to 
+add the definition for ``medical variance,'' which means a driver has 
+received either an exemption letter permitting operation of a CMV, or a 
+skills performance evaluation (SPE) permitting CMV operation per Sec. 
+381.49. However, the last sentence introduced in the amendments to 
+Sec. 391.41(2)(1)(i)
+[[Page 45657]]
+states that U.S. drivers who received a medical variance from FMCSA 
+cannot operate a CMV in Canada. By using the term ``medical variance,'' 
+this amendment included drivers with SPE certificates in the category 
+of drivers prohibited from cross-border operations in Canada, when only 
+drivers with exemptions or waivers are actually prohibited under the 
+Agreement.\3\ The amendment is clearly erroneous because SPE 
+certificates are neither an exemption nor waiver, and the Agreement 
+does not specifically mention limb loss or impairment. FMCSA revises 
+this section to replace the words ``medical variance'' with ``exemption 
+or waiver'' to rectify that error.
+---------------------------------------------------------------------------
+ \3\ As of 2025, FMCSA has eliminated all medical grandfathering 
+provisions from the FMCSR, and there are no longer any drivers 
+medically qualified via grandfathering.
+---------------------------------------------------------------------------
+Section 391.45 Persons Who Must Be Medically Examined and Certified
+ FMCSA deletes a cross-reference in 391.45(b) that is no longer 
+valid. In 2023, paragraph (d) of 391.45 was removed and reserved 
+because it related to an obsolete vision waiver program that no longer 
+exists (88 FR 80169). However, the cross-reference in paragraph (b) was 
+not deleted at that time, and FMCSA is now making the correction.
+G. Part 393--Parts and Accessories Necessary for Safe Operation
+Section 393.45 Brake Tubing and Hoses; Hose Assemblies and End Fittings
+ FMCSA corrects a spelling error found in Sec. 393.45(b)(2), which 
+describes brake tubing and hose installation and assembly. Currently, 
+the section uses the word ``chaffing'' which will be corrected to 
+``chafing.'' The revised spelling conforms to the use of the word in 
+other FMCSR, including Sec. 393.65(f)(2) and Sec. 393.77(b)(7).
+H. Part 395--Hours of Service of Drivers
+Section 395.38 Incorporation by Reference
+ FMCSA revises the section heading of Sec. 395.38 to change 
+``Incorporation by reference'' to ``Matter incorporated by reference'', 
+as the latter more accurately describes the contents of the section.
+I. PART 396--Inspection, Repair, and Maintenance
+Section 396.3 Inspection, Repair, and Maintenance
+ Section 396.3(b) sets out the required records that motor carriers 
+and intermodal equipment providers must maintain or cause to be 
+maintained. The first recordkeeping requirement found in Sec. 
+369.3(b)(1) states that records must include an identification of the 
+vehicle including company number, if so marked, make, serial number, 
+year, and tire size. This regulation was established by the FHWA in 
+1979 to mitigate vehicle defects and defect-related accidents. FMCSA 
+revises this regulation to remove tire size from the recordkeeping 
+requirement, as the Agency believes this requirement is obsolete.
+J. Part 399--Employee Safety and Health Standards
+Section 399.205 Definitions
+ Section 399.205 under Subpart L sets out a definition of the term 
+``person'' as described by the 1962 Health Examination Survey. This 
+definition was incorporated by reference and approved by the Director 
+of the Federal Register on July 17, 1979. In FMCSA's current 
+regulations, the survey is available for purchase from the U.S. 
+Department of Commerce, National Technical Information Service, or for 
+inspection at the National Archives and Records Administration (NARA). 
+However, the material incorporated by reference into FMCSA's 
+regulations is now available for free at the U.S. Center for Disease 
+Control and Prevention (CDC) website at: www.cdc.gov/nchs/data/series/sr_11/sr11_008.pdf . Accordingly, FMCSA amends the paragraph describing 
+the definition of ``person'' to provide free online public access to 
+view copies of the 1962 Health Examination Survey via the CDC website. 
+In addition, FMCSA updates NARA's contact information as the 
+information currently listed dates to 1979.
+ Since the Office of the Federal Register (OFR) updated the 
+incorporation by reference system and the Director revoked approval for 
+all previously approved IBR material in the CFR as of August 6, 1982, 
+FMCSA has received a new approval under the changed system to continue 
+using the section.
+IV. Regulatory Analyses
+A. Executive Order (E.O.) 12866 (Regulatory Planning and Review) and 
+DOT Regulatory Policies and Procedures
+ FMCSA has considered the impact of this final rule under E.O. 12866 
+(58 FR 51735, Oct. 4, 1993), Regulatory Planning and Review, and DOT 
+Order 2100.6B, Policies and Procedures for Rulemakings.\4\ The Office 
+of Information and Regulatory Affairs within the Office of Management 
+and Budget (OMB) determined that this final rulemaking is not a 
+significant regulatory action under section 3(f) of E.O. 12866 and has 
+not reviewed it under that E.O.
+---------------------------------------------------------------------------
+ \4\ DOT Order 2100.6B, available at https://www.transportation.gov/regulations/dot-order-21006b-policies-and-procedures-rulemakings .
+---------------------------------------------------------------------------
+ In addition, this rule is not significant within the meaning of DOT 
+regulations (49 CFR 5.13(a)). The amendments made in this final rule 
+primarily correct inadvertent errors and omissions, remove or update 
+obsolete references, and make minor language changes to improve clarity 
+and consistency. In accommodating those changes, the Agency is 
+performing nondiscretionary, ministerial acts. Other changes merely 
+align regulatory requirements with the underlying statutory authority. 
+None of the changes in this final rule impose new material requirements 
+or increase compliance obligations; therefore, this final rule imposes 
+no new costs and a full regulatory evaluation is unnecessary.
+B. Executive Order 14192 (Unleashing Prosperity Through Deregulation)
+ E.O. 14192 (90 FR 9065, Jan. 31, 2025), Unleashing Prosperity 
+Through Deregulation, requires that for ``each new [E.O. 14192 
+regulatory action] issued, at least ten prior regulations be identified 
+for elimination.'' \5\
+---------------------------------------------------------------------------
+ \5\ Executive Office of the President. Executive Order 14192 of 
+January 31, 2025. Unleashing Prosperity Through Deregulation, 90 FR 
+9065-9067 (Feb. 6, 2025).
+---------------------------------------------------------------------------
+ Implementation guidance for E.O. 14192 issued by OMB (Memorandum M-
+25-20, Mar. 26, 2025) defines two different types of E.O. 14192 
+actions: an E.O. 14192 deregulatory action, and an E.O. 14192 
+regulatory action.\6\
+---------------------------------------------------------------------------
+ \6\ Executive Office of the President, Office of Management and 
+Budget, Guidance Implementing Section 3 of Executive Order 14192, 
+Titled ``Unleashing Prosperity Through Deregulation'' Memorandum M-
+25-20 (Mar. 26, 2025).
+---------------------------------------------------------------------------
+ An E.O. 14192 deregulatory action is defined as ``an action that 
+has been finalized and has total costs less than zero.'' This final 
+rulemaking is expected to have total costs equal to zero, and is 
+therefore neither an E.O. 14192 deregulatory nor regulatory action.
+C. Congressional Review Act
+ This rule is not a major rule as defined under the Congressional 
+Review Act (5 U.S.C. 801-808).\7\
+---------------------------------------------------------------------------
+ \7\ A major rule means any rule that the Office of Management 
+and Budget finds has resulted in or is likely to result in (a) an 
+annual effect on the economy of $100 million or more; (b) a major 
+increase in costs or prices for consumers, individual industries, 
+geographic regions, Federal, State, or local government agencies; or 
+(c) significant adverse effects on competition, employment, 
+investment, productivity, innovation, or on the ability of United 
+States-based enterprises to compete with foreign-based enterprises 
+in domestic and export markets (5 U.S.C. 802(4)).
+---------------------------------------------------------------------------
+[[Page 45658]]
+D. Regulatory Flexibility Act (Small Entities)
+ Pursuant to the Regulatory Flexibility Act of 1980 (5 U.S.C. 601 et 
+seq.), as amended by the Small Business Regulatory Enforcement Fairness 
+Act of 1996 (Pub. L. 104-121, 110 Stat. 857), FMCSA is not required to 
+prepare a regulatory flexibility analysis under 5 U.S.C. 604(a) for 
+this final rule because FMCSA has not issued a notice of proposed 
+rulemaking prior to this action.
+E. Assistance for Small Entities
+ In accordance with section 213(a) of the Small Business Regulatory 
+Enforcement Fairness Act of 1996 (Pub. L. 104-121, 110 Stat. 857), 
+FMCSA wants to assist small entities in understanding this final rule 
+so they can better evaluate its effects on themselves and participate 
+in the rulemaking initiative. If the final rule will affect your small 
+business, organization, or governmental jurisdiction and you have 
+questions concerning its provisions or options for compliance, please 
+consult the person listed under FOR FURTHER INFORMATION CONTACT.
+ Small businesses may send comments on the actions of Federal 
+employees who enforce or otherwise determine compliance with Federal 
+regulations to the Small Business Administration's Small Business and 
+Agriculture Regulatory Enforcement Ombudsman (Office of the National 
+Ombudsman, see https://www.sba.gov/about-sba/oversight-advocacy/office-national-ombudsman ) and the Regional Small Business Regulatory Fairness 
+Boards. The Ombudsman evaluates these actions annually and rates each 
+agency's responsiveness to small business. If you wish to comment on 
+actions by employees of FMCSA, call 1-888-REG-FAIR (1-888-734-3247). 
+DOT has a policy regarding the rights of small entities to regulatory 
+enforcement fairness and an explicit policy against retaliation for 
+exercising these rights.
+F. Unfunded Mandates Reform Act of 1995
+ The Unfunded Mandates Reform Act of 1995 (2 U.S.C. 1531-1538) 
+(UMRA) requires Federal agencies to assess the effects of their 
+discretionary regulatory actions. The UMRA addresses actions that may 
+result in the expenditure by a State, local, or Tribal government, in 
+the aggregate, or by the private sector of $206 million (which is the 
+value equivalent of $100 million in 1995, adjusted for inflation to 
+2024 levels) or more in any 1 year. Though this final rule would not 
+result in such an expenditure, and the analytical requirements of UMRA 
+do not apply as a result, FMCSA discusses the effects of this rule 
+elsewhere in this preamble.
+G. Paperwork Reduction Act
+ This rule contains no new information collection requirements under 
+the Paperwork Reduction Act of 1995 (44 U.S.C. 3501-3520). Although 
+this rule makes changes to part 387, which is covered by an information 
+collection (IC), these amendments to the regulations are not expected 
+to result in more than a de minimis change to the existing collections 
+and will be reflected in the next renewal of that IC.
+H. Executive Order 13132 (Federalism)
+ A rule has implications for federalism under section 1(a) of E.O. 
+13132 if it has ``substantial direct effects on the States, on the 
+relationship between the national government and the States, or on the 
+distribution of power and responsibilities among the various levels of 
+government.'' FMCSA has determined that this rule will not have 
+substantial direct costs on or for States, nor will it limit the 
+policymaking discretion of States. Nothing in this document preempts 
+any State law or regulation. Therefore, this rule does not have 
+sufficient federalism implications to warrant the preparation of a 
+Federalism Impact Statement.
+I. Privacy
+ The Consolidated Appropriations Act, 2005,\8\ requires the Agency 
+to assess the privacy impact of a regulation that will affect the 
+privacy of individuals. Because this rule does not require the 
+collection of personally identifiable information, FMCSA is not 
+required to conduct a privacy impact assessment.
+---------------------------------------------------------------------------
+ \8\ Public Law 108-447, 118 Stat. 2809, 3268, note following 5 
+U.S.C. 552a (Dec. 4, 2014).
+---------------------------------------------------------------------------
+ The Privacy Act (5 U.S.C. 552a) applies only to Federal agencies 
+and any non-Federal agency that receives records contained in a system 
+of records from a Federal agency for use in a matching program.
+ The E-Government Act of 2002,\9\ requires Federal agencies to 
+conduct a Privacy Impact Analysis (PIA) for new or substantially 
+changed technology that collects, maintains, or disseminates 
+information in an identifiable form. No new or substantially changed 
+technology will collect, maintain, or disseminate information as a 
+result of this rule. Accordingly, FMCSA has not conducted a PIA.
+---------------------------------------------------------------------------
+ \9\ Public Law 107-347, sec. 208, 116 Stat. 2899, 2921 (Dec. 17, 
+2002).
+---------------------------------------------------------------------------
+ In addition, FMCSA submitted a Privacy Threshold Assessment (PTA) 
+to evaluate the risks and effects the rulemaking may have on 
+collecting, storing, and sharing personally identifiable information. 
+The PTA was adjudicated by DOT's Chief Privacy Officer on October 30, 
+2025.
+J. Executive Order 13175 (Indian Tribal Governments)
+ This rule does not have Tribal implications under E.O. 13175, 
+Consultation and Coordination with Indian Tribal Governments, because 
+it does not have a substantial direct effect on one or more Indian 
+Tribes, on the relationship between the Federal Government and Indian 
+Tribes, or on the distribution of power and responsibilities between 
+the Federal Government and Indian Tribes.
+K. National Environmental Policy Act of 1969
+ FMCSA analyzed this rule pursuant to the National Environmental 
+Policy Act of 1969 (42 U.S.C. 4321 et seq.) and determined this action 
+is categorically excluded from further analysis and documentation in an 
+environmental assessment or environmental impact statement under DOT 
+Order 5610.1D,\10\ Subpart B, subsection (e), paragraphs 6(b) and 6(e). 
+These categorical exclusions address technical amendments and other 
+minor amendments such as those found in this rulemaking, regulations 
+concerning internal agency functions, organization, or personnel 
+administration, and regulations to handle the processing of 
+applications for operating authority and certificates of registration.
+---------------------------------------------------------------------------
+ \10\ Available at https://www.transportation.gov/mission/dots-procedures-considering-environmental-impacts .
+---------------------------------------------------------------------------
+List of Subjects
+49 CFR Part 372
+ Agricultural Commodities, Buses, Cooperatives, Freight Forwarders, 
+Motor Carriers, Moving of household goods, Seafood.
+49 CFR Part 384
+ Administrative practice and procedure, Alcohol abuse, Drug abuse, 
+Highway safety, Incorporation by reference, Motor carriers.
+49 CFR Part 386
+ Administrative practice and procedure, Brokers, Freight forwarders,
+[[Page 45659]]
+Hazardous materials transportation, Highway safety, Highways and roads, 
+Motor carriers, Motor vehicle safety, Penalties.
+49 CFR Part 387
+ Buses, Freight, Freight forwarders, Hazardous materials 
+transportation, Highway safety, Insurance, Intergovernmental relations, 
+Motor carriers, Motor vehicle safety, Moving of household goods, 
+Penalties, Reporting and recordkeeping requirements, Surety bonds.
+49 CFR Part 389
+ Administrative practice and procedure, Highway safety, Motor 
+carriers, Motor vehicle safety.
+49 CFR Part 390
+ Highway safety, Intermodal transportation, Motor carriers, Motor 
+vehicle safety, Reporting and recordkeeping requirements.
+49 CFR Part 391
+ Alcohol abuse, Drug Abuse, Drug testing, Highway safety, Motor 
+carriers, Reporting and recordkeeping requirements, Safety, 
+Transportation.
+49 CFR Part 393
+ Highway safety, Motor carriers, Motor vehicle safety.
+49 CFR Part 395
+ Highway safety, Motor carriers, Reporting and recordkeeping 
+requirements.
+49 CFR Part 396
+ Highway safety, Motor carriers, Motor vehicle safety, Safety and 
+recordkeeping requirements.
+49 CFR Part 399
+ Incorporation by reference, Motor carriers, Motor vehicle safety, 
+Occupational safety and health.
+ In consideration of the foregoing, FMCSA amends 49 CFR chapter III 
+as set forth below:
+PART 372--EXEMPTIONS, COMMERCIAL ZONES, AND TERMINAL AREAS
+0
+1. The authority citation for part 372 continues to read as follows:
+ Authority: 49 U.S.C. 13504 and 13506; Pub. L. 105-178, sec. 
+4031, 112 Stat. 418; and 49 CFR 1.87.
+0
+2. Amend appendix A by revising and republishing sec. 44 to read as 
+follows:
+Appendix A to Part 372--Commercial Zones
+* * * * *
+Sec. 44--Commercial Zones Determined Generally, With Exceptions
+ The commercial zone of each municipality in the United States, 
+with the exceptions indicated in the note at the end of this 
+section, within which the transportation of passengers or property, 
+in interstate or foreign commerce, when not under a common control, 
+management, or arrangement for a continuous carriage or shipment to 
+or from a point without such zone, is exempt from all provisions of 
+49 U.S.C. subtitle IV, part B shall be deemed to consist of:
+ a. The municipality itself, hereinafter called the base 
+municipality;
+ b. All municipalities which are contiguous to the base 
+municipality;
+ c. All other municipalities and all unincorporated areas within 
+the United States which are adjacent to the base municipality as 
+follows:
+ (1) When the base municipality has a population less than 2,500 
+but less than 25,000 all unincorporated areas within 4 miles of its 
+corporate limits and all of any other municipality any part of which 
+is within 4 miles of the corporate limits of the base municipality.
+ (2) When the base municipality has a population of 2,500 but 
+less than 25,000 all unincorporated areas within 4 miles of its 
+corporate limits and all of any other municipality any part of which 
+is within 4 miles of the corporate limits of the base municipality.
+ (3) When the base municipality has a population of 25,000 but 
+less than 100,000 all unincorporated areas within 6 miles of its 
+corporate limits and all of any other municipality any part of which 
+is within 6 miles of the corporate limits of the base municipality, 
+and
+ (4) When the base municipality has a population of 100,000 but 
+less than 200,000 all unincorporated areas within 8 miles of its 
+corporate limits and all of any other municipality any part of which 
+is within 8 miles of the corporate limits of the municipality.
+ (5) When the base municipality has a population of 200,000 but 
+less than 500,000 all unincorporated areas within 10 miles of its 
+corporate limits and all of any other municipality any part of which 
+is within 10 miles of the corporate limits of the base municipality.
+ (6) When the base municipality has a municipality has a 
+population of 500,000 but less than 1 million, all unincorporated 
+areas within 15 miles of its corporate limits and all of any other 
+municipality any part of which is within 15 miles of the corporate 
+limits of the base municipality.
+ (7) When the base municipality has a population of 1 million or 
+more, all unincorporated areas within 20 miles of its corporate 
+limits and all of any other municipality any part of which is within 
+20 miles of the corporate limits of the base municipality, and
+ d. All municipalities wholly surrounded, or so surrounded except 
+for a water boundary, by the base municipality, by any municipality 
+contiguous thereto, or by any municipality adjacent thereto which is 
+included in the commercial zone of such base municipality under the 
+provisions of paragraph (c) of this section. Note: Except: 
+Municipalities the commercial zones of which have been or are 
+hereafter individually or specially determined.
+* * * * *
+PART 384--STATE COMPLIANCE WITH COMMERCIAL DRIVER'S LICENSE PROGRAM
+0
+3. The authority citation for part 384 continues to read as follows:
+ Authority: 49 U.S.C. 31136, 31301, et seq., and 215 of Pub. L. 
+106-159, 113 Stat. 1748, 1753, 1767; sec. 32934 of Pub. L. 112-141, 
+126 Stat. 405, 830; sec. 5524 of Pub. L. 114-94, 129 Stat. 1312, 
+1560; and 49 CFR 1.87.
+Sec. 384.234 [Amended]
+0
+4. Amend Sec. 384.234 by removing the text ``383.73(a)(2)(vii)'' and 
+adding in its place the text ``383.73(a)(7)''.
+0
+5. Revise and republish Sec. 384.301 to read as follows:
+Sec. 384.301 Substantial compliance-general requirements.
+ (a) Compliance, generally. To be in substantial compliance with 49 
+U.S.C. 31311(a), the State must meet each and every standard of subpart 
+B of this part by means of the demonstrable combined effect of its 
+statutes, regulations, administrative procedures and practices, 
+organizational structures, internal control mechanisms, resource 
+assignments (facilities, equipment, and personnel), and enforcement 
+practices.
+ (b)(1) Commercial driver's license program improvements and 
+noncommercial motor vehicle violations. Except as provided in paragraph 
+(b)(2) of this section, a State must come into substantial compliance 
+with 49 CFR part 384, subpart B (revised as of Oct. 1, 2002) as soon as 
+practical, but, unless otherwise specifically provided in this part, 
+not later than September 30, 2005.
+ (2) School bus endorsement exception. A State must come into 
+substantial compliance with 49 CFR 383.123 (revised as of Oct. 1, 2002) 
+not later than September 30, 2006.
+ (c) Safe, Accountable, Flexible, Efficient Transportation Equity 
+Act: A Legacy for User (SAFETEA-LU). A State must come into substantial 
+compliance with 49 CFR part 384, subpart B (revised as of Oct. 1, 2007) 
+as soon as practical but, unless otherwise specifically provided in 
+this part, not later than September 4, 2010.
+ (d) Commercial driver's license medical certification requirements. 
+A State must come into substantial
+[[Page 45660]]
+compliance with 49 CFR part 384, subpart B (revised as of Oct. 1, 
+2009), as soon as practical, but not later than January 30, 2012.
+ (e) Limiting the use of wireless communication devices. A State 
+must come into substantial compliance with 49 CFR part 384, subpart B 
+(revised as of Oct. 1, 2010, as amended at 75 FR 59118, 59135, in 
+effect as of Oct. 27, 2010) as soon as practical, but not later than 
+October 28, 2013.
+ (f) Commercial driver's license testing and commercial learner's 
+permit standards. A State must come into substantial compliance with 49 
+CFR part 384, subpart B (revised as of Oct. 1, 2011), and 49 CFR part 
+384, subpart B (revised as of Oct. 1, 2012, as amended at 78 FR 17875, 
+17881, in effect as of Apr. 24, 2013) as soon as practical but, unless 
+otherwise specifically provided in this part, not later than July 8, 
+2015.
+ (g) Commercial driver's license information system state procedures 
+manual. A State must come into substantial compliance with 49 CFR part 
+384, subpart B (revised as of Oct. 1, 2011, as amended at 76 FR 68328, 
+68332, in effect as of Dec. 5, 2011) as soon as practicable, but not 
+later than January 30, 2012.
+ (h) Restricting the use of cellular phones for commercial motor 
+vehicle drivers. A State must come into substantial compliance with 49 
+CFR part 384, subpart B (revised as of Oct. 1, 2011, as amended at 76 
+FR 68328, 68332 and further amended at 76 FR 75470, 75486, in effect as 
+of Jan. 3, 2012) as soon as practical, but not later than January 3, 
+2015.
+ (i) Medical examiner's certification integration. A State must come 
+into substantial compliance with the requirements of 49 CFR parts 383 
+and 384, subpart B (revised as of Oct. 1, 2015) as soon as practical, 
+but, unless otherwise specifically provided in this part, not later 
+than June 23, 2025.
+ (j) Commercial driver's license requirements of the Moving Ahead 
+for Progress in the 21st Century Act and the Military Commercial 
+Driver's License Act of 2012. A State must come into substantial 
+compliance with 49 CFR parts 383 and 384, subpart B (revised as of Oct. 
+1, 2016, as amended at 81 FR 70634, 70646, in effect as of Dec. 12, 
+2016) as soon as practicable, but, unless otherwise specifically 
+provided in this part, not later than December 12, 2019.
+ (k) Minimum training requirements for entry-level commercial 
+vehicle operators. A State must come into substantial compliance with 
+49 CFR parts 383 and 384, subpart B (revised as of Oct. 1, 2017) not 
+later than February 7, 2022.
+ (l) Military licensing and state commercial driver's license 
+reciprocity. A State must come into substantial compliance with 49 CFR 
+part 384, subpart B (revised as of Oct. 1, 2019) and 49 CFR parts 383 
+(revised as of Oct. 1, 2018, as amended at 83 FR 48964, 48975, in 
+effect as of Nov. 27, 2018) as soon as practicable, but, unless 
+otherwise specifically provided in this part, not later than November 
+27, 2021.
+ (m) Lifetime disqualification for human trafficking. A State must 
+come into substantial compliance with 49 CFR part 383 (revised as of 
+Oct. 1, 2021) as of September 23, 2019, or as soon as practicable, but 
+not later than September 23, 2022.
+ (n) Exclusively electronic exchange of driver history record 
+information. A State must come into substantial compliance with the 
+requirements of 49 CFR parts 383 and 384, subpart B (revised as of Oct. 
+1, 2022) as soon as practicable, but not later than August 22, 2024.
+ (o) State driver's licensing agency non-issuance/downgrade of 
+commercial driver's license related to controlled substances and 
+alcohol testing. A State must come into substantial compliance with the 
+requirements of 49 CFR part 384, subpart B (revised as of Oct. 1, 2024) 
+as soon as practicable, but, unless otherwise specifically provided in 
+this part, not later than November 18, 2024.
+ (p) State procedures manual. A State must come into substantial 
+compliance with the requirements of 49 CFR part 384, subpart B (revised 
+as of Oct. 1, 2024) as soon as practicable, but not later than August 
+22, 2024.
+ (q) Non-domiciled commercial driver's licenses. A State must come 
+into substantial compliance with the requirements of subpart B of this 
+part, in effect as of February 13, 2026, and part 383 of this chapter, 
+in effect as of February 13, 2026, prior to issuing (which includes 
+amending, correcting, reprinting, or otherwise duplicating a previously 
+issued CLP or CDL), transferring, renewing, or upgrading a non-
+domiciled CLP or CDL.
+PART 386--RULES OF PRACTICE FOR FMCSA PROCEEDINGS
+0
+6. The authority citation for part 386 continues to read as follows:
+ Authority: 28 U.S.C. 2461 note; 49 U.S.C. 113, 1301 note, 
+31306a; 49 U.S.C. chapters 5, 51, 131-141, 145-149, 311, 313, and 
+315; and 49 CFR 1.81, 1.87.
+0
+7. Amend appendix B to part 386 by revising paragraph (g)(1) to read as 
+follows:
+Appendix B to Part 386--Penalty Schedule: Violations and Monetary 
+Penalties
+* * * * *
+ (g) * * *
+ (1) A person who operates as a motor carrier, broker, or freight 
+forwarder for the transportation of property in violation of the 
+registration requirements of 49 U.S.C. 13901 is liable for a minimum 
+penalty of $13,676 per violation.
+* * * * *
+PART 387--MINIMUM LEVELS OF FINANCIAL RESPONSIBILITY FOR MOTOR 
+CARRIERS
+0
+8. The authority citation for part 387 continues to read as follows:
+ Authority: 49 U.S.C. 13101, 13301, 13906, 13908, 14701, 31138, 
+31139; sec. 204(a), Pub. L. 104-88, 109 Stat. 803, 941; and 49 CFR 
+1.87.
+0
+9. Amend Sec. 387.9 by revising the second entry of table 1 to read as 
+follows:
+Sec. 387.9 Financial responsibility, minimum levels.
+* * * * *
+ Table 1 to Sec. 387.9--Schedule of Limits--Public Liability
+------------------------------------------------------------------------
+ Commodity
+ Type of carriage transported January 1, 1985
+------------------------------------------------------------------------
+ * * * * * * *
+(2) For-hire and Private (In Hazardous 5,000,000
+ interstate, foreign, or substances, as
+ intrastate commerce, with a defined in 49 CFR
+ gross vehicle weight rating 171.8, transported
+ of 10,001 or more pounds). in bulk in cargo
+ tanks, portable
+ tanks, or hopper-
+ type vehicles; in
+ bulk Division 1.1,
+ 1.2 or 1.3
+ materials; in bulk
+ Division 2.3,
+ Hazard Zone A
+ material; in bulk
+ Division 6.1,
+ Packing Group I,
+ Hazard Zone A
+ material, in bulk
+ Division 2.1 or 2.2
+ material; or
+ highway route
+ controlled
+ quantities of a
+ Class 7 material,
+ as defined in 49
+ CFR 173.403.
+[[Page 45661]]
+ * * * * * * *
+------------------------------------------------------------------------
+Sec. 387.307 [Amended]
+0
+10. Amend Sec. 387.307 by:
+0
+a. In paragraph (e)(1)(iv)(C), removing the text ``paragraph 
+(e)(1)(D)(ii)'' and adding in its place the text ``paragraph 
+(e)(1)(ii)''; and
+0
+b. In paragraph (e)(3)(ii), removing the text ``paragraph (e)(1)(D)'' 
+and adding in its place the text ``paragraph (e)(1)''.
+PART 389--RULEMAKING PROCEDURES--FEDERAL MOTOR CARRIER SAFETY 
+REGULATIONS
+0
+11. The authority citation for part 390 continues to read as follows:
+ Authority: 49 U.S.C. 113, 501 et seq., subchapters I and III of 
+chapter 311, chapter 313, and 31502; sec. 5204 of Pub. L. 114-94, 
+129 Stat. 1312, 1536; 42 U.S.C. 4917; and 49 CFR 1.87
+0
+12. Amend Sec. 389.31 by revising paragraph (b)(1) to read as follows:
+Sec. 389.31 Petitions for rulemaking.
+* * * * *
+ (b) * * *
+ (1) Be submitted in writing by mail to the Administrator, Federal 
+Motor Carrier Safety Administration, 1200 New Jersey Avenue SE, 
+Washington, DC 20590-0001 or electronically at www.regulations.gov , 
+using the general petitions for rulemaking docket FMCSA-2021-0054.
+* * * * *
+PART 390--FEDERAL MOTOR CARRIER SAFETY REGULATIONS; GENERAL
+0
+13. The authority citation for part 390 continues to read as follows:
+ Authority: 49 U.S.C. 113, 504, 508, 31132, 31133, 31134, 31136, 
+31137, 31144, 31149, 31151, 31502; sec. 114, Pub. L. 103-311, 108 
+Stat. 1673, 1677; secs. 212 and 217, Pub. L. 106-159, 113 Stat. 
+1748, 1766, 1767; sec. 229, Pub. L. 106-159 (as added and 
+transferred by sec. 4115 and amended by secs. 4130-4132, Pub. L. 
+109-59, 119 Stat. 1144, 1726, 1743, 1744), 113 Stat. 1748, 1773; 
+sec. 4136, Pub. L. 109-59, 119 Stat. 1144, 1745; secs. 32101(d) and 
+32934, Pub. L. 112-141, 126 Stat. 405, 778, 830; sec. 2, Pub. L. 
+113-125, 128 Stat. 1388; secs. 5403, 5518, and 5524, Pub. L. 114-94, 
+129 Stat. 1312, 1548, 1558, 1560; sec. 2, Pub. L. 115-105, 131 Stat. 
+2263; and 49 CFR 1.81, 1.81a, 1.87.
+0
+14. Amend Sec. 390.5 by:
+0
+a. Lifting the suspension of the section;
+0
+b. Revising and republishing the definition for ``Gross vehicle weight 
+rating''; and
+0
+c. Suspending the section indefinitely.
+ The revision reads as follows:
+Sec. 390.5 Definitions.
+* * * * *
+ Gross vehicle weight rating (GVWR) means the value specified by the 
+manufacturer as the maximum loaded weight of a single motor vehicle.
+* * * * *
+0
+15. Amend Sec. 390.5T by revising and republishing the definition for 
+``Gross vehicle weight rating'' to read as follows:
+Sec. 390.5T Definitions.
+* * * * *
+ Gross vehicle weight rating (GVWR) means the value specified by the 
+manufacturer as the maximum loaded weight of a single motor vehicle.
+* * * * *
+0
+16. Amend Sec. 390.27 in the table by revising the entries for 
+``Midwestern'' and ``Western'' to read as follows:
+Sec. 390.27 Locations of motor carrier safety service centers.
+------------------------------------------------------------------------
+ Service center Territory included Location of office
+------------------------------------------------------------------------
+ * * * * * * *
+Midwestern.................. Illinois, Indiana, 600 Town Center
+ Iowa, Kansas, Road, Suite 240,
+ Michigan, Matteson, Illinois
+ Minnesota, 60443.
+ Missouri, Nebraska,
+ Ohio, Wisconsin.
+ * * * * * * *
+Western..................... Alaska, American 12300 West Dakota
+ Samoa, Arizona, Avenue, Suite 131,
+ California, Lakewood, Colorado
+ Colorado, Guam, 80228.
+ Hawaii, Idaho,
+ Mariana Islands,
+ Montana, Nevada,
+ New Mexico, North
+ Dakota, Oregon,
+ South Dakota,
+ Texas, Utah,
+ Washington, Wyoming.
+------------------------------------------------------------------------
+* * * * *
+PART 391--QUALIFICATIONS OF DRIVERS AND LONGER COMBINATION VEHICLE 
+(LCV) DRIVER INSTRUCTORS
+0
+17. The authority citation for part 391 continues to read as follows:
+ Authority: 49 U.S.C. 504, 508, 31133, 31136, 31149, 31502; sec. 
+4007(b), Pub. L. 102-240, 105 Stat. 1914, 2152; sec. 114, Pub. L. 
+103-311, 108 Stat. 1673, 1677; sec. 215, Pub. L. 106-159, 113 Stat. 
+1748, 1767; sec. 32934, Pub. L. 112-141, 126 Stat. 405, 830; secs. 
+5403 and 5524, Pub. L. 114-94, 129 Stat. 1312, 1548, 1560; sec. 2, 
+Pub. L. 115-105, 131 Stat. 2263; and 49 CFR 1.87.
+Sec. 391.23 [Amended]
+0
+18. Amend Sec. 391.23 by:
+0
+a. In paragraph (a)(1), removing the word ``State'' and adding in its 
+place the text ``driver's licensing authority''; and
+0
+b. In paragraph (m)(3)(i)(C):
+0
+i. Removing the word ``State'' and adding in its place the text 
+``driver's licensing authority''; and
+0
+ii. Removing ``383.73(a)(2)(vii)'' and adding in its place 
+``383.73(a)(7)''.
+Sec. 391.41 [Amended]
+0
+19. Amend Sec. 391.41 in paragraph (a)(1)(i) by removing the words 
+``medical variance'' from the last sentence and adding in their place 
+the words ``exemption or waiver.''
+0
+20. Amend Sec. 391.45 by revising paragraph (b) to read as follows:
+Sec. 391.45 Persons who must be medically examined and certified.
+* * * * *
+ (b) Any driver who has not been medically examined and certified as 
+qualified to operate a commercial motor vehicle during the preceding 24 
+months,
+[[Page 45662]]
+unless the driver is required to be examined and certified in 
+accordance with paragraph (c), (e), (f), (g), or (h) of this section;
+* * * * *
+PART 393--PARTS AND ACCESSORIES NECESSARY FOR SAFE OPERATION
+0
+21. The authority citation for part 393 continues to read as follows:
+ Authority: 49 U.S.C. 31136, 31151, 31502; sec. 1041(b), Pub. L. 
+102-240, 105 Stat. 1914, 1993; secs. 5301 and 5524, Pub. L. 114-94, 
+129 Stat. 1312, 1543, 1560; and 49 CFR 1.87.
+Sec. 393.45 [Amended]
+0
+22. Amend Sec. 393.45 by removing the word ``chaffing'' and adding in 
+its place the word ``chafing.''
+PART 395--HOURS OF SERVICE OF DRIVERS
+0
+23. The authority citation for part 395 continues to read as follows:
+ Authority: 49 U.S.C. 504, 21104(e), 31133, 31136, 31137, 31502; 
+sec. 113, Pub. L. 103-311, 108 Stat. 1673, 1676; sec. 229, Pub. L. 
+106-159 (as added and transferred by sec. 4115 and amended by secs. 
+4130-4132, Pub. L. 109-59, 119 Stat. 1144, 1726, 1743, 1744), 113 
+Stat. 1748, 1773; sec. 4133, Pub. L. 109-59, 119 Stat. 1144, 1744; 
+sec. 32934, Pub. L. 112-141, 126 Stat. 405, 830; sec. 5206(b), Pub. 
+L. 114-94, 129 Stat. 1312, 1537; and 49 CFR 1.87.
+0
+24. Amend Sec. 395.38 by revising the section heading to read as 
+follows:
+Sec. 395.38 Matter incorporated by reference.
+* * * * *
+PART 396--INSPECTION, REPAIR, AND MAINTENANCE
+0
+25. The authority citation for part 396 continues to read as follows:
+ Authority: 49 U.S.C. 504, 31133, 31136, 31151, 31502; sec. 
+32934, Pub. L. 112-141, 126 Stat. 405, 830; sec. 5524, Pub. L. 114-
+94, 129 Stat. 1312, 1560; and 49 CFR 1.87.
+0
+26. Amend Sec. 396.3 by revising paragraph (b)(1) to read as follows:
+Sec. 396.3 Inspection, repair, and maintenance.
+* * * * *
+ (b) * * *
+ (1) An identification of the vehicle including company number, if 
+so marked, make, serial number, and year. In addition, if the motor 
+vehicle is not owned by the motor carrier, the record shall identify 
+the name of the person furnishing the vehicle;
+* * * * *
+PART 399--EMPLOYEE SAFETY AND HEALTH STANDARDS
+0
+27. The authority citation for part 399 continues to read as follows:
+ Authority: 49 U.S.C. 31502; and 49 CFR 1.87.
+0
+28. Amend Sec. 399.205 by revising the definition for ``Person'' to 
+read as follows:
+Sec. 399.205 Definitions.
+* * * * *
+ Person, as used in this part, means:
+ (1) Any individual within the 5th percentile female adult through 
+the 95th percentile male adult of anthropometric measures as described 
+by Weight, Height and Selected Body Dimensions of Adults, United States 
+1960-1962.
+ (2) Vital and Health Statistics; Series 11, No. 8 (6/65), Weight, 
+Height and Selected Body Dimensions of Adults, United States 1960-1962, 
+issued June 1965 (first issued in Public Health Service publication No. 
+1000, then reprinted DHEW publication No. (HRA) 76-1074), is 
+incorporated by reference into this section with the approval of the 
+Director of the Federal Register under 5 U.S.C. 552(a) and 1 CFR part 
+5.1. This material is available for inspection at FMCSA and at the 
+National Archives and Records Administration (NARA). Contact FMCSA at 
+the Department of Transportation Library, 1200 New Jersey Avenue SE, 
+Washington, DC 20509; (202) 366-0746; website: https://transportation.libanswers.com . For information on the availability of 
+this material at NARA, visit www.archives.gov/federal-register/cfr/ibr-locations or email [email protected] . You may also obtain the 
+material electronically from the U.S. Centers for Disease Control and 
+Prevention, phone: (800) 232-4636; website: www.cdc.gov/cdc-info/forms/contact-us.html . Download the material at www.cdc.gov/nchs/data/series/sr_11/sr11_008.pdf .
+* * * * *
+ Issued under authority delegated in 49 CFR 1.87.
+Derek D. Barrs,
+Administrator.
+[FR Doc. 2026-14701 Filed 7-20-26; 8:45 am]
+BILLING CODE 4910-EX-P
+ 
