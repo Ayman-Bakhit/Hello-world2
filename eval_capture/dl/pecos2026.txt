@@ -1,0 +1,1127 @@
+ PECOS 101
+ November 18 - 19, 2026
+Presented by:
+Vani Annadata,
+Director, Division of Enrollment Systems
+Centers for Medicare & Medicaid Services
+
+
+Jennifer Payne
+Business Analyst, Provider Enrollment
+Novitas Solutions and First Coast Service Options
+
+                                                    CMS | National Provider Enrollment Conference | November 2026
+Provider Enrollment & Oversight Group
+Centers for Medicare & Medicaid Services
+Session Overview
+
+▪      Getting Started
+           ▪       Introduction to PECOS
+           ▪       Registering for a PECOS Account
+           ▪       Navigating the PECOS Home Page
+
+▪      PECOS Tools
+           ▪       Medicare ID Lookup Tool
+           ▪       Revalidation Notification Center
+
+▪      Completing Applications
+           ▪       Submitting an Initial Application
+           ▪       Submitting a Revalidation Application
+           ▪       Submitting a Change of Information
+
+CMS | National Provider Enrollment Conference | November 2026   |   2
+What You’ll Be Able to Do
+
+By the end of this session, you will be able to:
+
+
+✓ Find the enrollment information you need in PECOS
+✓ Review and update enrollment information
+✓ Start a new application
+✓ Complete signatures and upload supporting documents
+✓ Avoid common issues that can delay application processing
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   3
+         Introduction to PECOS
+              Understanding the system and its benefits
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   4
+                                   What is PECOS?
+ The Provider Enrollment, Chain, and Ownership System, or PECOS, is
+ CMS’s online Medicare enrollment management system for providers
+ and suppliers.
+ Use PECOS to:
+ Manage your Medicare Enrollment:
+         ✓ Submit an initial enrollment application
+         ✓ Revalidate your enrollment information
+         ✓ Update enrollment information
+         ✓ Withdraw or reactivate an enrollment
+         ✓ Report a change of ownership
+ Complete other Actions:
+         ✓ Add or terminate reassignments
+         ✓ Track application, revalidation, and enrollment status
+
+CMS | National Provider Enrollment Conference | November 2026         |   5
+                                Benefits of PECOS
+       Why use PECOS rather than a paper enrollment application?
+
+        ✓ Faster Processing                                     ✓ Paperless Submission
+              Online applications are                             Upload documents and
+              processed faster than paper                         complete signatures
+              applications.                                       electronically.
+
+        ✓ Greater Visibility and                                ✓ Reduced Administrative
+          Control                                                 Effort
+              Review, update, and track                            Minimize processing, mailing,
+              your enrollment information                          and managing paper
+              online.                                              enrollment materials.
+                                                                ✓ Improved Accuracy and
+        ✓ A Tailored Experience
+              Provide only information
+                                                                  Quality
+              relevant to the application                          Built-in validations help users
+              and provider or supplier type.                       submit more complete and
+                                                                   accurate information.
+
+
+CMS | National Provider Enrollment Conference | November 2026                                        |   6
+                                     Accessing PECOS
+
+                                                                    1 Sign In
+                                                                    Use your existing I&A user ID and
+                                                                    password.
+
+                                                                    2 Manage Your Account
+                                                                    Recover a forgotten user ID or
+                                                                    password, or update your user
+                   1                                            4
+                                                                    profile.
+
+                                                                    3 Find the Right Support
+                                                                5   Use Who Should I Call? to determine
+                   2                                                whether to contact EUS or your
+                                                                    enrollment contractor.
+                        3                                           4 Register
+                                                                    Register for an account.
+
+                                                                    5 Access Helpful Links
+                                                                    Track application status or pay an
+                                                                    application fee.
+CMS | National Provider Enrollment Conference | November 2026                                   | 7
+                                         I&A Overview
+                        One account to access multiple CMS systems
+
+Identity & Access Management
+System
+I&A establishes and manages user
+access to CMS systems.
+
+PECOS
+Manage Medicare enrollment
+activities
+
+NPPES (National Plan and Provider
+Enumeration System)
+Obtain and maintain NPI
+information
+
+Access Management
+Manage user access, staff, and
+surrogacy connections
+
+
+
+CMS | National Provider Enrollment Conference | November 2026        | 8
+I&A Roles and Access
+
+                                                                 Authorized Officials and Access Managers
+Important: Access Is Not                                         • Add the organization as an employer in
+Enrollment                                                          I&A
+                                   Organizational
+ Registering or updating               Roles                     • Manage access on behalf of the
+information in I&A does not                                         organization
+enroll a provider or supplier in                                 • Support authorized third-party access
+Medicare, obtain an NPI, or
+update information in PECOS or
+NPPES.                                                          Manage Staff and Permissions
+ Helpful Tip: Authorized Officials Staff Access                 • Add or remove staff
+Roles                                                           • Control the functions available to staff
+                                                                • Maintain organizational access
+An Authorized Official in I&A
+manages system access. The
+Authorized Official reported on                                 Work on Behalf of Providers and Suppliers
+a Medicare enrollment record is                                 • Establish surrogacy connections
+determined by enrollment                                        • Allow approved organizations to work on
+requirements and may not be         Surrogacy
+                                   Connections                    another party’s behalf
+the same individual.                                            • Manage access without sharing individual
+                                                                  login credentials
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                            | 9
+                                   PECOS Home Page
+
+
+
+                     1
+
+
+                            2                                       Release Notes
+                                                                1
+                                                                    See what has changed in
+                                                                    the latest PECOS release.
+
+                                                                2   Check System Notifications
+                                                                    Review current system
+                                                                    notices before beginning
+                                                                    work.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                            |   10
+                       PECOS Home Page Options
+
+                                                                    1 My Associates
+                                                                       Manage enrollments, submit
+                              1                                 2      updates, or begin a new
+                                                                       application.
+
+                                                                    2 Account Management
+                                                                       Manage user-account and access
+                                                                       information in I&A.
+                                          3
+                                                                    3 Revalidation Notification Center
+                                                                       Review revalidation information
+                                                                       or begin an available
+                                                                       revalidation.
+                         4
+                                                                    4 Manage Signatures
+                                                                       View applications with
+                                                                       outstanding signature
+                                                                       requirements.
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                            |   11
+        Home Page - Medicare ID Lookup Tool
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   12
+            Using the Medicare ID Lookup Tool
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   13
+Submitting Initial Application
+
+
+CMS | National Provider Enrollment Conference | November 2026   |
+                               Access My Associates
+
+
+                                                                Select My Associates
+                                                                Select My Associates to view
+                                                                the individuals and
+                                                                organizations you are
+                                                                authorized to access.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                             |    15
+                                    Find an Associate
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   16
+                                      Application Alerts
+                                                                Opened for Corrections
+                                                                Applications retracted before all
+                                                                required signatures were
+                                                                submitted. Resubmit within 20
+                                                                days of the original submission to
+                                                                avoid rejection.
+
+                                                                Returned for Corrections
+                                                                Applications returned by the
+                                                                enrollment contractor for missing
+                                                                or incomplete information. The
+                                                                Date Returned is displayed in
+                                                                PECOS. Correct and resubmit the
+                                                                application within 30 days of that
+                                                                date to avoid rejection.
+
+                                                                Rejected Applications
+                                                                Applications rejected by the
+                                                                enrollment contractor remain
+                                                                available in PECOS for 60 days
+CMS | National Provider Enrollment Conference | November 2026   unless reopened.                     |   17
+             Create an Initial Enrollment Application
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   18
+ Application Questionnaire – Select an Applicant
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   19
+                              PECOS 2026 Enhancement
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   20
+                            Application Questionnaire
+1                                                2                  3
+
+
+
+
+                                                                    4
+
+
+
+
+     Answer each question carefully. Your responses determine which application PECOS
+     creates and where it is routed.
+    CMS | National Provider Enrollment Conference | November 2026                       |   21
+       Review and Start the Initial Application
+
+                                                                Review the Application
+                                                                Confirm that PECOS created the
+                                                                correct application based on your
+                                                                questionnaire responses.
+
+                                                                Select Start Application
+                                                                Select Start Application to begin
+                                                                completing the enrollment
+                                                                application.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                       |   22
+                           Navigate the Application
+
+
+
+
+                                                                Monitor Application Progress
+                                                                Use the progress bar to see how
+                                                                much of the application has been
+                                                                completed.
+
+                                                                Navigate the Application
+                                                                Use Topic View or Fast Track View
+                                                                to review and complete the
+                                                                application.
+
+                                                                Review Errors and Warnings
+                                                                Use Errors/Warning Check to
+                                                                identify items that may need
+                                                                attention.
+CMS | National Provider Enrollment Conference | November 2026                                   |   23
+       Complete the Application – Topic View
+
+
+                                                                Review Application Topics
+                                                                Select a topic to review and
+                                                                complete the applicable
+                                                                information.
+
+                                                                Monitor Completion
+                                                                PECOS places a check beside a
+                                                                topic after the required
+                                                                information has been completed
+                                                                and saved.
+
+                                                                View the Application
+                                                                Use View Application Being
+                                                                Edited to review all application
+                                                                information in one document.
+
+
+CMS | National Provider Enrollment Conference | November 2026                                      |   24
+ Complete the Application – Individual Topic
+
+                                                                Complete the Applicable Fields
+                                                                Enter all information applicable
+                                                                to the enrollment.
+
+                                                                Identify Required Fields
+                                                                Required fields are marked with
+                                                                a red asterisk.
+
+                                                                Save the Topic
+                                                                Select Save after completing the
+                                                                section to retain the information
+                                                                entered.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                 |    25
+    Review the Application – Fast Track View
+
+
+
+                                                                Review Application Information
+                                                                Use Fast Track View to review
+                                                                information entered throughout
+                                                                the application.
+
+                                                                Make an Update
+                                                                Select Go to Topic to return to
+                                                                the applicable section and
+                                                                update the information.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                |    26
+ Review the Application – Error/Warning Check
+
+                                                                Errors Must Be Resolved
+                                                                The application cannot be
+                                                                submitted until all errors are
+                                                                corrected.
+
+                                                                Review All Warnings
+                                                                Warnings do not prevent
+                                                                submission, but each warning
+                                                                should be reviewed to confirm the
+                                                                information is accurate.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                       |   27
+                        Ready to Begin Submission
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   28
+      Begin Submission – Required Signatures
+
+                                                                Complete All Applicable Signatures
+                                                                All applicable signatures must be
+                                                                received before the application is
+                                                                considered complete.
+
+                                                                Select a Signature Method
+                                                                Each required signature must be
+                                                                completed electronically or by
+                                                                uploading a signed certification
+                                                                statement.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                      |   29
+                     Select the Signature Options
+
+                                                                Send the Signature Request
+                                                                Enter the email address for the
+                                                                Authorized or Delegated Official to
+                                                                initiate the electronic signature
+                                                                process.
+
+                                                                Complete the Practitioner Signature
+                                                                When available, select E-Sign (Sign
+                                                                Now) to complete the practitioner’s
+                                                                signature during submission.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                    |    30
+     Review and Accept the Terms and Conditions
+
+                                                                Review Each Section
+                                                                Review each applicable Terms and
+                                                                Conditions section.
+
+                                                                Accept the Terms and Conditions
+                                                                Scroll to the bottom of each
+                                                                section to enable the acceptance
+                                                                checkbox, then select the
+                                                                checkbox.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                |   31
+         Review and Complete the Submission
+
+
+
+
+                                                                2
+
+
+
+
+                                           1
+
+1 Review the Application
+1.
+2.
+2 Download Certification Statements (If Needed)
+3 Complete the Submission
+3.
+                                                                    3
+CMS | National Provider Enrollment Conference | November 2026           |   32
+                          Submission Confirmation
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   33
+             Electronic Signature Request Email
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   34
+              Complete the Electronic Signature
+
+
+
+                                                                Enter the Required Information
+                                                                Enter the requested identifying
+                                                                information and the PIN
+                                                                provided in the signature
+                                                                request email.
+
+                                                                Request a New PIN if Needed
+                                                                Select the link at the bottom of
+                                                                the page to request a new PIN.
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                |   35
+                       View the Application Status
+
+                                                                Locate the Submitted
+                                                                Application
+                                                                Select the applicable
+                                                                individual or
+                                                                organization in My
+                                                                Associates.
+
+                                                                Review the Status
+                                                                The submitted
+                                                                application will display
+                                                                as Awaiting
+                                                                Processing.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                      |   36
+      Revalidation Notification Center
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |
+ Access the Revalidation Notification Center
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   38
+                       Filter Revalidation Information
+
+                                                                1 Search for an Enrollment
+                                                                   Use available identifying
+           1                                                       information to locate a provider
+                                                                   or supplier.
+
+                                                                2 Date Range
+                                                                   Choose whether to include
+               2                                                   recently completed or canceled
+                                                                   revalidations.
+
+                                                                3 Filter by Revalidation Status
+                        3
+                                                                   Display enrollments based on
+                                                                   where the revalidation is in the
+                                                                   process.
+
+                   4                                            4 Filter by Stay Status
+                                                                   Show enrollments with or
+                                                                   without a current Stay of
+                                                                   Enrollment.
+
+
+CMS | National Provider Enrollment Conference | November 2026                                         |   39
+                 Revalidation Results and Access
+
+
+
+
+                   Verify Authorized Access
+                   A # indicates that the required
+                   authorized connection is not established
+                   for the provider or supplier. Go to I&A to
+                   establish the appropriate connection.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   40
+                      Review Revalidation Details
+1               2         3                4                    1 Available Actions
+                                                                   Start a revalidation application or
+                                                                   view the enrollment.
+
+                                                                2 Revalidation Status
+                                                                   See where the revalidation is in
+                                                                   the submission process.
+
+                                                                3 Revalidation Due Date
+                                                                   Review the date by which the
+                                                                   revalidation should be
+                                                                   completed.
+
+                                                                4 Stay of Enrollment
+                                                                   Identify whether a Stay is in
+                                                                   place and review the displayed
+                                                                   reason.
+
+                                                                5 Download or Print
+                                                                   Create a report for further
+                                       5                           review.
+CMS | National Provider Enrollment Conference | November 2026                                    |   41
+Submitting a Revalidation Application
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |
+             Begin the Revalidation Application
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   43
+            Select the Enrollment to Revalidate
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   44
+                 Review Enrollment Information
+
+           1                  2                                 1   Topic View
+                                                                    Open individual topics to
+                                                                    review information by
+                                                                    section.
+
+                                                                2 Fast Track View
+                                                                  Review enrollment
+                                                                  information together in a
+                                                                  consolidated view.
+
+                                                                3   Go to Topic
+                                                                    Navigate directly to a section
+                                                                    when information needs to
+                                                                    be updated.
+                   3
+                                                                    PECOS Tip: Review every
+                                                                    topic, even when no changes
+                                                                    are expected.
+CMS | National Provider Enrollment Conference | November 2026                                        |   45
+                     Review Physical Location Details
+
+                                                                1   Review the Location
+                                                                    Confirm that the
+                                           2                        address and other
+                           1                                        location information
+                                                                    are accurate.
+
+                                                                2   Check the Location
+                                                                    Type Make sure the
+                                                                    selected location type
+                                                                    correctly describes the
+                                                                    location.
+
+                                                                3   Update When Needed
+                                                                    Select Go to Topic to
+                                                                    correct or update the
+                                                                    location information.
+                 3
+CMS | National Provider Enrollment Conference | November 2026                                 |   46
+                Update Physical Location Information
+
+                                                                1   Edit an Existing Location
+                                                                    Select Edit Information to update
+                                               2                    the details for the current
+                                                                    location.
+                                                                2
+                                                                    Review the Location Type
+                                                                    Confirm that the location type
+                      3                                             accurately describes the practice
+                                                                    location.
+                                                                3
+                                                                    Report a Relocation
+                                                                    Delete the former physical
+                                                                    location, then select Add to report
+                                                                    the new location.
+            1
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                      |    47
+             Review Reassignment Information
+
+                                               1
+                                                                1 Review Existing Reassignments
+                                                                  Confirm that the displayed
+                                                                  reassignment information
+                                                                  remains accurate.
+                                                        2       2 Check the Reassignment Details
+                                                                  Review the organization and
+                                                                  other information associated with
+                                                                  each reassignment.
+
+                                                                3 Update When Needed
+                                                                  Select Go to Topic to add,
+                                                                  remove, or update reassignment
+                 3
+                                                                  information.
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                 |   48
+                   Update Reassignment Information
+
+
+                                                                1   Find a Reassignment
+                                                                    Use the Advanced Search to
+                   1                                                locate a specific reassignment.
+                   2
+                                                                2   Add a Reassignment
+                                                                    Select Add Information to
+                                                                    report an additional
+                                                                    reassignment.
+
+                   3                                            3   Remove a Reassignment
+                                                                    Select Delete beside the
+                                                                    reassignment that should be
+                                                                    removed.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                         |   49
+ Review Ownership and Control Information
+                      1
+                                                                1 Review Organizational Control
+                                                                  Confirm that the organizations
+                                                                  listed as having control remain
+                      2                                           accurate.
+
+                                                                2 Review Individual Control
+                                                                  Confirm that the individuals
+                                                                  listed as having control remain
+                                                                  accurate.
+
+                                                                3 Update When Needed
+                                                                  Select Go to Topic to add,
+                                                                  remove, or update control
+                  3                                               information.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                       |   50
+              Revalidation Application – Update
+                   Ownership and Control
+
+                                                                1   Review Existing Information
+                                                                    View the control information
+                                                                    currently reported.
+                       2
+                                                                2   Add Individuals
+                                                                    Report an additional individual
+                 1                                                  by selecting Add Information.
+
+                                                                3   Edit Existing Individuals
+                                                                    Select Edit to update
+                                                                    information already displayed.
+
+                                                                4   Remove Individuals
+                                                                    Select Delete to remove the
+                                                                    individual’s ownership or
+       3           4                                                control information from the
+                                                                    application.
+
+CMS | National Provider Enrollment Conference | November 2026                                         |   51
+                             Supporting Documents
+
+1                                                               1 Review Required Documents
+                                                                  Expand to see documents and
+                                                                  their details that may be needed
+                                                                  for the application.
+                                           3
+                                                                2 Upload Supporting Documents
+                                                                  Upload supporting documents in
+                                                                  PDF or TIFF format. The delivery
+                                                                  method does not need to be
+                                       2                          completed.
+
+                                                                3 Add Helpful Comments
+                                                                  Include a comment when
+                                                                  additional context may help the
+                                                                  enrollment contractor review the
+                                                                  document.
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                        |   52
+         Supporting Documents – Upload Files
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   53
+                                    Begin Submission
+
+
+
+                                                                1   Confirm Application Progress
+                                           1                        Confirm that all required
+                                                                    application sections have
+                                                                    been completed.
+
+                                                                2   Select Begin Submission
+                                                                    Select Begin Submission to
+                   2                                                continue to the submission
+                                                                    process.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                |   54
+        Submit Signatures – Select a Signatory
+
+Select the authorized signer for the organization enrollment, then select Next Page.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                          |   55
+   Submit Signatures – Select a Signature Method
+
+
+                                                                Choose how the required
+                                                                signature will be completed:
+
+                                                                Electronic Signature
+                                                                Send the signer an email with
+                                                                instructions for completing the
+                                                                signature electronically.
+
+                                                                Upload Signature
+                                                                Obtain the required signature and
+                                                                upload the completed certification
+                                                                statement.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                     |   56
+                                   Who Needs to Sign?
+
+   Initial Organization Enrollment                              IDTF Supervising Physician
+   All Authorized Officials and Delegated                       A signature is required when adding a
+   Officials for the organization must sign                     supervising physician in addition to the
+   the initial enrollment application.                          authorized or delegated official.
+
+
+   Change of Information                                        New Reassignments
+   An Authorized Official or Delegated                          The individual practitioner and an
+   Official may sign, provided a new                            Authorized or Delegated Official for the
+   Authorized Official or Delegated Official                    organization accepting the reassignment
+   is not added as part of the change.                          must sign.
+
+   Electronic Funds Transfer                                    Existing Reassignments
+   A signature is required when reporting a                     When an existing reassignment is
+   change to banking information,                               updated or terminated, only the
+   including a change to the EFT contact                        initiating party is required to sign.
+   person.
+
+CMS | National Provider Enrollment Conference | November 2026                                              |   57
+     Submit Signatures – Electronic Signature
+
+                                                                Enter the Signer's Email
+                                                                Address
+                                                                Enter the email address
+                                                                where the signature
+                                                                request email should be
+                                                                sent.
+
+
+                                                                    PECOS Tip: Let the
+                                                                signer know to expect a
+                                                                signature request email.
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                              |   58
+           Electronic Signature Request Email 2
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   59
+           Complete the Electronic Signature 2
+
+
+
+                                                                Enter the Required Information
+                                                                Enter the requested identifying
+                                                                information and the PIN
+                                                                provided in the signature
+                                                                request email.
+
+                                                                Request a New PIN if Needed
+                                                                Select the link at the bottom of
+                                                                the page to generate a new PIN.
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                |   60
+       Submit Signatures - Upload a Signature
+
+
+                                                                1 Select the Upload Option
+            1                                                     Select Upload as the signature method and
+                                                                  continue through the submission steps.
+
+                                                                2 Upload the Signed Certification Statement
+                                                                  Choose the signed certification statement
+                                                                  and select Upload.
+
+
+
+
+                      2
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                         |   61
+      Review and Complete the Submission 2
+
+
+
+
+                                                                                          2
+
+
+
+
+                                                                1 Review the Application
+                                              1                   Select View Application to review or save a
+                                                                  copy before submission.
+
+                                                                2 Complete the Submission
+                                                                  When everything is ready, select Complete
+                                                                  Submission.
+
+CMS | National Provider Enrollment Conference | November 2026                                         |   62
+                       Submission Confirmation 2
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   63
+Submitting Change of Information
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |
+                       Locate the Existing Enrollment
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   65
+                  Review the Existing Enrollment
+
+                                                                Locate the Enrollment
+                                                                Identify the enrollment
+                                                                that needs to be
+                                                                updated.
+
+                                                                View the Approved
+                                                                Enrollment Record
+                                                                Review the
+                                                                information currently
+                                                                on file before
+                                                                beginning the Change
+                                                                of Information.
+
+                                                                Open More Options
+                                                                Select More Options
+                                                                for the applicable
+                                                                enrollment.
+CMS | National Provider Enrollment Conference | November 2026                     |   66
+                    Start a Change of Information
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   67
+Begin the Change of Information Application
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   68
+              Access Reassignment Information
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   69
+           Review and Manage Reassignments
+
+                                                                Review Pending Applications
+                                                                Use More Options to continue
+                                                                working on an incomplete
+                                                                reassignment application.
+
+                                                                Review Existing Reassignments
+                                                                View the reassignment
+                                                                relationships currently
+                                                                associated with the individual or
+                                                                organization.
+
+                                                                Manage Reassignments
+                                                                Select Manage Reassignments
+                                                                to add, remove, or update
+                                                                reassignment information.
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                              |   70
+     Review the Approved Enrollment Record
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   71
+  Review the Approved Enrollment Record 2
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   72
+                 Common Development Reasons
+          Why Applications Are Developed for Additional Information:
+
+
+          Missing Signatures
+                 • Application not e-signed, or
+                 • Missing certification statement upload
+          Missing Supporting Documentation
+                 • EIN verification
+                 • Voided Check or Bank Letterhead
+                 • Diploma/Transcripts
+                 • DEA/License/Certification
+          Missing Education Information
+                 • School of graduation not provided
+
+
+CMS | National Provider Enrollment Conference | November 2026          |   73
+                                       Top PECOS Tips
+
+             Let AOs/DOs Know a Signature Request Is Coming
+                • After submission, AOs/DOs may receive a PECOS
+                  certification/signature request. Delays in completing required
+                  signatures can delay processing.
+             Have Supporting Documentation Ready
+                • Upload required documents with the application whenever
+                  possible, such as EIN verification and other requested supporting
+                  documentation.
+              Review the Application Before Submission
+                • Double-check that all sections are complete and accurate before
+                  submitting.
+              Monitor Email After Submission
+                • Watch for development requests and respond promptly to avoid
+                  processing delays.
+                • Be sure to check your Spam/Junk folder regularly for CMS or
+                  contractor communications.
+CMS | National Provider Enrollment Conference | November 2026                         |   74
+        Question
+        & Answer Session
+
+
+CMS | National Provider Enrollment Conference | November 2026   |   75
+Resources
+
+    cms.gov                                                     ProviderEnrollment@cms.hhs.gov
+    ▪ ordering and referring, DMEPOS                            Provider Enrollment contact
+       accreditation, supplier standards
+    ▪ MAC contacts: (search for
+                                                                FFSProviderRelations@cms.hhs.gov
+       Medicare enrollment contact”)
+                                                                “ListServ” sign-up: Notice of program
+                                                                and policy details, press releases,
+    cms.gov/Revalidation
+                                                                events, educational material
+    ▪ search all records online
+    ▪ view and filter online spreadsheets
+    ▪ export to Excel, or connect to with API                   cms.gov MLN Matters® Articles
+                                                                articles on the latest changes
+                                                                to the Medicare Program and enrollment
+     PECOS.cms.hhs.gov
+                                                                education products
+     account creation, videos,
+     providers resources , FAQs
+
+
+     888-734-6433
+     PECOS Help Desk
+
+
+CMS | National Provider Enrollment Conference | November 2026                                            |   76
+    Thank You
+    November 2026 | This summary material was part of an in-person presentation. It was current
+    at the time we presented it. It does not grant rights or impose obligations. We encourage you to
+    review statutes, regulations, and other directions for details.
+                                                                  providerenrollment@cms.hhs.gov
+
+
+
+
+    If you need more accessibility options for the material, contact providerenrollment@cms.hhs.gov
+
+
+    Centers for Medicare & Medicaid Services
+
+
+
+
+CMS | National Provider Enrollment Conference | November 2026                                          |   77
+
