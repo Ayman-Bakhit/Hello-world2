@@ -1,0 +1,286 @@
+
+ 140 | Postal Explorer 
+ Skip top navigation 
+ Postal Explorer 
+ Postal Explorer 
+ PE Tools Calculators
+ Domestic Retail 
+ International Retail 
+ Domestic Business Calculator 
+ International Business Calculator 
+ Domestic Tools
+ APO/FPO/DPO Restrictions 
+ Zone Charts 
+ Locate a Post Office 
+ ZIP Code Lookup 
+ Service Commitments 
+ International Tools
+ Country Max Limits and Price Groups 
+ Customs Form Indicator 
+ Other Tools
+ Metric Conversion Calculator 
+ Publications Business Mail 101 
+ DMM Advisory 
+ Download DMM, IMM and QSGs 
+ Federal Register Notices 
+ Handbook DM-204 
+ Postal Bulletin 
+ Designing Letter and Reply Mail (PUB 25) 
+ Business Solutions Address Management Systems 
+ Address Quality 
+ Business Customer Gateway 
+ Business Mail Entry Locator 
+ Direct Mail Advertising 
+ eCommerce Solutions for Web Developers 
+ EDELCON Country List 
+ Labeling Lists 
+ Mailpiece Design 
+ Mailpiece Design Analyst 
+ Periodicals Nonsubscriber % Calculator 
+ Postage Statements 
+ PostalPro 
+ USPS SKU Guide 
+ USPS Marketing Mail Eligibility Decision Tree 
+ Archives DMM Archive 
+ QSG Archive 
+ IMM Archive 
+ PUB 52 Archive 
+ Price and SKU File Archive 
+ Full Country List 
+ Streamline DMM
+ Cross Reference 
+ Simplification Crosswalk 
+ Help About Postal Explorer 
+ Contact Postal Explorer 
+ FAQs 
+ Video Library 
+ PCSC 
+ Search 
+ Skip side navigation 
+ Domestic Mail Manual 
+ Domestic Mail Manual 
+ 100 Retail Mail 101 Physical Standards 
+ 102 Elements on the Face of a Mailpiece 
+ 110 Priority Mail Express 113 Prices & Eligibility 
+ 114 Postage Payment Methods 
+ 115 Mail Preparation 
+ 116 Deposit 
+ 120 Priority Mail 123 Prices and Eligibility 
+ 124 Postage Payment Methods 
+ 125 Mail Preparation 
+ 126 Deposit 
+ 130 Retail Mail First-Class Mail and USPS Ground Advantage - Retail 133 Prices and Eligibility 
+ 134 Postage Payment Methods 
+ 135 Mail Preparation 
+ 136 Deposit 
+ 140 USPS Marketing Mail Flats Every Door Direct Mail-Retail — (EDDM-Retail) 143 Prices and Eligibility 
+ 144 Postage Payment Methods 
+ 145 Mail Preparation 
+ 146 Deposit 
+ 170 Media Mail and Library Mail 173 Prices and Eligibility 
+ 174 Postage Payment Methods 
+ 175 Mail Preparation 
+ 176 Deposit 
+ 200 Commercial Mail 201 Physical Standards 
+ 202 Elements on the Face of a Mailpiece 
+ 203 Basic Postage Statement, Documentation, and Preparation 
+ 204 Barcoding Standards 
+ 207 Periodicals 
+ 210 Priority Mail Express 213 Prices and Eligibility 
+ 214 Postage Payment and Documentation 
+ 215 Mail Preparation 
+ 216 Enter and Deposit 
+ 220 Priority Mail 223 Prices and Eligibility 
+ 224 Postage Payment and Documentation 
+ 225 Mail Preparation 
+ 226 Enter and Deposit 
+ 230 First-Class Mail 233 Prices and Eligibility 
+ 234 Postage Payment and Documentation 
+ 235 Mail Preparation 
+ 236 Enter and Deposit 
+ 240 USPS Marketing Mail 243 Prices and Eligibility 
+ 244 Postage Payment and Documentation 
+ 245 Mail Preparation 
+ 246 Enter and Deposit 
+ 250 Parcel Select 253 Prices and Eligibility 
+ 254 Postage Payment and Documentation 
+ 255 Mail Preparation 
+ 256 Enter and Deposit 
+ 260 Bound Printed Matter 263 Prices and Eligibility 
+ 264 Postage Payment and Documentation 
+ 265 Mail Preparation 
+ 266 Enter and Deposit 
+ 270 Media Mail and Library Mail 273 Prices and Eligibility 
+ 274 Postage Payment and Documentation 
+ 275 Mail Preparation 
+ 276 Enter and Deposit 
+ 280 Commercial Mail USPS Ground Advantage — Commercial 283 Prices and Eligibility 
+ 284 Postage Payment and Documentation 
+ 285 Mail Preparation 
+ 286 Enter and Deposit 
+ 500 Additional Mailing Services 503 Extra Services Basic Standards for Extra Services 
+ Registered Mail 
+ Certified Mail 
+ Insured Mail 
+ Certificate of Mailing 
+ Return Receipt 
+ USPS Tracking 
+ USPS Signature Services 
+ Collect on Delivery (COD) 
+ 505 Return Services Business Reply Mail (BRM) 
+ Permit Reply Mail 
+ USPS Returns Service 
+ Parcel Return Service 
+ Bulk Parcel Return Service 
+ 507 Mailer Services Treatment of Mail 
+ Forwarding 
+ Hold for Pickup 
+ Address Correction Service 
+ Package Intercept 
+ Requesting Withdrawal and Disposal of a Mailing 
+ Pickup Service 
+ Mailing List Services 
+ Address Sequencing Services 
+ Informed Visibility 
+ USPS Tracking Plus Service 
+ USPS Label Delivery Service 
+ USPS Delivered Duty Paid (DDP) Service 
+ 508 Recipient Services Recipient Options 
+ Conditions of Delivery 
+ Customer Mail Receptacles 
+ Post Office Box Service 
+ Caller Service 
+ General Delivery 
+ Premium Forwarding Services 
+ Firm Holdout 
+ Pandering Advertisements 
+ Sexually Oriented Advertisements 
+ Hold Mail Service 
+ 509 Other Services Address Information System Products 
+ Nonpostal Services 
+ Money Orders 
+ 600 Basic Standards for All Mailing Services 601 Mailability General Standards 
+ RESERVED 
+ Packaging 
+ Acceptable Mailing Containers 
+ Handling, Content, and Extra Service Markings 
+ Mailing Containers - Special Types of Envelopes 
+ RESERVED 
+ Hazardous, Restricted, and Perishable Mail 
+ Written, Printed, and Graphic Matter Generally 
+ Catalogs 
+ 602 Addressing Elements of Addressing 
+ Restrictions 
+ Use of Alternative Addressing 
+ Detached Address Labels (DAL) and Detached Marketing Labels (DMLs) 
+ Move Update Standards 
+ ZIP Code Accuracy Standards 
+ Carrier Route Accuracy Standard 
+ Presort Accuracy Validation and Evaluation (PAVE) 
+ Coding Accuracy Support System (CASS) 
+ Dual Shipping Labels 
+ Commercial Plus One Mailpieces 
+ 604 Postage Payment Methods and Refunds Stamps 
+ Stamped Stationery 
+ Precanceled Stamps 
+ Postage Meters & PC Postage 
+ Permit Imprint (Indicia) 
+ Payment of Postage 
+ Computing Postage 
+ Insufficient or Omitted Postage 
+ Refunds and Exchanges 
+ Postage Due Weight Averaging Program 
+ Retail Cash Transactions 
+ 607 Mailer Compliance and Appeals of Classification Decisions Mailer Compliance with Mailing Standards 
+ Rulings on Mailing Standards 
+ Revenue Deficiency 
+ 608 Postal Information and Resources About the Domestic Mail Manual (DMM) 
+ Domestic Mail 
+ Post Office and Holidays 
+ Philatelic (Stamp Collecting) Services 
+ Private Express Statutes 
+ Complaints and Postal Law Violations 
+ Trademarks and Copyrights of the USPS 
+ USPS Contact Information 
+ Postal Zones 
+ Forms of Identification 
+ Postmarks and Postal Possession 
+ 609 Filing Indemnity Claims for Loss or Damage General Filing Instructions 
+ Providing Proof of Loss or Damage 
+ Providing Evidence of Insurance and Value 
+ Claims 
+ Compensation 
+ Adjudication of Claims 
+ 700 Special Standards 703 Nonprofit USPS Marketing Mail and Other Unique Eligibility 
+ 705 Advanced Preparation and Special Postage Payment Systems 
+ 709 Negotiated Service Agreements 
+ Index and Appendices DMM Index 
+ Forms Glossary 
+ Summary of Changes 
+ Price List 
+ Mailing Standards of the United States Postal Service Domestic Mail Manual > 
+ 140 
+ 140 USPS Marketing Mail Flats Every Door Direct Mail-Retail (EDDM-Retail) 
+ 143 Prices and Eligibility 
+ Overview 
+ 1.0 Prices, and Fees 
+ 2.0 Basic Eligibility Standards for EDDM-Retail Flats 
+ 3.0 Content Standards for EDDM-Retail Flats 
+ 1.0 Prices and Fees 
+ 1.1 Price 
+ For price, see Notice 123—Price List . Flats mailed under EDDM-Retail are not eligible for Nonprofit prices.
+ 1.2 Fees and Services 
+ There are no annual presort or mailing fees to mail pieces as EDDM-Retail. Ancillary service endorsements are not allowed on pieces mailed as EDDM-Retail flats. 
+ 2.0 Basic Eligibility Standards for EDDM-Retail Flats 
+ 2.1 Description of Service 
+ EDDM-Retail flats are USPS Marketing Mail, and are generally subject to USPS Marketing Mail eligibility standards, with differences as described in 3.0 due to the use of simplified addresses. USPS Marketing Mail may receive deferred handling. The USPS does not guarantee the delivery of USPS Marketing Mail within a specified time.
+ 2.2 Inspection of Contents 
+ EDDM-Retail flats are not sealed against postal inspection. Regardless of physical closure, the mailing of articles at EDDM-Retail prices constitutes consent by the mailer to postal inspection of the contents. 
+ 2.3 Forwarding and Return Service 
+ No forwarding or return service is available for pieces mailed as EDDM-Retail. 
+ 2.4 Extra Services 
+ No extra services are available with EDDM-Retail mailpieces. 
+ 2.5 Additional Eligibility Standards for EDDM-Retail Flats 
+ Additional Standards for EDDM-Retail Flats are as follows: 
+ EDDM-Retail flats must weigh no more than 3.3 ounces and must have a length greater than 10-1/2 inches long, or a height greater than 6-1/8 inches high, or a thickness greater than 1/4 inch thick. See 101.2.0 for general minimum and maximum dimensions.
+ EDDM-Retail flats must be part of a saturation flats mailing with all pieces bearing simplified addresses meeting the saturation and addressing standards in 602.3.0 . Each mailing must consist of 200 or more pieces or 50 or more pounds of mail up to a maximum of 5000 pieces per day per 5-digit ZIP Code. As an exception to this minimum quantity, a mailing to all addresses in a 5-digit ZIP Code area may contain fewer than 200 pieces when there are fewer than 200 deliverable addresses in the entire ZIP Code service area to which the pieces are mailed. All pieces in a mailing must be entered at the designated Post Office servicing the routes and Post Office Box sections to which delivery is intended.
+ EDDM-Retail flats are not subject to the ZIP Code accuracy or Move Update standards. 
+ Additional basic standards for USPS Marketing Mail flats in 243.3.0 apply to EDDM-Retail flats, unless stated otherwise in 140 .
+ 3.0 Content Standards for EDDM-Retail Flats 
+ 3.1 General 
+ EDDM-Retail flats consist of mailable matter that is neither mailed nor required to be mailed as First-Class Mail and that is not authorized to be mailed as Periodicals. 
+ 3.2 Personal Information 
+ Personal information may not be included in an EDDM-Retail mailpiece. 
+ 3.3 Bills and Statements of Account 
+ Mail containing bills or statements of account as defined in 133.3.2 may not be entered as EDDM-Retail mail. 
+ 3.4 Handwritten and Typewritten Matter 
+ Mail containing handwritten or typewritten matter may not be entered as EDDM- Retail mail. 
+ 3.5 Attachments and Enclosures 
+ EDDM-Retail mailpieces may not have First-Class Mail enclosures or attachments. An EDDM-Retail flat may bear a label, a sticker, or a release card eligible as USPS Marketing Mail matter, when affixed under 3.5 and 201.4.8.4 . EDDM—Retail flats may bear Repositionable Notes under 202.7.0 . EDDM-Retail flats also may bear other attachments eligible as USPS Marketing Mail matter if these additional conditions are met:
+ The host piece must be at least .009 inch thick. 
+ The attachment is securely attached, not larger than the host piece, and does not extend beyond the host piece. 
+ Each piece in the mailing bears the attachment, and the attachment is of identical size, weight, and positioning on the host piece. 
+ The attachment does not interfere with processing or delivery. Folded or multipage attachments must be secured and sealed to prevent opening during handling. 
+ HELPFUL LINKS Contact Us 
+ Site Index 
+ FAQs 
+ USPS JOBS Careers 
+ ON ABOUT.USPS.COM About USPS Home 
+ Newsroom 
+ USPS Service Updates 
+ Forms & Publications 
+ Government Services 
+ Other USPS Sites Business Customer Gateway 
+ Postal Inspectors 
+ Inspector General 
+ Postal Explorer 
+ National Postal Museum 
+ Resources for Developers 
+ PostalPro 
+ Legal Information Privacy Policy 
+ Terms of Use 
+ FOIA 
+ No FEAR Act/EEO Contacts 
+ Accessibility Statement 
+ Copyright ©
+ USPS. All Rights Reserved.

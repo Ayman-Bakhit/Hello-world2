@@ -1,0 +1,768 @@
+
+ 240 | Postal Explorer 
+ Skip top navigation 
+ Postal Explorer 
+ Postal Explorer 
+ PE Tools Calculators
+ Domestic Retail 
+ International Retail 
+ Domestic Business Calculator 
+ International Business Calculator 
+ Domestic Tools
+ APO/FPO/DPO Restrictions 
+ Zone Charts 
+ Locate a Post Office 
+ ZIP Code Lookup 
+ Service Commitments 
+ International Tools
+ Country Max Limits and Price Groups 
+ Customs Form Indicator 
+ Other Tools
+ Metric Conversion Calculator 
+ Publications Business Mail 101 
+ DMM Advisory 
+ Download DMM, IMM and QSGs 
+ Federal Register Notices 
+ Handbook DM-204 
+ Postal Bulletin 
+ Designing Letter and Reply Mail (PUB 25) 
+ Business Solutions Address Management Systems 
+ Address Quality 
+ Business Customer Gateway 
+ Business Mail Entry Locator 
+ Direct Mail Advertising 
+ eCommerce Solutions for Web Developers 
+ EDELCON Country List 
+ Labeling Lists 
+ Mailpiece Design 
+ Mailpiece Design Analyst 
+ Periodicals Nonsubscriber % Calculator 
+ Postage Statements 
+ PostalPro 
+ USPS SKU Guide 
+ USPS Marketing Mail Eligibility Decision Tree 
+ Archives DMM Archive 
+ QSG Archive 
+ IMM Archive 
+ PUB 52 Archive 
+ Price and SKU File Archive 
+ Full Country List 
+ Streamline DMM
+ Cross Reference 
+ Simplification Crosswalk 
+ Help About Postal Explorer 
+ Contact Postal Explorer 
+ FAQs 
+ Video Library 
+ PCSC 
+ Search 
+ Skip side navigation 
+ Domestic Mail Manual 
+ Domestic Mail Manual 
+ 100 Retail Mail 101 Physical Standards 
+ 102 Elements on the Face of a Mailpiece 
+ 110 Priority Mail Express 113 Prices & Eligibility 
+ 114 Postage Payment Methods 
+ 115 Mail Preparation 
+ 116 Deposit 
+ 120 Priority Mail 123 Prices and Eligibility 
+ 124 Postage Payment Methods 
+ 125 Mail Preparation 
+ 126 Deposit 
+ 130 Retail Mail First-Class Mail and USPS Ground Advantage - Retail 133 Prices and Eligibility 
+ 134 Postage Payment Methods 
+ 135 Mail Preparation 
+ 136 Deposit 
+ 140 USPS Marketing Mail Flats Every Door Direct Mail-Retail — (EDDM-Retail) 143 Prices and Eligibility 
+ 144 Postage Payment Methods 
+ 145 Mail Preparation 
+ 146 Deposit 
+ 170 Media Mail and Library Mail 173 Prices and Eligibility 
+ 174 Postage Payment Methods 
+ 175 Mail Preparation 
+ 176 Deposit 
+ 200 Commercial Mail 201 Physical Standards 
+ 202 Elements on the Face of a Mailpiece 
+ 203 Basic Postage Statement, Documentation, and Preparation 
+ 204 Barcoding Standards 
+ 207 Periodicals 
+ 210 Priority Mail Express 213 Prices and Eligibility 
+ 214 Postage Payment and Documentation 
+ 215 Mail Preparation 
+ 216 Enter and Deposit 
+ 220 Priority Mail 223 Prices and Eligibility 
+ 224 Postage Payment and Documentation 
+ 225 Mail Preparation 
+ 226 Enter and Deposit 
+ 230 First-Class Mail 233 Prices and Eligibility 
+ 234 Postage Payment and Documentation 
+ 235 Mail Preparation 
+ 236 Enter and Deposit 
+ 240 USPS Marketing Mail 243 Prices and Eligibility 
+ 244 Postage Payment and Documentation 
+ 245 Mail Preparation 
+ 246 Enter and Deposit 
+ 250 Parcel Select 253 Prices and Eligibility 
+ 254 Postage Payment and Documentation 
+ 255 Mail Preparation 
+ 256 Enter and Deposit 
+ 260 Bound Printed Matter 263 Prices and Eligibility 
+ 264 Postage Payment and Documentation 
+ 265 Mail Preparation 
+ 266 Enter and Deposit 
+ 270 Media Mail and Library Mail 273 Prices and Eligibility 
+ 274 Postage Payment and Documentation 
+ 275 Mail Preparation 
+ 276 Enter and Deposit 
+ 280 Commercial Mail USPS Ground Advantage — Commercial 283 Prices and Eligibility 
+ 284 Postage Payment and Documentation 
+ 285 Mail Preparation 
+ 286 Enter and Deposit 
+ 500 Additional Mailing Services 503 Extra Services Basic Standards for Extra Services 
+ Registered Mail 
+ Certified Mail 
+ Insured Mail 
+ Certificate of Mailing 
+ Return Receipt 
+ USPS Tracking 
+ USPS Signature Services 
+ Collect on Delivery (COD) 
+ 505 Return Services Business Reply Mail (BRM) 
+ Permit Reply Mail 
+ USPS Returns Service 
+ Parcel Return Service 
+ Bulk Parcel Return Service 
+ 507 Mailer Services Treatment of Mail 
+ Forwarding 
+ Hold for Pickup 
+ Address Correction Service 
+ Package Intercept 
+ Requesting Withdrawal and Disposal of a Mailing 
+ Pickup Service 
+ Mailing List Services 
+ Address Sequencing Services 
+ Informed Visibility 
+ USPS Tracking Plus Service 
+ USPS Label Delivery Service 
+ USPS Delivered Duty Paid (DDP) Service 
+ 508 Recipient Services Recipient Options 
+ Conditions of Delivery 
+ Customer Mail Receptacles 
+ Post Office Box Service 
+ Caller Service 
+ General Delivery 
+ Premium Forwarding Services 
+ Firm Holdout 
+ Pandering Advertisements 
+ Sexually Oriented Advertisements 
+ Hold Mail Service 
+ 509 Other Services Address Information System Products 
+ Nonpostal Services 
+ Money Orders 
+ 600 Basic Standards for All Mailing Services 601 Mailability General Standards 
+ RESERVED 
+ Packaging 
+ Acceptable Mailing Containers 
+ Handling, Content, and Extra Service Markings 
+ Mailing Containers - Special Types of Envelopes 
+ RESERVED 
+ Hazardous, Restricted, and Perishable Mail 
+ Written, Printed, and Graphic Matter Generally 
+ Catalogs 
+ 602 Addressing Elements of Addressing 
+ Restrictions 
+ Use of Alternative Addressing 
+ Detached Address Labels (DAL) and Detached Marketing Labels (DMLs) 
+ Move Update Standards 
+ ZIP Code Accuracy Standards 
+ Carrier Route Accuracy Standard 
+ Presort Accuracy Validation and Evaluation (PAVE) 
+ Coding Accuracy Support System (CASS) 
+ Dual Shipping Labels 
+ Commercial Plus One Mailpieces 
+ 604 Postage Payment Methods and Refunds Stamps 
+ Stamped Stationery 
+ Precanceled Stamps 
+ Postage Meters & PC Postage 
+ Permit Imprint (Indicia) 
+ Payment of Postage 
+ Computing Postage 
+ Insufficient or Omitted Postage 
+ Refunds and Exchanges 
+ Postage Due Weight Averaging Program 
+ Retail Cash Transactions 
+ 607 Mailer Compliance and Appeals of Classification Decisions Mailer Compliance with Mailing Standards 
+ Rulings on Mailing Standards 
+ Revenue Deficiency 
+ 608 Postal Information and Resources About the Domestic Mail Manual (DMM) 
+ Domestic Mail 
+ Post Office and Holidays 
+ Philatelic (Stamp Collecting) Services 
+ Private Express Statutes 
+ Complaints and Postal Law Violations 
+ Trademarks and Copyrights of the USPS 
+ USPS Contact Information 
+ Postal Zones 
+ Forms of Identification 
+ Postmarks and Postal Possession 
+ 609 Filing Indemnity Claims for Loss or Damage General Filing Instructions 
+ Providing Proof of Loss or Damage 
+ Providing Evidence of Insurance and Value 
+ Claims 
+ Compensation 
+ Adjudication of Claims 
+ 700 Special Standards 703 Nonprofit USPS Marketing Mail and Other Unique Eligibility 
+ 705 Advanced Preparation and Special Postage Payment Systems 
+ 709 Negotiated Service Agreements 
+ Index and Appendices DMM Index 
+ Forms Glossary 
+ Summary of Changes 
+ Price List 
+ Mailing Standards of the United States Postal Service Domestic Mail Manual > 
+ 240 
+ 240 Commercial Mail USPS Marketing Mail 
+ 243 Prices and Eligibility 
+ Overview 
+ 1.0 Prices and Fees 
+ 2.0 Content Standards for USPS Marketing Mail 
+ 3.0 Basic Eligibility Standards for USPS Marketing Mail 
+ 4.0 Price Eligibility for USPS Marketing Mail 
+ 5.0 Additional Eligibility Standards for Nonautomation USPS Marketing Mail Letters, Flats, and Presorted USPS Marketing Mail Parcels 
+ 6.0 Additional Eligibility Standards for Enhanced Carrier Route USPS Marketing Mail Letters and Flats 
+ 7.0 Eligibility Standards for Automation USPS Marketing Mail 
+ 8.0 Customized MarketMail 
+ 9.0 Additional Eligibility Standards for Heavy Printed Matter 
+ 1.0 Prices and Fees 
+ 1.1 Price Application 
+ Postage is based on the price that applies to the weight (postage) increment of each addressed piece. 
+ 1.2 USPS Marketing Mail Prices 
+ USPS Marketing Mail prices are applied as follows: 
+ [7-12-26] The appropriate minimum per piece price applies to USPS Marketing Mail automation or machinable letter-sized mailpiece that weighs 3.5 ounces (0.2188 pound) or less, Nonautomation nonmachinable letters that weigh 4.0 ounces (0.25 pounds) or less, flat-sized mailpieces that weighs 4.0 ounces (0.25 pound) or less, presorted Marketing Parcels and nonstandard parcels that weighs 3.3 ounces (0.2063 pound) or less, and Heavy Printed Matter nonpresorted parcels. 
+ [7-12-26] A price determined by adding the per-piece charge and the corresponding per-pound charge applies to the following: 
+ Nonmachinable letters and flats that weigh more than 4.0 ounces; 
+ Presorted Marketing Parcels; 
+ [7-12-26] Nonprofit machinable and Nonprofit nonstandard parcels that weigh more than 3.3 ounces; 
+ [7-12-26] Machinable parcels that weigh 3.5 ounces or more; and 
+ [7-12-26] Regular and Nonprofit Heavy Printed Matter (HPM) presorted and carrier route parcels. 
+ A regular or nonprofit per piece price applies to Customized MarketMail. 
+ Items qualifying as a catalog under 601.10.0 are eligible for an incentive discount when appropriately identified on the postage statement or the eDoc. 
+ 1.3 [11-2-26] Regular and Nonprofit USPS Marketing Mail (including Heavy Printed Matter) and Customized MarketMail Prices 
+ For prices, see Notice 123–Price List . 
+ 1.4 Fees 
+ 1.4.1 Presort Mailing Fee 
+ [11-2-26] An annual mailing fee must be paid each 12-month period at each Post Office of mailing. The annual mailing fee for USPS Marketing Mail includes Heavy Printed Matter. Payment of this fee does not apply to mailers who present qualified full-service mailings (under 705.23.3.1a ). For mail manifested using the USPS Ship System under 705.2.6 , only one annual mailing fee, paid at the Post Office of account where the permit-imprint account is held, is required, regardless of the number of Post Offices of mailing. A mailer paying this fee may enter information on clients’ mail into the system, as well as the mailer’s own. The mailer whose permit imprint appears on pieces in a mailing paid with a permit imprint must show that permit number on the postage statement and must pay the annual mailing fee for that permit; this fee is in addition to the one-time fee for an application to use permit imprints. The fee may be paid in advance only for the next 12 months and only during the last 60 days of the current service period. The fee charged is that which is in effect on the date of payment (see Notice 123—Price List ). 
+ 1.4.2 Weighted Fee 
+ For return of pieces bearing the ancillary service markings “Address Service Requested” and “Forwarding Service Requested.” The weighted fee equals single-piece First-Class Mail, or USPS Ground Advantage — Retail, or Priority Mail price multiplied by 2.472. 
+ 1.5 Computing Postage for USPS Marketing Mail 
+ 1.5.1 Weight 
+ To compute the total weight of the addressed pieces in a mailing or mailing segment for: 
+ Identical-weight pieces, multiply the computed average weight of a single piece by the corresponding number of pieces; do not round the product. 
+ Nonidentical-weight pieces, add the actual weight of the individual pieces or weigh the entire mailing in bulk; do not round either result. 
+ 1.5.2 Determining Single-Piece Weight 
+ To determine single-piece weight in a mailing of identical-weight pieces, weigh a sample group of at least 10 randomly selected pieces and divide the total sample weight by the number of pieces in the sample. To determine single-piece weight in a mailing of nonidentical-weight pieces, weigh each piece individually. Express all single-piece weights in decimal pounds, rounded off to four decimal places. 
+ 1.5.3 Net Postage 
+ Postage is computed at the applicable prices on the entire mailing to be mailed at one time. The net postage price is either the applicable minimum per piece price or the piece/pound price, as adjusted for any discounts and surcharges. 
+ 1.5.4 Per Piece and Per Pound Charges 
+ To determine per-piece and per-pound charges:
+ Per-Piece Charge. The per-piece charge is computed based on the total number of addressed pieces for each price category claimed. The minimum price may apply to each piece as detailed in 1.2. Otherwise, the per-piece charge must be added to the per-pound charge to determine total postage. 
+ Per-Pound Charge. Where applicable, the per-pound charge is computed based on the total weight of the addressed pieces for each price category.claimed and is added to the per-piece charge to determine total postage. 
+ Example. A quantity of pieces weighing 100.25 pounds is charged 100.25 times the applicable price per pound, based on the price claimed, plus one unit of the applicable per-piece charge for each addressed piece. 
+ 1.5.5 Computing Affixed Postage for Piece/Pound Price Mailpieces 
+ To compute postage to be affixed to each piece/pound-price piece: 
+ Multiply the weight of the piece (in pounds) by the applicable price per pound; 
+ Add the applicable per-piece charge and any surcharge; and 
+ Round up the sum to the next 10th of a cent. See 244.2.0 for affixing postage. 
+ 1.5.6 Permit Imprint 
+ In any permit imprint mailing: 
+ For each price or price category, multiply the number of addressed pieces by the corresponding price per piece and (if applicable) multiply the unrounded total weight of the pieces by the corresponding price per pound; round off each product to four decimal places.
+ Add the per piece and per pound charges and round off the total postage to the nearest whole cent. 
+ 2.0 Content Standards for USPS Marketing Mail 
+ 2.1 General 
+ USPS Marketing Mail consists of mailable matter that:
+ Is neither mailed nor required to be mailed as First-Class Mail; 
+ [7-12-26] Is not authorized to be mailed as Periodicals (unless permitted or required by standard); 
+ [7-12-26] Weighs no more than 20 ounces (or 24 ounces for carrier route flats); and 
+ [7-12-26] Weighs no more than 15 pounds if prepared as Heavy Printed Matter under 9.0 . Note: Mailpieces prepared as catalogs must meet the standards in 601.10.0 . 2.2 Personal Information 
+ Personal information (see 233.2.3 ) may not be included in a USPS Marketing Mail mailpiece unless all of the following conditions are met: 
+ The mailpiece contains explicit advertising for a product or service for sale or lease or an explicit solicitation for a donation. 
+ All of the personal information is directly related to the advertising or solicitation. 
+ The exclusive reason for inclusion of all of the personal information is to support the advertising or solicitation in the mailpiece. 
+ 2.3 Bills and Statements of Account 
+ Mail containing bills or statements of account as defined in 233.2.2 may not be entered as USPS Marketing Mail except under the conditions described in 2.5.2 .
+ 2.4 Handwritten and Typewritten Matter 
+ Mail containing handwritten or typewritten matter may not be entered as USPS Marketing Mail except under the conditions described in 2.6 .
+ 2.5 Attachments and Enclosures 
+ 2.5.1 Invoice 
+ An invoice, whether it also serves as a bill, may be placed either inside a USPS Marketing Mail piece or in an envelope marked “Invoice Enclosed” and attached to the outside of the piece if the invoice relates solely to the matter with which it is mailed. The invoice may show this information: 
+ Names and addresses of the sender and addressee. 
+ Names and quantities of the articles enclosed, descriptions of each (e.g., price, tax, style, stock number, size, and quality, and, if defective, nature of defects). 
+ Order or file number, date of order, date and manner of shipment, shipping weight, postage paid, and initials or name of packer or checker. 
+ 2.5.2 Incidental First-Class Mail Attachments and Enclosures 
+ Incidental First-Class Mail matter may be enclosed in or attached to USPS Marketing Mail merchandise (including books but excluding merchandise samples) without payment of First-Class Mail postage. Incidental First-Class Mail matter may not be enclosed in or attached to matter mailed as Customized MarketMail under 8.0 . An incidental First-Class Mail attachment or enclosure must be matter that, if mailed separately, would require First-Class Mail postage, is closely associated with but secondary to the host piece, and is prepared not to encumber postal processing. An incidental First-Class Mail attachment or enclosure may be a bill for the product or publication, a statement of account for past products or publications, or a personal message or greeting included with a product, publication, or parcel. Postage at the USPS Marketing Mail or Package Services price for the host piece is based on the combined weight of the host piece and the incidental First-Class Mail attachment or enclosure. 
+ 2.5.3 Nonincidental First-Class Mail Enclosures 
+ Letters or other pieces of nonincidental First-Class Mail, subject to postage at First-Class Mail prices, may be enclosed with USPS Marketing Mail pieces (except matter mailed as Customized MarketMail under 8.0 ). Postage for the First-Class Mail enclosure must be placed on the outside of the piece. It may be affixed separately or added to the postage for the host piece. The endorsement “First-Class Mail Enclosed” must be placed on the piece, below the postage and above the address. 
+ 2.5.4 Nonincidental First-Class Mail Attachments 
+ Letters or other pieces of nonincidental First-Class Mail may be placed in an envelope and securely attached to the address side of a USPS Marketing Mail piece (except matter mailed as Customized MarketMail under 8.0 ), or of the principal piece, as applicable. Combination envelopes or containers with separate parts for the two classes of mail may be used. The names and addresses of the sender and addressee must be placed on both the principal piece and the attachment. Alternatively, the sender’s name and address must be placed on one part and the addressee’s name and address on the other. If the piece is a combination container with inseparable parts or compartments, the names and addresses may appear on only one part. The applicable USPS Marketing Mail postage for the USPS Marketing Mail matter must be prepaid and placed in the upper right corner of the address space. Postage at the applicable First-Class Mail price must be paid for and affixed to the First-Class Mail attachment, unless other payment methods are permitted by standard. 
+ 2.5.5 Attachment of Other USPS Marketing Mail Matter 
+ USPS Marketing Mail letters and flats may bear one repositionable note per mailpiece under 202.7.0 . A USPS Marketing Mail letter or flat may bear a label, a sticker, or a release card eligible as USPS Marketing Mail matter, when affixed under 2.5.5 , 2.5.6 and 2.5.7 . USPS Marketing Mail letters, flats, and parcels also may bear other attachments eligible as USPS Marketing Mail matter if these additional conditions are met:
+ The piece bearing the attachment is claimed as Customized MarketMail (CMM) under 243.8.1 or as Enhanced Carrier Route, except as allowed for labels, stickers and release cards under 2.5.6 and 2.5.7 . The face of the attachment may bear only the price markings and endorsements permitted for the price claimed for the host piece.
+ At the time of mailing, the piece shows only one complete delivery address. If the attachment is a reply card, the address for returning the piece is not visible. 
+ CMM host pieces are any size permitted under 245.13.0 . Enhanced Carrier Route host pieces are larger than 6 by 11 inches.
+ The attachment is not larger than the host piece and does not extend beyond the host piece. An attachment affixed to a CMM piece may not be greater than 1/4 inch thick at its thickest point. 
+ Each piece in the mailing bears the attachment, and the attachment is of identical size, weight, and positioning on the host piece. Different wording or designs may be used. 
+ The attachment does not interfere with processing or delivery. Folded or multipage attachments must be secured to prevent opening during handling. 
+ Letters and flats, with attachments that have been approved in writing by the Pricing and Classification Service Center, are eligible for mailing under the conditions specified in the approval letter. 
+ 2.5.6 Letter-Size Pieces with Labels, Stickers, or Release Cards 
+ Automation letters and Enhanced Carrier Route letters with an attached label, sticker, or release card eligible as USPS Marketing Mail matter must meet the standards in 201.3.13 . 
+ 2.5.7 Flat-Size Pieces with Labels, Stickers or Release Cards 
+ Flats with an attached label, sticker, or release card eligible as USPS Marketing Mail matter must meet the standards in 201.4.8 . 
+ 2.6 Written Additions 
+ Markings that have the character of personal correspondence require, with certain exceptions, additional postage at the First-Class Mail prices. The following written additions and enclosures do not require additional First-Class Mail postage: 
+ The sender’s and the addressee’s names, occupations, and addresses, preceded by “From” or “To,” and directions for handling. 
+ Marks, numbers, names, or letters describing the contents. 
+ Words or phrases such as “Do Not Open Until Christmas” and “Happy Birthday, Mother.” 
+ Instructions and directions for the use of the item mailed. 
+ A manuscript dedication or inscription not having the nature of personal correspondence. 
+ Marks to call attention to words or passages in the text. 
+ Corrections of typographical errors in printed matter. 
+ Manuscripts accompanying related proof sheets and corrections of proof sheets including corrections of typographical and other errors, changes in the text, insertions of new text, marginal instructions to the printer, and corrective rewrites of parts. 
+ Handstamped imprints, unless the added material is in itself personal or converts the original matter to a personal communication. 
+ Matter mailable separately as USPS Marketing Mail printed on the wrapper, envelope, tag, or label. 
+ 3.0 Basic Eligibility Standards for USPS Marketing Mail 
+ 3.1 Description of Service 
+ 3.1.1 Service Description 
+ USPS Marketing Mail (formerly Standard Mail) may receive deferred handling. The USPS does not guarantee the delivery of USPS Marketing Mail within a specified time.
+ 3.1.2 Minimum Quantity 
+ USPS Marketing Mail provides economical prices for mailings of 200 or more pieces or 50 or more pounds of mail. 
+ 3.2 Defining Characteristics 
+ 3.2.1 Mailpiece Weight 
+ [7-12-26] USPS Marketing Mail parcels and Marketing Parcels must weigh no more than 16 ounces. USPS Marketing Mail presorted must weigh no more than 20 ounces. USPS Marketing Mail carrier route flats must weigh no more than 24 ounces. Heavy Printed Matter parcels must weigh no more than 15 pounds. Flat-size pieces that do not meet the standards in 201.4.3 through 201.4.4 must be prepared as parcels, and the mailer must pay the applicable parcel prices. The following weight limits also apply to pieces mailed at USPS Marketing Mail letter prices: 
+ Pieces mailed at automation or machinable letter prices may weigh up to 3.5 ounces. Automation or machinable letter-size pieces weighing more than 3.5 ounces are mailable at the nonautomation, nonmachinable letter prices. 
+ Pieces mailed at automation carrier route (saturation, high density, and high density plus) letter prices may weigh up to 3.5 ounces. Automation carrier route letters weighing more than 3.5 ounces are mailable at the applicable nonautomation carrier route letter prices. 
+ 3.2.2 USPS Marketing Mail, Marketing Parcels 
+ All USPS Marketing Mail, Marketing Parcels (regular and nonprofit) must bear an alternate addressing format under 602.3.0 , and cannot be used for “fulfillment purposes‘‘ (i.e. the sending of items specifically purchased or requested by the customer of a mailer). The alternate address format must be on the same line as the addressee‘s name or on the address line directly above or below the addressee‘s name. USPS Tracking is the only extra service available for USPS Marketing Mail, Marketing Parcels. 
+ 3.2.3 Nonprofit USPS Marketing Mail Machinable and Nonstandard Parcels 
+ Nonprofit USPS Marketing Mail parcels that do not qualify as Marketing Parcels under 3.2.2 may be prepared and mailed as Nonprofit Machinable or Nonstandard priced parcels. 
+ 3.2.4 Preparation Requirements 
+ USPS Marketing Mail is subject to specific volume, marking, and preparation requirements under 245 . 
+ 3.2.5 Inspection of Contents 
+ USPS Marketing Mail is not sealed against postal inspection. Regardless of physical closure, the mailing of articles at USPS Marketing Mail prices constitutes consent by the mailer to postal inspection of the contents. 
+ 3.2.6 Forwarding Service 
+ The price of USPS Marketing Mail typically does not include forwarding service. Forwarding service is available under 507.1.5 .
+ 3.2.7 Return Service 
+ The price of USPS Marketing Mail does not include return service. Return service is available under 507.1.5 for an additional fee.
+ 3.2.8 Extra Services 
+ See information regarding available extra services under 503 .
+ 3.2.9 Periodicals 
+ Authorized Periodicals may not be entered as USPS Marketing Mail unless permitted by standard. 
+ 3.2.10 Identical Pieces 
+ The contents of printed matter in a USPS Marketing Mail mailing must be identical to a piece sent to at least one other addressee. USPS Marketing Mail may include the addressee‘s name and address but may not transmit personal information except as permitted under 2.2 .
+ [7-12-26] 3.2.11 Heavy Printed Matter (HPM) 
+ Heavy Printed Matter is a sub-category of Marketing Parcels that includes regular and nonprofit carrier route, presorted, and nonpresorted parcels that weigh no more than 15 pounds. HPM must also meet the additional standards under 9.0 .
+ 3.3 Additional Basic Standards for USPS Marketing Mail 
+ Each USPS Marketing Mail mailing is subject to these general standards: 
+ All pieces in a mailing must be of the same processing category, except that nonstandard and machinable parcels may be combined in 5-digit scheme and 5-digit sacks or on 5-digit scheme and 5-digit pallets. 
+ Each mailing must contain at least 200 pieces or 50 pounds of pieces. See 3.6 , for volume requirement eligibility unique to Presorted USPS Marketing price mailings. Other volume standards also can apply, based on the price claimed.
+ All pieces in an automation mailing must be eligible for an automation price. Separate automation and Presorted price mailings of flats that are reported on the same postage statement must be cosacked under 705.9.0 . Separate automation, Presorted, and Enhanced Carrier Route mailings of flats may be co-containerized under 705 .
+ All pieces in a mailing must be sorted together and marked under the standards for the price claimed. 
+ Each letter and flat piece must bear the addressee‘s name and delivery address, including the correct ZIP Code or ZIP+4 code, except as allowed when using alternative addressing formats under 602.3.0 or detached address labels (DALs) under 602.4.0 . 
+ Each Marketing parcel must bear an alternative addressing format subject to 602.3.0 . Nonprofit USPS Marketing Mail machinable or nonstandard parcels must bear the addressee‘s name and complete delivery address, or may use an alternative addressing format. DALS may be used subject to 602.4.0 .
+ Postage must be paid under 244.1.0 through 244.3.0 with precanceled stamps, meter stamps, or permit imprint.
+ A completed postage statement using the correct USPS form must be submitted with each mailing.
+ Each piece must meet the standards for any other price or discount claimed. 
+ Any barcode on a mailpiece must be correct for the delivery address and meet the standards in 202.5.0 , 602.9.0 , and 204.1.0 .
+ Mailings must be deposited at a business mail entry unit of the Post Office where the postage permit or license is held and the annual mailing fee paid, unless deposit elsewhere is permitted by standard. 
+ [7-12-26] 3.4 Barcode Standards 
+ 3.4.1 IMpb and IMmb Standards 
+ All USPS Marketing Mail parcels and Heavy Printed Matter parcels must bear an Intelligent Mail package barcode (IMpb) and an Intelligent Mail matrix barcode (IMmb) as outlined in 204.2.0 and Publication 199, Intelligent Mail Package Barcode (IMpb) Implementation Guide for Confirmation Services and Electronic Payment Systems . For details see PostalPro at https://postalpro.usps.com . 
+ 3.4.2 Package Quality Noncompliance Fee 
+ Unless otherwise excepted, mailers of USPS Marketing Mail parcels not meeting the requirements for using a unique IMpb and IMmb, as outlined in 204.2.1.6 and Publication 199, Intelligent Mail Package Barcode (IMpb) Implementation Guide for Confirmation Services and Electronic Payment Systems , will be assessed the Package Quality Noncompliance Fee. (See Notice 123–Price List.) For details see PostalPro at https://postalpro.usps.com .
+ 3.5 Merging Similar USPS Marketing Mailings 
+ Mailings are subject to the general definitions and conditions in 245.1.0 . Generally, mailers may merge similar USPS Marketing Mail matter into a single mailing. Differences in text, address labels, and address lists or list key numbers do not prohibit the mailer from merging and sorting pieces together. Pieces with different methods of postage payment may be combined in the same mailing only if authorized by the director, Business Acceptance Solutions (see 608.8.0 for address). Pieces of nonidentical weight, if merged in the same mailing, must bear the correct postage when mailed, unless otherwise authorized by the director, Business Acceptance Solutions. 
+ 3.6 Residual Volume Requirement 
+ Pieces in an Enhanced Carrier Route price mailing that has separately met a 200-piece or 50-pound minimum quantity requirement may be counted toward the minimum quantity requirement for a Presorted price mailing, provided that the Enhanced Carrier Route price mailing and the Presorted price mailing are part of the same mailing job. Likewise, pieces in an automation price mailing that has separately met a 200-piece or 50-pound minimum quantity requirement may be counted toward the minimum quantity requirement for a Presorted price mailing, provided that the automation price mailing and the Presorted mailing are part of the same mailing job. Pieces mailed at Presorted USPS Marketing Mail prices must not be counted toward the minimum volume requirements for an Enhanced Carrier Route price or an automation price mailing. 
+ 3.7 Residual Mail Subject to First-Class Mail or USPS Ground Advantage — Retail Prices 
+ The following applies: Pieces prepared as USPS Marketing Mail (i.e., that bear USPS Marketing Mail price markings, ACS codes, etc.) that do not qualify for Enhanced Carrier Route, automation, or Presorted USPS Marketing Mail prices are subject to the single-piece First-Class Mail or USPS Ground Advantage – Retail prices as applicable for the weight of the mailpiece. 
+ [7-12-26] Metered pieces weighing more than 13 ounces but not exceeding 20 ounces that do not qualify for USPS Marketing Mail prices, and any pieces that do not qualify for USPS Marketing Mail prices for which First-Class Mail or USPS Ground Advantage – Retail service is desired, must be re-enveloped or otherwise prepared so that they do not bear USPS Marketing Mail markings, endorsements, and ACS codes and must bear the proper First-Class Mail or USPS Ground Advantage — Retail price markings and ACS codes. 
+ [7-12-26] Mailers with pieces (other than metered pieces weighing more than 13 ounces but not exceeding 20 ounces) that do not qualify for USPS Marketing Mail prices but that are prepared as USPS Marketing Mail and who do not want First-Class Mail or USPS Ground Advantage — Retail service for those pieces may enter their mailpieces “as is” (i.e., bearing the USPS Marketing Mail markings and endorsements), provided the requirements in 244.1.0 , are met. 
+ 3.8 ZIP Code Accuracy 
+ The ZIP Code accuracy standard is a means of ensuring that the 5-digit ZIP Code in the delivery address correctly matches the delivery address information. For the purposes of this standard, address means a specific address associated with a specific 5-digit ZIP Code. Each address in a mailing at USPS Marketing Mail flats prices must meet the ZIP Code accuracy requirements in 602.6.0 .
+ 3.9 Move Update Standard 
+ The Move Update standard requires the periodic matching of a mailer‘s address records with customer-filed change-of-address orders maintained by the USPS. See 602.5.0 for Move Update standards.
+ 4.0 Price Eligibility for USPS Marketing Mail 
+ 4.1 General Information 
+ The following apply: 
+ All USPS Marketing Mail prices are Presorted prices (including all nonprofit prices). These prices apply to mailings meeting: 
+ Basic standards in 2.0 through 4.0 ; 
+ Corresponding standards for Presorted prices, Enhanced Carrier Route (ECR) prices, and automation prices under 5.0 through 7.0 ; or 
+ Customized MarketMail prices under 243.8.0 . 
+ Except for Customized MarketMail pieces, destination entry-discount prices are available under 246.2.0 through 246.6.0 . 
+ Nonprofit prices may be used only by organizations that USPS authorized under 703.1.0 . 
+ Not all processing categories qualify for every price. 
+ Pieces are subject to either a single minimum per-piece price or a combined piece/pound price, depending on the weight of the individual pieces in the mailing. 
+ Heavy Printed Matter (HPM) prices are Carrier Route, Presorted, and Nonpresorted prices (including nonprofit prices). These prices apply to mailings meeting: 
+ [7-12-26] Basic standards in 2.0 through 4.0 ; and 
+ [7-12-26] Corresponding standards for Presorted prices, Carrier Route prices, and Nonpresorted prices under 9.0 . 
+ 4.2 Minimum Per Piece Prices 
+ The minimum per piece prices (the minimum postage that must be paid for each piece) apply as follows: 
+ Basic Requirement. Automation and automation compatible letters mailed at Regular, Enhanced Carrier Route, Nonprofit, and Nonprofit Enhanced Carrier Route prices are subject to minimum per piece prices when they weigh no more than 3.5 ounces (0.2188 pound). Nonautomation letters and flats mailed at Regular, enhanced Carrier Route, Nonprofit and Nonprofit Enhanced Carrier Route prices are subject to minimum per piece prices when they weigh no more than 4 ounces (0.25 pound). 
+ In applying the minimum per piece prices, a mailpiece is categorized as either a letter or a nonletter, based on whether the piece meets the letter-size standard in 201.1.1.1 , without regard to placement of the address on the piece, except under these conditions: 
+ If the piece meets both the definition of a letter in 201.1.1.1 and the definition of an automation flat in 201.6.0 , the piece may be prepared and entered at an automation flat price. 
+ If the piece is prepared for automation letter prices, address placement is used to determine the length when applying the size standards and aspect ratio requirements to qualify for automation letter prices under 201.3.0 . For this purpose, the length is considered to be the dimension parallel to the address.
+ Pieces mailed as Customized MarketMail under 9.0 must pay the prices in 1.2 and must not exceed 3.3 ounces.
+ Individual prices. The following apply: 
+ There are separate minimum per-piece prices for each subclass (Regular, Enhanced Carrier Route, Nonprofit, and Nonprofit Enhanced Carrier Route) and within each subclass for the type of mailing and the level of presort within each mailing. 
+ Except for Customized MarketMail pieces, discounted per-piece prices also may be claimed for destination sectional center facility (DSCF) and destination delivery unit (DDU) under 246 . 
+ DDU prices are available only for mail entered at Enhanced Carrier Route or Nonprofit Enhanced Carrier Route prices. 
+ There are also separate prices for Marketing parcels, Nonprofit machinable-priced parcels, and Nonprofit nonstandard-priced parcels. 
+ See 1.0 for individual per-piece prices. 
+ 4.3 Piece/Pound Prices 
+ Letters that exceed 4 ounces are subject to a two-part piece/pound price that includes a fixed charge per piece and a variable pound charge based on weight. Flats that exceed 4 ounces are subject to a two-part piece/pound price that includes a fixed charge per piece and a variable pound charge based on weight. 
+ 4.4 Extra Services for USPS Marketing Mail 
+ 4.4.1 Available Services 
+ [7-12-26] Only the following extra services may be used with USPS Marketing Mail parcels, with restrictions as noted in 4.4.2 ; see 9.0 for Heavy Printed Matter: 
+ Bulk insurance. 
+ USPS Tracking (electronic option only). 
+ Certificate of mailing, as provided in 503.5.0 .
+ 4.4.2 Ineligible Matter 
+ Extra services (other than certificate of mailing service) may not be used for any of the following types of USPS Marketing Mail: 
+ Pieces entered as letters or flats. 
+ Machinable parcels mailed using Bulk Parcel Return Service. 
+ Pieces mailed with detached address labels (DALs) under 602.4.0 .
+ Pieces mailed as Customized MarketMail. 
+ 4.4.3 Additional Preparation Requirements 
+ An eligible mailpiece with an extra service must bear a return address under 602.1.0 , and an ancillary service endorsement under 507.1.0 under the following conditions: 
+ Pieces with bulk insurance must bear an endorsement that returns any undeliverable-as-addressed piece to the sender. Required endorsements are “Address Service Requested,” “Forwarding Service Requested,” or “Return Service Requested.” 
+ Except for USPS Marketing Mail Marketing parcels, pieces with USPS Tracking must bear one of the required endorsements in 4.4.3a or “Change Service Requested.” USPS Marketing Mail Marketing parcels with required alternative address formats may be mailed with USPS Tracking, but must not bear an ancillary service endorsement (see 602.3.1.2 ).
+ 5.0 Additional Eligibility Standards for Nonautomation USPS Marketing Mail Letters, Flats, and Presorted USPS Marketing Mail Parcels 
+ 5.1 Basic Standards 
+ All pieces in a Regular USPS Marketing Mail or Nonprofit USPS Marketing Mail nonautomation price mailing must: 
+ Meet the basic standards for USPS Marketing Mail in 2.0 through 4.0 .
+ Except as provided in 3.6 , be part of a single mailing of at least 200 addressed pieces or 50 pounds of pieces qualifying for Presorted USPS Marketing Mail. Regular and Nonprofit mailings must meet separate minimum volumes.
+ Bear a delivery address that includes the correct ZIP Code or ZIP+4 code and that meets these address quality standards: 
+ The ZIP Code accuracy standard in 3.8 .
+ If an alternative addressing format is used, the additional standards in 602.3.0 .
+ If merchandise samples are prepared with detached address labels (DALs), the additional standards in 602.4.0 .
+ Be marked, sorted and documented as specified in 245 , 705.8.0 , or 705.14.0 .
+ 5.2 Weight Standards for Machinable Letter Pieces 
+ Maximum weight limit for machinable nonautomation USPS Marketing mail letters is 3.5 ounces (0.2188 pound). 
+ 5.3 Price Application 
+ Nonautomation prices for Regular and Nonprofit USPS Marketing Mail apply to mailpieces that meet the eligibility standards in 2.0 through 4.0 , and the preparation standards in 245 or 705 . Prices for Nonprofit parcels not qualifying as Marketing parcels apply separately to Nonprofit machinable parcels and Nonprofit nonstandard parcels.. When parcels are combined under 245.11.0 , 705.6.0 , or 705.21.0 , all pieces are eligible for the applicable prices when the combined total meets the eligibility standards.
+ 5.4 Price Application for Machinable Letters 
+ 5.4.1 General 
+ [7-12-26] Machinable letters are subject only to 3-digit and mixed prices. 
+ 5.4.2 [7-12-26] 3-Digit Price 
+ [11-2-26][7-12-26] The 3-digit price applies to qualifying letter-size machinable pieces in quantities of 150 or more pieces prepared in SCF trays for a single SCF, and to pieces placed in mixed trays in lieu of overflow SCF trays. 
+ 5.4.3 [7-12-26] 3-Digit USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ [7-12-26] The SCF-pallet discount applies to 3-digit/SCF eligible USPS Marketing Mail letter-shaped pieces that are palletized under 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry. 
+ 5.4.4 [7-12-26] Mixed Price 
+ [7-12-26] The mixed price applies to qualifying letter-size machinable pieces that the mailer prepares in mixed trays, except for pieces placed in mixed trays in lieu of overflow SCF trays (see 245.5.3.2 ). 
+ 5.5 Price Application for Nonmachinable Letters 
+ 5.5.1 General 
+ Nonmachinable prices in 1.0 apply only to USPS Marketing Mail letter-size pieces (including card-size pieces) that meet the criteria in 201.2.1 for nonmachinable letters. Nonmachinable saturation or high density letter-size pieces are subject to the applicable saturation or high density nonautomation letter prices. 
+ 5.5.2 5-Digit Price 
+ [7-12-26] The 5-digit price applies to letter-size pieces subject to nonmachinable prices in quantities of 150 or more pieces for a 5-digit ZIP Code prepared in 5-digit trays (and overflow pieces in 3-digit or SCF trays) under 245.5.0 . 
+ 5.5.3 5-Digit USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to 5-digit-eligible pieces that are palletized under 705.8.10.3a to 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry. 
+ 5.5.4 3-Digit Price 
+ [11-2-26] [7-12-26] The 3-digit price applies to letter-size pieces subject to nonmachinable prices when placed in origin/entry SCF trays (regardless of quantity) for a 3-digit ZIP Code prepared in 3-digit and SCF trays (and overflow pieces in Mixed trays) under 245.5.0 .
+ 5.5.5 3-Digit USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ [7-12-26] The SCF pallet discount applies to 3-digit/SCF-eligible USPS Marketing Mail letter-shaped pieces that are palletized under 705.8.10.3e and 705.8.10.3f and entered at Origin (None) or DSCF entry. 
+ 5.5.6 [7-12-26] Mixed Price 
+ [7-12-26] The mixed price applies to letter-size pieces that are subject to the nonmachinable prices and prepared in mixed trays. 
+ 5.6 Price Application for Nonautomation Flats 
+ 5.6.1 5-Digit Prices for Flats 
+ [7-12-26] The 5-digit price applies to flat-size pieces: 
+ In groups of 50 or more pieces and all pieces in a full 5-digit/scheme flat tray (see 245.1.4 ). 
+ When palletized under 705.8.0 and 705.10.0 through 705.13.0 , in a 5-digit/scheme bundle of 10 or more pieces, or 15 or more pieces, as applicable.
+ When palletized under 705.10.0 . in a 5-digit bundle of 10 or more pieces, or 15 or more pieces, as applicable; properly placed on a merged 5-digit/scheme or 5-digit pallet. 
+ 5.6.2 5-Digit USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to 5-digit-eligible USPS Marketing Mail flat-shaped pieces that are palletized under 705.8.10.3d , 705.8.10.3e , and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry. 
+ 5.6.3 3-Digit Prices for Flats 
+ [11-2-26] [7-12-26] The 3-digit price applies to flat-size pieces: 
+ In groups of 50 or more 5-digit/scheme or 3-digit/scheme pieces in a 3-digit/SCF flat tray and pieces placed in origin/entry SCF trays regardless of quantity (see 245.1.4 ). 
+ When palletized under 705.8.0 and 705.10.0 through 705.13.0 , in a 3-digit/scheme/SCF bundle of 10 or more pieces.
+ 5.6.4 3-Digit USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to 3-digit-eligible USPS Marketing Mail flat-shaped pieces that are palletized under 705.8.10.3e and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 5.6.5 [7-12-26] Mixed Prices for Flats 
+ [7-12-26] Mixed prices apply to flat-size pieces in bundles that do not qualify for 5-digit or 3-digit prices; placed in mixed flat trays or on mixed pallets under 705.8.0 .
+ 5.7 Prices for Machinable Parcels 
+ 5.7.1 5-Digit Price 
+ The 5-digit price applies to qualifying machinable parcels that are dropshipped to a DSCF/RPDC or DDU/S&DC and presented: 
+ In a 5-digit/scheme ( L606 ) sack containing at least 10 pounds of pieces. 
+ On a 5-digit/scheme ( L606 ) pallet, according to standards in 705.8.10 .
+ As one or more parcels that mailers drop ship to a DDU/S&DC under 246.5.2.3 .
+ 5.7.2 [7-12-26] Mixed Price 
+ [7-12-26] The mixed price applies to machinable parcels that are not eligible for 5-digit prices. Machinable parcels at mixed prices must be placed in mixed sacks or on mixed pallets. See 245.11.3 and 705.8.10 . 
+ 5.8 Prices for Nonstandard Parcels and Marketing Parcels 
+ 5.8.1 5-Digit Price 
+ Five-digit prices apply to nonstandard parcels and to Marketing parcels that are dropshipped to DSCF/DRPDC or DDU or DSDC and presented: 
+ In a 5-digit/scheme ( L606 ) sack containing at least 10 pounds of pieces. 
+ On a 5-digit/scheme ( L606 ) pallet, according to 705.8.10 . 
+ As one or more parcels that mailers drop ship to a DDU/S&DC under 246.5.2.3 . 
+ In 5-digit/scheme containers prepared under 705.21.0 . 
+ 5.8.2 [7-12-26] 3-Digit Price 
+ [7-12-26] 3-digit prices apply to nonstandard parcels and Marketing parcels as follows under either of the following conditions: 
+ When dropshipped to a DSCF/RPDC and presented: 
+ In an SCF/RPDC sack containing at least 10 pounds of parcels. 
+ On an SCF/RPDC pallet, according to 705.8.10 . 
+ In SCF/RPDC containers prepared under 705.21.0 . 
+ When presented at the origin acceptance office on a 3-digit or SCF/RPDC pallet containing at least 200 pounds of pieces. 
+ 5.8.3 [7-12-26] Mixed Price 
+ [7-12-26] Mixed prices apply to nonstandard parcels and to Marketing Parcels in Mixed containers that are not eligible for 5-digit or 3-digit prices. Parcels at Mixed prices must be placed in mixed sacks under 245.11.4.3 or on mixed pallets under 705.8.10 . 
+ 6.0 Additional Eligibility Standards for Enhanced Carrier Route USPS Marketing Mail Letters and Flats 
+ 6.1 General Enhanced Carrier Route Standards 
+ 6.1.1 Optional Preparation 
+ Preparation to qualify for any Enhanced Carrier Route price is optional and need not be performed for all carrier routes in a 5-digit area. An Enhanced Carrier Route mailing may include pieces at basic, high density, high density plus, and saturation Enhanced Carrier Route prices. 
+ 6.1.2 Basic Eligibility Standards 
+ All pieces in an Enhanced Carrier Route or Nonprofit Enhanced Carrier Route USPS Marketing Mail mailing must: 
+ Meet the basic standards for USPS Marketing Mail in 2.0 through 4.0 .
+ Be part of a single mailing of at least 200 pieces or 50 pounds of pieces of Enhanced Carrier Route USPS Marketing Mail. Regular and Nonprofit mailings must meet separate minimum volumes. 
+ Be sorted to carrier routes (except under 705.14.0 ), marked, and documented under 245.9.0 , 705.8.0 , or 705.14.0 .
+ Bear a delivery address that includes the correct ZIP Code, ZIP+4 code, or numeric equivalent to the delivery point routing code and that meets these address quality standards: 
+ The carrier route accuracy standard in 6.2 .
+ The address matching and coding standards in 7.6 , and 602.9.0 .
+ If an alternative addressing format is used, the additional standards in 602.3.0 .
+ If flat-size pieces are prepared with detached address labels (DALs), the additional standards in 602.4.0 .
+ Meet the applicable sequencing requirements in 6.3 through 6.7 and in 245 . 
+ Meet the applicable documentation and postage payment standards in 244 , and 1.5 . 
+ Letters must meet the requirements for automation compatibility in 201.3.0 and bear an accurate Intelligent Mail barcode encoded with the correct delivery point routing code matching the delivery address and meeting the standards in 202.5.0 and 204.1.0 except as provided in 6.1.2h . Pieces prepared with a simplified address format are exempt from the automation-compatibility and barcode requirements. Letters entered under the full-service Intelligent Mail automation option also must meet the standards in 705.23.0 .
+ All saturation and high density letters over 3.5 ounces, and saturation (other than pieces with a simplified address) and high density letter-size pieces not meeting the standards 6.1.2g must pay the applicable nonautomation saturation or high density prices. 
+ Enhanced Carrier Route price mail may not be more than 12 inches high, 15 inches long, or 3/4-inch thick. Exception: Merchandise samples with detached address labels (DALs) may exceed these dimensions if the labels meet the standards in 602.4.0 . 
+ Meet the standards in 245.6.10 for High Density and High Density Plus automation letter mailings prepared using the optional 5-digit/scheme tray preparation. 
+ [7-12-26] Flats must not weigh more than 24 ounces. 
+ 6.1.3 Full-Service Intelligent Mail Eligibility Standards 
+ In addition to other requirements in 6.0 , flats eligible for the full-service Intelligent Mail option must:
+ Be flat-size under 201.4.0 .
+ Be part of a basic carrier route, high density, or high density plus carrier route mailing under 6.3 or 6.4 .
+ Bear an accurate Intelligent Mail barcode encoded with the correct delivery point routing code matching the delivery address and meeting the standards in 202.4.0 , and 204.1.0 . Flats with Intelligent Mail barcodes entered under the full-service automation option also must be part of mailings that meet the standards in 705.23.0 . 
+ 6.2 Carrier Route Accuracy Standard 
+ Addresses used on pieces claiming any Enhanced Carrier Route prices must meet the carrier route accuracy standard in 602.7.0 .
+ 6.3 Basic Price Enhanced Carrier Route Standards 
+ 6.3.1 Sequencing 
+ All pieces mailed at basic prices must be prepared in walk sequence or in line-of-travel (LOT) sequence according to LOT schemes prescribed by USPS (see 245.9.9 and 245.9.10 ).
+ 6.3.2 Basic Price Eligibility - Letters 
+ Basic prices apply to each piece sorted under 245.6.0 or 705.8.0 in a full carrier route tray, in a carrier route bundle of 10 or more pieces, or in groups of 10 or more pieces placed in a 5-digit carrier routes or a 3-digit carrier routes tray. 
+ 6.3.3 Basic Carrier Route USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to Basic Carrier Route-eligible USPS Marketing Mail letter-shaped pieces that are palletized under 705.8.10.3a to 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 6.3.4 Basic Price Eligibility - Flats 
+ Basic prices apply to each piece in a carrier route bundle of 10 or more pieces that is: 
+ Palletized under 705.8.0 , 705.10.0 , 705.12.0 , or 705.13.0 .
+ Placed in a carrier route flat tray/sack containing at least 125 pieces or 15 pounds of pieces. 
+ Placed in a merged 5-digit scheme, 5-digit scheme carrier routes, merged 5-digit, or 5-digit carrier routes flat tray/sack. 
+ Entered at a destination delivery unit as untrayed/unsacked bundles, according to preparation standards in 245.2.0 and entry standards in 246.5.0 . 
+ 6.3.5 Basic Carrier Route Bundles on a 5-digit/Direct Container (Basic–CR Bundles/Container) Price Eligibility–Flats 
+ The Basic-CR Bundles/Container discount applies to each piece in a carrier route bundle of 10 or more pieces that are palletized under 705.8.0 , 705.10.0 , 705.12.0 , or 705.13.0 on a 5-digit merged, 5-digit (scheme) merged, 5-digit carrier route or 5-digit scheme carrier route pallet entered at an Origin (None), DSCF, or DDU entry or in a carrier route sack or flat tray under 245.9.7a or 203.5.8 and entered at the DDU. 
+ 6.3.6 Basic Carrier Route USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to Basic Carrier Route-eligible USPS Marketing Mail flat-shaped pieces that are palletized under 705.8.10.3d , 705.8.10.3e , and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 6.4 High Density and High Density Plus (Enhanced Carrier Route) Standards - Letters 
+ 6.4.1 Additional Eligibility Standards for High Density and High Density Plus Prices 
+ In addition to the general eligibility standards in 6.1 , High Density and High Density Plus letter-size mailpieces must be in a full carrier-route tray or in a carrier-route bundle of 10 or more pieces placed in a 5-digit carrier-routes or 3-digit carrier-routes tray unless prepared using the standards in 245.6.10 . High density and high density plus prices for barcoded letters apply to each piece that is automation-compatible according to 201.3.0 , and has an accurate delivery point Intelligent Mail barcode (IMb) encoded with the correct delivery point routing code matching the delivery address and meeting the standards in 202.5.0 and 204.1.0 . Pieces that are not automation-compatible or not barcoded with an IMb under 202.5.0 are mailable only at the applicable high density or high density plus nonautomation letter prices. 
+ 6.4.2 Basic Eligibility Standards for High Density and High Density Plus Prices for Letters 
+ All pieces mailed at high density or high density plus prices must be prepared in walk sequence according to schemes prescribed by the USPS (see 245.9.8 through 245.9.9 ). Multiple pieces per delivery address can count toward both density standards. Specific density requirements are as follows: 
+ Pieces mailed at high density prices must be sorted together in sequence in quantities of at least 125 pieces for each carrier route. 
+ Pieces mailed at high density plus prices must be sorted together in sequence in quantities of at least 300 pieces for each carrier route. 
+ 6.4.3 High Density and High Density Plus USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to High Density- and High Density Plus-eligible USPS Marketing Mail letter-shaped pieces that are palletized under 705.8.10.3a to 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry. 
+ 6.5 High Density and High Density Plus (Enhanced Carrier Route) Standards - Flats 
+ 6.5.1 Basic Eligibility Standards for High Density and High Density Plus Prices 
+ All flat-size pieces mailed at high density prices must: 
+ Be prepared in walk sequence according to schemes prescribed by the USPS (see 245.9.9 ).
+ Meet the density requirement of at least 125 pieces for each carrier route. For high density plus prices, the density requirement is at least 300 pieces for each carrier route. Multiple pieces per delivery address can count toward the density standards, except for pieces with simplified addresses as allowed under 602.3.0 . 
+ 6.5.2 High Density and High Density Plus Prices for Flats 
+ High density or high density plus prices apply to each piece meeting the density standards in 6.5.1 or in a carrier route bundle of 10 or more pieces that is:
+ Palletized under 705.8.0 , 705.10.0 , 705.12.0 , or 705.13.0 .
+ Placed in a merged 5-digit scheme, 5-digit scheme carrier routes, merged 5-digit, or 5-digit carrier routes flat tray/sack. 
+ Placed in a carrier route flat tray/sack containing at least 125 pieces or 15 pounds of pieces for high density prices. 
+ Placed in a carrier route flat tray/sack containing at least 300 pieces for high density plus prices. 
+ 6.5.3 High Density Carrier-Route Bundles on a 5-digit/Direct Container (High Density-CR Bundles/Container Discount Eligibility)–Flats 
+ The High Density-CR Bundles/Container discount applies to 125 or more High Density-eligible pieces that are palletized under 705.8.0 , 705.10.0 , 705.12.0 , or 705.13.0 on the following type of pallet entered at an Origin (None), DSCF/LPC, or DDU/S&DC entry, or placed in a carrier-route sack or flat tray under 245.9.7a or 203.5.8 and entered at the DDU/S&DC: 
+ 5-digit merged; 
+ 5-digit (scheme) merged; 
+ 5-digit carrier route; 
+ 5-digit carrier routes; or 
+ 5-digit scheme carrier route. 
+ 6.5.4 High Density Plus Carrier-Route Bundles on a 5-digit/Direct Container (High Density Plus-CR Bundles/Container Discount Eligibility)–Flats 
+ The High Density Plus-CR Bundles/Container discount applies to 300 or more High Density Plus-eligible pieces that are palletized under 705.8.0 , 705.10.0 , 705.12.0 , or 705.13.0 on the following type of pallet entered at an Origin (None), DSCF/LPC, or DDU/S&DC entry, or in a carrier-route sack or tub, under 245.9.7a or 203.5.8 , and entered at the DDU/S&DC: 5-digit merged; 
+ 5-digit (scheme) merged; 
+ 5-digit carrier route; 
+ 5-digit carrier routes; or 
+ 5-digit scheme carrier route. 
+ 6.5.5 High Density USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to 125 or more High Density-eligible USPS Marketing Mail flat-shaped pieces that are palletized under 705.8.10.3d , 705.8.10.3e , and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 6.5.6 High Density Plus USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to 300 or more High Density Plus-eligible USPS Marketing Mail flat-shaped pieces that are palletized under 705.8.10.3d , 705.8.10.3e , and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 6.6 Saturation ECR Standards - Letters 
+ 6.6.1 Additional Eligibility Standards for Saturation Prices 
+ In addition to the eligibility standards in 6.1 , saturation letter-size mailpieces must be in a full carrier route tray or in a carrier route bundle of 10 or more pieces placed in a 5-digit (or 3-digit) carrier routes tray. Except for pieces with a simplified address, pieces that are not automation-compatible or not barcoded with an Intelligent Mail barcode under 202.5.0 are mailable only at nonautomation saturation letter prices.
+ 6.6.2 Saturation Prices for Letters 
+ All pieces mailed at saturation prices must: 
+ Be prepared in walk sequence according to schemes prescribed by the USPS (see 245.9.8 through 245.9.9 ).
+ Meet the density requirement of at least 90% or more of the active residential addresses or 75% or more of the total number of active possible delivery addresses on each carrier route receiving this mail. Pieces bearing a simplified address must meet the coverage standards in 602.3.0 . Multiple pieces per delivery address do not count toward this density standard. 
+ 6.6.3 Saturation USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to at least 90 percent or more of the total number of active residential addresses, or 75 percent or more of the total number of active possible delivery addresses, on each carrier route that are palletized under 705.8.10.3a to 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 6.7 Saturation Enhanced Carrier Route Standards - Flats 
+ 6.7.1 Basic Eligibility Standards for Saturation Prices 
+ All pieces mailed at saturation prices must: 
+ Be prepared in walk sequence according to schemes prescribed by the USPS (see 245.9.9 ).
+ Meet the density requirement of at least 90% or more of the active residential addresses or 75% or more of the total number of active possible delivery addresses on each carrier route receiving this mail. Pieces bearing a simplified address must meet the coverage standards in 602.3.0 . Multiple pieces per delivery address do not count toward this density standard. 
+ 6.7.2 Saturation Prices for Flats 
+ There are two different sets of saturation prices for USPS Marketing Mail flats; one for pieces with specific addresses and another for pieces with simplified (EDDM) addresses. Saturation prices apply to each piece in a carrier route bundle of 10 or more pieces that is: 
+ Palletized under 705.8.0 , 705.10.0 , 705.12.0 , or 705.13.0 .
+ Placed in a carrier route flat tray/sack containing at least 125 pieces or 15 pounds of pieces. 
+ Placed in a merged 5-digit scheme or merged 5-digit flat tray. 
+ Placed in a 5-digit scheme carrier routes or 5-digit carrier routes sack/flat tray. 
+ 6.7.3 Saturation–(including EDDM) Carrier-Route Bundles on a 5-digit/Direct Container (Saturation–CR Bundles/Container Discount Eligibility)–Flats 
+ The Saturation-CR Bundles/Container discount applies to at least 90 percent or more of the total number of active residential addresses or 75 percent or more of the total number of active possible delivery addresses on each carrier route that is palletized under 705.8.0 , 705.10.0 , 705.12.0 , or 705.13.0 on the following type of pallet entered at an Origin (None), DSCF/LPC, or DDU/S&DC entry, or in a carrier-route sack or tub under 245.9.7a or 203.5.8 and entered at the DDU/S&DC: 
+ 5-digit merged; 
+ 5-digit (scheme) merged; 
+ 5-digit carrier route; 
+ 5-digit carrier routes; or 
+ 5-digit scheme carrier-route. 
+ 6.7.4 Saturation USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to at least 90 percent or more of the total number of active residential addresses, or 75 percent or more of the total number of active possible delivery addresses, on each carrier route that are palletized under 705.8.10.3d , 705.8.10.3e , and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 7.0 Eligibility Standards for Automation USPS Marketing Mail 
+ 7.1 Basic Eligibility Standards for Automation USPS Marketing Mail 
+ All pieces in a Regular USPS Marketing Mail or Nonprofit USPS Marketing Mail automation mailing must: 
+ Meet the basic standards for USPS Marketing Mail in 2.0 through 4.0 .
+ Be part of a single mailing of at least 200 pieces or 50 pounds of pieces of automation price USPS Marketing Mail (Regular and Nonprofit mailings must meet separate minimum volumes). 
+ Be in the same processing category and meet the physical standards in 201.3.0 .
+ Bear a delivery address that includes the correct ZIP Code, ZIP+4 code, or numeric equivalent to the delivery point routing code and that meets these address quality standards: 
+ The address matching and coding standards in 7.6 , and 602.9.0 .
+ If an alternative addressing format is used, the additional standards in 602.3.0 .
+ Bear an accurate Intelligent Mail barcode encoded with the correct delivery point routing code, matching the delivery address and meeting the standards in 202.5.0 and 204.1.0 .
+ Be marked, sorted and documented under 245.7.0 or 245.10.0 .
+ Meet the applicable documentation and postage payment standards in 1.5 , and 244.1.0 through 244.3.0 .
+ 7.2 Eligibility Standards for Full-Service Automation USPS Marketing Mail 
+ All pieces entered under the full-service Intelligent Mail automation option must: 
+ Bear a unique Intelligent Mail barcode. 
+ Be part of a mailing that meets the standards in 705.23.0 . 
+ Be scheduled for an appointment through the Facility Access and Shipment Tracking (FAST) system when deposited as a DSCF drop shipment. 
+ 7.3 Maximum Weight for Automation Letters 
+ Maximum weight limit for automation price mail is 3.5 ounces (0.2188 pound). See 201.3.6 , for pieces heavier than 3 ounces. 
+ 7.4 Price Application for Automation Letters 
+ 7.4.1 General 
+ Automation prices apply to each piece that is sorted under 245.10.0 , into the corresponding qualifying groups:
+ [7-12-26] Groups of 150 or more pieces in 5-digit/scheme trays qualify for the 5-digit price. Preparation to qualify for that price is optional. Pieces placed in full SCF trays under 245.7.5 in lieu of 5-digit/scheme overflow trays are eligible for 5-digit prices (see 245.7.5 .)
+ [11-2-26] [7-12-26] Groups of 150 or more pieces in SCF trays and all pieces in origin/entry SCF trays (regardless of quantity) qualify for the 3-digit price. Pieces placed in mixed trays under 245.7.5 in lieu of SCF overflow trays also are eligible for 3-digit prices. 
+ [7-12-26] Pieces in mixed trays qualify for the mixed price, except for pieces prepared under 7.4b .
+ 7.4.2 5-Digit USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to 5-digit-eligible USPS Marketing Mail letter-shaped pieces that are palletized under 705.8.10.3a to 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry. 
+ 7.4.3 [7-12-26] 3-Digit USPS Marketing Mail Letter-Shaped Pieces SCF-Pallet Discount Eligibility 
+ [7-12-26] The SCF-pallet discount applies to 3-digit/SCF-eligible USPS Marketing Mail letter-shaped pieces that are palletized under 705.8.10.3e and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 7.5 Price Application for Automation Flats 
+ 7.5.1 General 
+ [7-12-26] Automation prices apply to each piece properly sorted into qualifying groups: 
+ [7-12-26] Groups of 50 or more flat-size pieces and all pieces in a full 5-digit/scheme tray qualify for the 5-digit price. 
+ [11-2-26][7-12-26] Groups of 50 or more flat-size pieces in a 3-digit/scheme/SCF tray and pieces placed in origin/entry SCF trays (regardless of quantity) qualify for the 3-digit price. 
+ [7-12-26] All flat-size pieces in mixed trays qualify for the mixed price (no minimum). 
+ 7.5.2 5-Digit USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ The SCF-pallet discount applies to 5-digit-eligible USPS Marketing Mail flat-shaped pieces that are palletized under 705.8.10.3d , 705.8.10.3e , and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 7.5.3 3-Digit USPS Marketing Mail Flat-Shaped Pieces SCF-Pallet Discount Eligibility 
+ [7-12-26] The SCF-pallet discount applies to 3-digit/SCF-eligible USPS Marketing Mail flat-shaped pieces that are palletized under 705.8.10.3e and 705.8.10.3f and entered at Origin (None) or DSCF/LPC entry.
+ 7.6 Address Standards for Barcoded Pieces 
+ 7.6.1 Basic Address Standards for Barcodes 
+ To qualify for automation prices, addresses must be sufficiently complete to enable matching to the current USPS ZIP+4 Product when used with current CASS-certified address matching software. Standardized address elements are not required. Any barcode that appears on a mailpiece claimed at an automation price must be the correct barcode for the corresponding delivery address on the piece. 
+ 7.6.2 Numeric ZIP+4 
+ A numeric ZIP+4 code must consist of five digits, a hyphen, and four digits. 
+ 7.6.3 Numeric Delivery Point Routing Code 
+ A numeric equivalent to the delivery point routing code is formed by adding two digits directly after the ZIP+4 code. 
+ 7.6.4 Address Elements 
+ Addresses must include the correct street number, predirectional, street name, suffix, and postdirectional that are input to obtain a match with the current USPS ZIP+4 Product. 
+ 7.6.5 Firm Name 
+ An address must include a firm name when necessary to obtain a match with the finest level of ZIP+4 code in the USPS ZIP+4 Product. If an address contains a firm name assigned a unique ZIP+4 code in the USPS ZIP+4 Product, the unique ZIP+4 code must be used. If the firm name is not one assigned a unique ZIP+4 code in the USPS ZIP+4 Product and the apartment/suite number is included in the address, the ZIP+4 code for the range in which the apartment/suite number appears must be used in that address. If the firm name does not correspond to a firm name that has a unique ZIP+4 code assigned in the USPS ZIP+4 Product and the apartment/suite number is not included in the address, the ZIP+4 code for the building must be used. 
+ 7.6.6 Secondary Designator 
+ If a secondary address designator (e.g., an apartment number) is shown in the address, the mailpiece must show the appropriate ZIP+4 code representing the range for that secondary address as contained in the current USPS ZIP+4 Product. If a secondary address designator is required to obtain an exact match with the finest level of ZIP+4 code in the USPS ZIP+4 Product but the information is not available, the alternative ZIP+4 code or ZIP+4 or delivery point barcode for the building must be used. 
+ 7.6.7 Rural and Highway Contract Routes 
+ If a rural route or highway contract route box number is included in the address, the mailpiece must show the appropriate ZIP+4 code representing the range for that box number as contained in the current USPS ZIP+4 Product. If a rural route or highway contract route box number is required to obtain a match with the finest level of ZIP+4 code but is not available, the alternative ZIP+4 code or ZIP+4 or delivery point barcode for the rural route or highway contract route must be used. If used, the rural route or highway contract route box number must be placed on the line immediately above the city/state/ZIP Code line. 
+ 7.6.8 Post Office Box 
+ A Post Office box address must contain a Post Office box number that can be exactly matched with the USPS ZIP+4 Product in effect. 
+ 8.0 Customized MarketMail 
+ 8.1 Basic Standards 
+ Customized MarketMail (CMM) is an option for mailing nonrectangular or irregular-shaped Regular USPS Marketing Mail and Nonprofit USPS Marketing Mail pieces weighing 3.3 ounces or less that meet the physical characteristics and dimensional requirements in 201.9.0 and the mail preparation standards in 245.13.0 . Other Regular and Nonprofit USPS Marketing Mail pieces measuring 3/4 inch thick or less and meeting the standards in 9.0 may be entered as CMM at the mailer‘s option. CMM must be entered at a destination delivery unit (DDU)/sorting and delivery center (S&DC). 
+ 8.2 Eligibility Standards 
+ All pieces in a CMM mailing must: 
+ Meet the basic content and eligibility standards for USPS Marketing Mail in 2.0 through 4.0 and, for Nonprofit USPS Marketing Mail, the additional standards in 703.1.0 .
+ Be part of a mailing of at least 200 addressed pieces. All pieces must be identical in size, shape, and weight unless excepted under an approved postage payment system. 
+ Bear a complete delivery address using the addressing formats in 602.1.0 or the exceptional or occupant address formats in 602.3.0 with the correct ZIP Code or ZIP+4 code. These additional addressing standards apply: 
+ Detached address labels (DALs) under 602.4.0 are not permitted. 
+ Ancillary service endorsements under 507.1.0 are not permitted. 
+ The ZIP Code accuracy standard in 3.8 must be met.
+ Be marked, sorted, and documented as specified in 244 and 245.13.0 .
+ Be entered at the destination delivery unit appropriate to the delivery address on the mail, under 246.5.0 , or as a mailing using Priority Mail Express or Priority Mail Open and Distribute under 705.18.5 and 705.18.5.13 , or as a plant-verified drop shipment (PVDS) mailing under 705.17.0 . There are no minimum volumes per destination. 
+ 8.3 Extra Services 
+ CMM is not eligible for any extra service. 
+ [7-12-26] 9.0 Additional Eligibility Standards for Heavy Printed Matter 
+ 9.1 Basic Standards 
+ All pieces in a Regular Heavy Printed Matter or Nonprofit Heavy Printed Matter mailing must:
+ Meet the basic standards for USPS Marketing Mail in 2.0 and 3.0 and, for Nonprofit USPS Marketing Mail, the additional standards in 703.1.0 . 
+ Not be used for “fulfillment purposes” (i.e. the sending of items specifically purchased or requested by the customer of a mailer). 
+ Weigh no more than 15 pounds. 
+ Exceed the standards of a flat by either weight or ¾” thickness. 
+ Meet the standards in 601.10.0 if prepared as a catalog. 
+ Consist of advertising, promotional, directory, or editorial material (or any combination of such material). 
+ Be securely bound by permanent fastenings such as staples, spiral binding, glue, or stitching. Loose-leaf binders and similar fastenings are not considered permanent. 
+ Consist of sheets of which at least 90% are imprinted by any process other than handwriting or typewriting with words, letters, characters, figures, or images (or any combination of them). 
+ Not have the nature of personal correspondence. 
+ Not contain books or other non-eligible matter. 
+ Meet a volume of at least 200 pieces or 50 pounds of pieces per mailing (except Heavy Printed Matter nonpresorted, non-discounted mailings). 
+ Be marked under the corresponding standards in 202.3.5.1 to show the class of service and/or price paid. 
+ Bear an Intelligent Mail package barcode (IMpb) and an Intelligent Mail matrix barcode (IMmb) as outlined in 204.2.0 and Publication 199, Intelligent Mail Package Barcode (IMpb) Implementation Guide for Confirmation Services and Electronic Payment Systems . For details see PostalPro at https://postalpro.usps.com . 
+ 9.2 Nonpresorted Heavy Printed Matter 
+ Apply the prices and discounts for nonpresorted Heavy Printed Matter (HPM) as follows:
+ 9.2.1 Prices 
+ Nonpresorted HPM prices are based on the weight of a single addressed piece or one pound, whichever is heavier. The nonpresorted price applies to HPM not mailed at the Presorted or carrier route prices. For prices, see Notice 123—Price List .
+ 9.2.2 Price Application 
+ The nonpresorted HPM price is charged per half-pound from 1 through 5 pounds, and per pound from more than 5 through 15 pounds. For pieces weighing 5 pounds or under, any fraction of a half-pound is considered a whole half-pound. For pieces weighing more than 5 but not more than 15 pounds, any fraction of a pound is considered a whole pound. For example, if a HPM item weighs 4.325 pounds, the weight (postage) increment is 4.5 pounds; if an item weighs 6.25 pounds, the weight (postage) increment is 7 pounds. The minimum postage price per piece is the 1-pound price.
+ 9.2.3 Catalog Incentive Discount 
+ Items qualifying as a catalog under 601.10.0 are eligible for an incentive discount when appropriately identified on the postage statement and/or the eDoc.
+ 9.3 Presorted and Carrier Route Heavy Printed Matter 
+ Apply the prices, fees, and discounts for Regular and Nonprofit Presorted and Carrier Route Heavy Printed Matter as follows:
+ 9.3.1 Prices 
+ Postage is determined by adding the per-piece charge and the corresponding per-pound charge of each addressed piece. For prices, see Notice 123—Price List . 
+ 9.3.2 Price Application 
+ The presorted Heavy Printed Matter price and Carrier Route price has a per piece charge and a per pound charge. Pricing is based on two weight tiers: up to 2.5 pounds and over 2.5 pounds. The following pallet discounts apply to Presorted and Carrier Route Heavy Printed Matter:
+ The SCF-pallet discount applies to Presorted and Carrier Route eligible Heavy Printed Matter parcels that are palletized and entered at Origin or DSCF/LPC entry. 
+ The Delivery Sort Container discount applies to each Heavy Printed Matter carrier route parcel palletized under 705.8.0 on a 5-digit carrier routes or 5-digit scheme carrier routes pallet entered at Origin, DSCF, or DDU; in a carrier route bundle palletized on a 5-digit/scheme pallet entered at DDU entry; in a carrier route sack under 245.14.0 and entered at the DDU; or in a carrier route bundle in a 5-digit/scheme sack under 245.13.0 and entered at the DDU. 
+ 9.3.3 Heavy Printed Matter Destination Entry Prices 
+ Each piece is subject to both a piece price and a pound price. 
+ 9.3.4 Determining Single-Piece Weight 
+ To determine single-piece weight in a mailing of nonidentical-weight pieces, weigh each piece individually. To determine single-piece weight in a mailing of identical-weight pieces, weigh a sample of at least 10 randomly selected pieces and divide the total sample weight by the number of pieces. Express all single-piece weights in decimal pounds rounded off to two decimal places.
+ 9.3.5 Computing Postage 
+ Presorted and Carrier Route Heavy Printed Matter mailings are charged a per pound price and a per piece price as follows:
+ Per-Piece Charge. The per-piece charge is computed based on the total number of addressed pieces for each price category claimed. 
+ Per-Pound Charge. The per-pound charge is computed based on the total weight of the addressed pieces for each price category claimed and is added to the per-piece charge to determine total postage. 
+ For each price or price category, multiply the number of addressed pieces by the corresponding price per piece and multiply the unrounded total weight of the pieces by the corresponding price per pound; round off each product to four decimal places. 
+ Add the per piece and per pound charges and round off the total postage to the nearest whole cent. 
+ 9.3.6 Catalog Incentive Discount 
+ Items qualifying as a catalog under 601.10.0 are eligible for an incentive discount when appropriately identified on the postage statement and/or the eDoc.
+ 9.4 Extra Services for Heavy Printed Matter 
+ 9.4.1 Available Services 
+ Only the following extra services may be used with Heavy Printed Matter parcels:
+ USPS Tracking (electronic option only). 
+ Certificate of mailing, as provided in 503.5.0 . 
+ 9.4.2 Additional Preparation Requirements 
+ An eligible mailpiece with an extra service must bear a return address under 602.1.0 , and an ancillary service endorsement under 507.1.0 . Pieces with USPS Tracking must bear one of the required endorsements: “Address Service Requested”, “Forwarding Service Requested”, “Return Service Requested”, or “Change Service Requested”. 
+ HELPFUL LINKS Contact Us 
+ Site Index 
+ FAQs 
+ USPS JOBS Careers 
+ ON ABOUT.USPS.COM About USPS Home 
+ Newsroom 
+ USPS Service Updates 
+ Forms & Publications 
+ Government Services 
+ Other USPS Sites Business Customer Gateway 
+ Postal Inspectors 
+ Inspector General 
+ Postal Explorer 
+ National Postal Museum 
+ Resources for Developers 
+ PostalPro 
+ Legal Information Privacy Policy 
+ Terms of Use 
+ FOIA 
+ No FEAR Act/EEO Contacts 
+ Accessibility Statement 
+ Copyright ©
+ USPS. All Rights Reserved.
